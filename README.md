@@ -2,86 +2,68 @@
 
 **English** | [简体中文](README-zh.md)
 
-[![Platform](https://img.shields.io/badge/platform-Android_only-brightgreen)](https://flutter.dev)
 [![pub package](https://img.shields.io/pub/v/flutter_patcher.svg)](https://pub.dev/packages/flutter_patcher)
+[![Platform](https://img.shields.io/badge/platform-Android-brightgreen)](https://flutter.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Status](https://img.shields.io/badge/status-beta-orange)]()
 
-## TL;DR
+Open-source, self-hosted **code push** for Flutter Android.
+Ship Dart code and asset hotfixes over the air — no store release, no third-party cloud.
 
-flutter_patcher is an Android-only, self-hosted Flutter hot-update plugin.
-
-It replaces Flutter's Dart AOT artifact `libapp.so` (and, since 0.1.3, Flutter assets) on the next cold start, with:
-
-- self-hosted patch distribution
-- versionCode binding
-- MD5 / optional Ed25519 verification
-- crash rollback and bad-patch blacklist
-
-Best for: teams that need controlled Android hotfixes and can manage their own patch endpoint/CDN.
-Not for: iOS, native code, Flutter Engine upgrades, or apps whose distribution channel forbids dynamic executable code.
-
-> **Before you ship:** Google Play and some app stores restrict downloading executable `.so` files — check your channel's policy first. This package targets self-controlled, enterprise, or otherwise permissive distribution.
-> The project is **beta**: validate it in internal testing and staged rollouts before depending on it in production.
-
-If this project helps your Flutter release workflow, please star it.
-
----
-
-## Features
-
-- Hot updates for Dart code compiled into Android `libapp.so`
-- Patches take effect on the next cold start; no in-process code swapping
-- Self-hosted distribution; no third-party cloud lock-in
-- Built-in integrity verification, crash rollback, and a bad-patch blacklist
-- Includes a packaging CLI, runtime diagnostics, local mock server, and sample app
-
----
-
-## Feature Demo
+If you've used [Shorebird](https://shorebird.dev/), [CodePush](https://learn.microsoft.com/en-us/appcenter/distribution/codepush/), or [Expo EAS Update](https://docs.expo.dev/eas-update/introduction/) — flutter_patcher brings the same OTA update model to Flutter Android, fully self-hosted and MIT-licensed.
 
 ![Feature demo: apply a patch, cold restart, and rollback](doc/feature-presentation.gif)
 
 ---
 
-## Table of contents
+## How it compares
 
-- [Is this plugin a fit for you?](#is-this-plugin-a-fit-for-you)
-- [Requirements](#requirements)
-- [5-minute walkthrough](#5-minute-walkthrough)
-- [Local mock server](#local-mock-server)
-- [Install](#install)
-- [Quick start](#quick-start)
-- [Patch lifecycle](#patch-lifecycle)
-- [Crash protection](#crash-protection)
-- [What can and cannot be patched](#what-can-and-cannot-be-patched)
-- [Security](#security)
-- [Production recommendations](#production-recommendations)
-- [FAQ](#faq)
-- [Documentation](#documentation)
+|                | flutter_patcher          | Shorebird                     | CodePush (React Native)       |
+|----------------|--------------------------|-------------------------------|-------------------------------|
+| Framework      | Flutter                  | Flutter                       | React Native                  |
+| Platforms      | Android                  | Android + iOS                 | Android + iOS (retired 2025)  |
+| Hosting        | Your server / CDN        | Shorebird cloud               | AppCenter cloud (deprecated)  |
+| Update scope   | Dart code + assets       | Dart code (engine-level diff) | JS bundle                     |
+| Takes effect   | Next cold start          | Next restart                  | Next restart                  |
+| Cost           | Free (MIT)               | Free tier + paid plans        | —                             |
+| Self-hostable  | Yes — full control       | Cloud-managed                 | —                             |
+
+**Choose Shorebird** if you need iOS support or a fully managed service.
+**Choose flutter_patcher** if you need self-hosted OTA updates on infrastructure you control — enterprise apps, regional distribution, or non-Play channels.
+
+> Google Play and some stores restrict downloading executable code at runtime. flutter_patcher targets self-controlled, enterprise, or permissive distribution channels. Check your channel's policy before shipping.
 
 ---
 
-## Is this plugin a fit for you?
+## Features
 
-`flutter_patcher` is a self-hosted Android-only hot-update SDK for Flutter.
-Patches live on your own server, CDN, or object storage; nothing depends on a third-party cloud.
+- **OTA code push** — replace Dart AOT `libapp.so` and Flutter assets on the next cold start
+- **Self-hosted** — patches live on your CDN / object storage / internal server; zero vendor lock-in
+- **Integrity verification** — MD5 checksum + optional Ed25519 signature (Android 13+)
+- **Crash rollback** — automatic rollback on boot failure with a bad-patch blacklist
+- **Tooling included** — `pack` CLI, runtime diagnostics, local mock server, and sample app
 
-### Good fit
+---
 
-- Your project only needs Android hot updates; iOS can ship through normal store releases
-- Your team can run its own patch distribution, and patch data must be self-hosted
-- You want to roll out Dart-layer fixes to a small audience quickly
+## Try it in 5 minutes
 
-### Not a fit
+No server needed. Clone and experience the full patch → restart → rollback flow:
 
-- You need hot updates on both Android and iOS
-- You don't want to maintain any patch-distribution infrastructure
-- You need a commercial SLA, hosted console, audit trails, or dedicated support
-- You need to update native code, Android `res/` resources, or the Flutter Engine
-- App-store policy or regulatory rules forbid dynamic delivery of executable code
+```bash
+git clone https://github.com/xuelinger2333/flutter_patcher.git
+cd flutter_patcher/example
+flutter build apk --release
+flutter install
+```
 
-If you need cross-platform hot updates or a managed service, evaluate alternatives such as Shorebird.
+1. Launch the app — it shows the **original** `assets/patch_demo.png`
+2. Tap **Apply patch**
+3. Swipe the app away from recents and reopen it
+4. The image has changed — the asset patch took effect
+5. Tap **Rollback** → restart → original image is back
+
+The example bundles a precompiled `patch.zip`. Everything runs offline on the device.
+
+For HTTP-based testing, see the [Local mock server guide](doc/getting-started.md#local-mock-server).
 
 ---
 
@@ -91,81 +73,26 @@ If you need cross-platform hot updates or a managed service, evaluate alternativ
 |---|---|
 | Platform | Android only |
 | Dart SDK | `>=3.0.0 <4.0.0` |
-| Flutter | `>=3.3.0`; loader hook verified on 3.19 ~ 3.38 |
+| Flutter | `>=3.3.0`; loader hook verified on 3.19 ~ 3.44 |
 | Android `minSdk` | 24 |
 | Android `compileSdk` | 36 |
 | ABI | `armeabi-v7a` / `arm64-v8a` / `x86_64` |
 | NDK | 27.0.12077973+ |
-| AGP | 8.11.1+ |
-| Kotlin | 2.2.20+ |
+| AGP | 8.11.1+ (including AGP 9.x) |
+| Kotlin | 2.2.20+ (or AGP 9 built-in Kotlin) |
 | Java / JVM | 17 |
 
-On iOS, macOS, Windows, Linux and Web, every API is safe to call but does nothing — the plugin logs a one-time "platform unsupported" warning and returns safe defaults.
+On iOS, macOS, Windows, Linux, and Web, every API is safe to call but does nothing — the plugin logs a one-time warning and returns safe defaults.
 
 ---
 
-## 5-minute walkthrough
+## Quick start
 
-You don't need any backend. Clone the repo and you can experience the full hot-update flow:
-
-```bash
-git clone https://github.com/xuelinger2333/flutter_patcher.git
-cd flutter_patcher/example
-flutter build apk --release
-flutter install
-```
-
-Steps:
-
-1. Launch the app — it shows the **original** `assets/patch_demo.png`
-2. Tap **Apply patch**
-3. Swipe the app away from recents and reopen it
-4. The image has changed — the asset overlay took effect
-5. Tap **Rollback**
-6. After another restart the original image is back
-
-The example bundles a precompiled `patch.zip` that swaps `assets/patch_demo.png`. `Apply patch` reads the bundled bytes and calls `applyPatchBytes`; nothing leaves the device.
-
----
-
-## Local mock server
-
-If you want to try the HTTP `checkUpdate -> applyPatch` flow without building a backend, run the bundled mock server.
-It is for local development only, not production patch distribution.
-
-```bash
-# Rebuild the release APK after editing Dart code
-flutter build apk --release
-
-# Build the patch package
-dart run flutter_patcher:pack \
-  --apk build/app/outputs/flutter-apk/app-release.apk \
-  --version dev-1 \
-  --target-version-code 100
-
-# Serve dist/patch.zip and dist/manifest.json on 0.0.0.0:8080
-dart run flutter_patcher:mock_server --dist dist
-```
-
-Then call it from a phone on the same Wi-Fi network:
-
-```dart
-final check = await FlutterPatcher.checkUpdate(
-  'http://<your-computer-ip>:8080/check',
-);
-
-if (check.hasUpdate) {
-  await FlutterPatcher.applyPatch(check.patch!);
-}
-```
-
----
-
-## Install
+### 1. Install
 
 ```yaml
 dependencies:
-  flutter_patcher: ^0.1.3
+  flutter_patcher: ^0.1.4
 ```
 
 Or as a Git dependency:
@@ -177,15 +104,21 @@ dependencies:
       url: https://github.com/xuelinger2333/flutter_patcher.git
 ```
 
----
+### 2. Initialize
 
-## Quick start
+Call before `runApp()`:
 
-### 1. Build a patch
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await FlutterPatcher.init();
+  runApp(const MyApp());
+}
+```
 
-Rebuild the release APK (`flutter build apk --release`), then run `pack` against it.
+### 3. Build a patch
 
-**Dart code:**
+Rebuild the release APK, then run `pack`:
 
 ```bash
 dart run flutter_patcher:pack \
@@ -194,7 +127,7 @@ dart run flutter_patcher:pack \
   --target-version-code 100
 ```
 
-**Assets** (since 0.1.3) — append `--assets`:
+To include assets (since 0.1.3), append `--assets`:
 
 ```bash
 dart run flutter_patcher:pack \
@@ -204,61 +137,15 @@ dart run flutter_patcher:pack \
   --assets assets/hero.png,assets/strings/zh.json
 ```
 
-- `--version`: patch version (any string you choose).
-- `--target-version-code`: `versionCode` of the **base APK installed on the user's device** — not the patch version, not the patch APK's version.
-- `--assets`: paths of asset files to include. Each path must already be declared under `assets:` in the new APK's `pubspec.yaml`; `--assets` only tells `pack` *which* of those assets to ship inside `patch.zip`. Omit for Dart-only patches.
+- `--version`: patch version (any string).
+- `--target-version-code`: the `versionCode` of the **base APK installed on the user's device**.
+- `--assets`: asset paths to include in `patch.zip`. Each must be registered in the new APK's `pubspec.yaml`.
 
-For long lists, point `--assets` at a text file with `@` — one path per line, `#` starts a comment, inline and `@file` can be mixed:
+Output: `dist/patch.zip` + `dist/manifest.json`. Upload `patch.zip` to your CDN and have your update endpoint return a `PatchInfo` pointing at it.
 
-```bash
-# patch-assets.txt
-assets/hero.png
-assets/strings/zh.json
-assets/illustrations/onboarding-1.png
-```
+For advanced `--assets` syntax and the `@file` list format, see [API Reference](doc/api-reference.md#asset-patching).
 
-```bash
-dart run flutter_patcher:pack \
-  --apk build/app/outputs/flutter-apk/app-release.apk \
-  --version 1.0.1 \
-  --target-version-code 100 \
-  --assets @patch-assets.txt,assets/last-minute.png
-```
-
-Output: `dist/patch.zip` (the payload) + `dist/manifest.json` (a sidecar that tells *your* backend the patch version, MD5, target `versionCode`, and that `patch.zip` is the file to serve). Ship `patch.zip` from your CDN; have your update endpoint hand the client a `PatchInfo` whose `patchUrl` points at it.
-
-Schema reference and advanced configuration: [API Reference → Asset Patching](doc/api-reference.md#asset-patching) · [Architecture](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html).
-
-### 2. Apply a patch
-
-#### 2.1 Initialize
-
-Call before `runApp()`:
-
-```dart
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  await FlutterPatcher.init();
-
-  runApp(const MyApp());
-}
-```
-
-The defaults are appropriate for most projects.
-
-If you need to tune crash protection, pass parameters explicitly:
-
-```dart
-await FlutterPatcher.init(
-  maxCrashCount: 1,
-  verifyAfter: const Duration(seconds: 5),
-);
-```
-
-#### 2.2 Apply a patch
-
-The client only needs a `PatchInfo`; pass it to `applyPatch`. `PatchInfo` is normally produced from your own update endpoint:
+### 4. Apply a patch
 
 ```dart
 final result = await FlutterPatcher.applyPatch(
@@ -271,15 +158,14 @@ final result = await FlutterPatcher.applyPatch(
 );
 
 if (result.ok) {
-  // The patch will take effect on the next cold start; show a restart hint if you want.
+  // Patch takes effect on next cold start
 }
 ```
 
-If you already have your own download logic, or the patch comes from an asset / isolate, use `applyPatchBytes`:
+If you manage downloads yourself, use `applyPatchBytes`:
 
 ```dart
 final bytes = await loadPatchFromYourSource();
-
 final result = await FlutterPatcher.applyPatchBytes(
   bytes,
   version: '1.0.0-h1',
@@ -287,233 +173,109 @@ final result = await FlutterPatcher.applyPatchBytes(
 );
 ```
 
-`applyPatchBytes` automatically computes the MD5, manages the temporary file, and reuses the regular apply flow.
-
-> The plugin also ships with an optional minimal check-update JSON protocol, intended for quick onboarding, the example, and local testing. In production, if you already have your own update / staging / auth protocol, parse the response yourself and construct `PatchInfo` directly. The protocol format and `checkUpdate` usage live in the [API reference](https://pub.dev/documentation/flutter_patcher/latest/topics/API-reference-topic.html) and [Architecture](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html).
-
-> **Skipping MD5**: `PatchInfo.md5` is now optional. If your server doesn't ship md5 (or you only want HTTPS-level integrity), leave it out:
-> ```dart
-> PatchInfo(version: 'fix-1', patchUrl: '...', targetVersionCode: 100); // md5 defaults to ''
-> ```
-> Download integrity checks are skipped; **note that signature verification is also skipped** in this case (the Ed25519 input is the md5 hex string — without md5 there is no message to sign over). To keep signature verification you must also ship md5.
-
-#### 2.3 Roll back
+### 5. Roll back
 
 ```dart
 await FlutterPatcher.rollback();
 ```
 
-Rollback deletes the current patch. On the next cold start the app falls back to the version baked into the APK.
-
-A manual `rollback()` does **not** add the patch to the blacklist.
+Deletes the current patch. The app reverts to the APK's built-in version on the next cold start.
 
 ---
 
-## Patch lifecycle
+## How it works
 
 ```text
 Download patch
   ↓
-Verify MD5 / signature when provided, then versionCode
+Verify MD5 / signature (when provided), then versionCode
   ↓
 Persist to local patch directory
   ↓
-Wait for the next cold start
+Next cold start → load patched libapp.so + asset overlays
   ↓
-Cold start loads the patched libapp.so
-  ↓
-Boot succeeds: keep using the patch
-Boot fails:    auto-rollback
+Boot succeeds → keep using the patch
+Boot fails    → auto-rollback + blacklist
 ```
 
-A successful `applyPatch` takes effect on the **next cold start**, never inside the current process.
-
-If you need to nudge users to restart, show a prompt after `applyPatch` succeeds.
+Patches take effect on the **next cold start**, never inside the running process.
 
 ---
 
-## Crash protection
+## What can be patched
 
-`flutter_patcher` is fail-fast by default.
-If a patch causes a boot failure, or a serious Dart-level error fires during early UI, the plugin rolls back to the APK's built-in version on the next cold start and adds the offending patch to a local blacklist, so the same bad patch is not loaded over and over.
+| Hot-patchable | Not hot-patchable |
+|---|---|
+| Anything in `lib/` — widgets, logic, routes, constants | Native code (Kotlin / Java / C++), `AndroidManifest.xml`, APK `res/` |
+| Pure-Dart package upgrades (native side unchanged) | Flutter Engine upgrades |
+| Flutter asset files (registered in `pubspec.yaml` + listed in `--assets`) | Adding or removing native plugins |
+| Existing `Image.asset()` / `rootBundle.load()` calls pick up new bytes automatically | Removing assets that exist in the base APK |
+|  | `pubspec.yaml` font registration changes |
 
-Common settings:
-
-| Parameter | Default | Description |
-|---|---|---|
-| `maxCrashCount` | `1` | Number of consecutive failures before the patch is tripped |
-| `verifyAfter` | `5 seconds` | Window during which the post-first-frame Dart error hooks keep watching |
-
-Android 11+ uses `ApplicationExitInfo` to distinguish crashes, ANRs, user dismissal, and system reclaim more accurately.
-Android 10 and below have weaker signals; pair the SDK with your own crash monitoring and a server-side kill switch.
-
-The full design, Android version differences, blacklist semantics, and diagnostic states live in the [Crash protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html) doc.
+For edge cases (ProGuard/R8, multi-ABI/flavor, state migrations), see [API Reference](doc/api-reference.md#what-can-and-cannot-be-patched).
 
 ---
 
-## What can and cannot be patched
+## Safety
 
-A patch replaces the Dart AOT artifact `libapp.so` plus any Flutter asset files you opt into. Everything else — native code, the Flutter Engine, APK resources — must ship through a regular release.
+### Crash protection
 
-### Hot-patchable
+The plugin is fail-fast by default. If a patch causes a boot failure, it auto-rolls back and blacklists the offending version so it won't be retried. Configurable via `maxCrashCount` (default 1) and `verifyAfter` (default 5s).
 
-- Anything in `lib/` — widgets, business logic, state, routing, string constants
-- Pure-Dart third-party packages, as long as the native side is unchanged
-- Flutter asset files that satisfy **both** conditions:
-  1. registered under `assets:` in the new APK's `pubspec.yaml` (so Flutter actually compiles them into the APK)
-  2. listed in `--assets` when you run `pack` (so they end up inside `patch.zip`)
+Full design and Android version differences: [Crash protection docs](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html).
 
-  Code that already reads them via `Image.asset(...)` or `rootBundle.load(...)` picks up the new bytes on the next cold start, no app-side changes required.
+### Integrity & signing
 
-### Not hot-patchable
+- **MD5** verification is strongly recommended; omit only for quick testing
+- **Ed25519 signature** verification is available on Android 13+ (API 33)
+- Patches are bound to the host APK's `versionCode` — old patches expire after an APK upgrade
+- Always download over HTTPS; keep private keys on the server only
 
-- Native code: Kotlin / Java / C++, `AndroidManifest.xml`, APK `res/` resources, adding or modifying native plugins
-- Flutter Engine upgrades (a patched `libapp.so` is tied to the engine version baked into the APK)
-- Assets that aren't registered in the new APK's `pubspec.yaml`, or that are registered but you forgot to pass via `--assets` — these never end up in `patch.zip`
-- **Removing** an asset that exists in the base APK (the overlay can only replace bytes under an existing key, not delete it)
-- `pubspec.yaml` font registration changes — Flutter generates the font table at build time, so adding / removing / renaming a font family needs a real release
-- Anything a native plugin reads directly from the APK rather than through `AssetBundle` (our overlay doesn't sit in that path)
-
-### Evaluate carefully
-
-- **ProGuard / R8 changes**: a mismatched symbol map can make crash stacks unreadable
-- **Multi-ABI / multi-flavor**: the server must shard by `ABI × flavor × versionCode`
-- **Persisted state migrations** (Dart model serialization, DB schema, local cache format): both old and new code must read safely, since a rollback brings old code back against new-format data
-- **Font file replacements**: if you replace the bytes of an already-registered `.ttf` / `.otf`, verify the new glyphs render on a real device first; some platforms cache fonts aggressively
+Details: [Architecture → Security](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html).
 
 ---
 
-## Security
+## Production tips
 
-`flutter_patcher` provides basic integrity checks plus an optional signature mechanism.
+- **Stage your rollout** (1% → 5% → 20% → 50% → 100%) and monitor crash rate at each stage
+- **Report diagnostics** — send `FlutterPatcher.lastBootDiagnostic` to your analytics pipeline
+- **Prepare for emergency rollback** — stop returning the bad patch from your endpoint; devices that already tripped crash protection have rolled back locally
 
-- MD5 verification is strongly recommended; leave `PatchInfo.md5` empty only for quick testing or protocols that intentionally rely on HTTPS-level integrity
-- Optional Ed25519 signature verification is available on Android 13 / API 33+. On lower Android versions, signed patches are rejected by default (`strictSignature: true`); use `strictSignature: false` only if you accept the MD5 + HTTPS fallback
-- Because the signed message is the md5 hex string, signatures are only checked when `md5` is present
-- Keep the private key on the server or build environment only — never in the client repo
-- A patch is strongly bound to the host APK's `versionCode`, so old patches expire after an APK upgrade
-- Always download patches over HTTPS
-- The server should record patch version, MD5/signature when used, target `versionCode`, and release time
-
-For signature generation, `strictSignature` behavior, and the server protocol, see [Architecture](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html).
-
----
-
-## Production recommendations
-
-### 1. Stage the rollout
-
-Don't ship a patch to 100% on day one. A typical ramp:
-
-```text
-1% → 5% → 20% → 50% → 100%
-```
-
-Watch crash rate, boot failure rate, and the key business metrics at each stage.
-
-### 2. Report boot diagnostics
-
-Report `lastBootDiagnostic`:
-
-```dart
-final diag = await FlutterPatcher.lastBootDiagnostic;
-
-if (diag != null && !diag.isHealthy) {
-  // Replace with your analytics SDK: Firebase Analytics / Sentry / your own pipeline.
-  analytics.report('patch_dropped', {
-    'status': diag.status.name,
-    'patch_version': diag.patchVersion,
-    'crash_count': diag.crashCount,
-    'message': diag.message,
-  });
-}
-```
-
-If the same patch triggers `droppedCircuitBreaker` repeatedly in a short window, the server should automatically stop delivering it.
-
-### 3. Keep release records
-
-Track each patch with at least:
-
-- Patch version
-- Target APK `versionCode`
-- ABI
-- Flavor
-- MD5, if shipped
-- Signature, if shipped
-- Release time
-- Rollout percentage
-- Current state: ramping, full, or rolled back
-
-### 4. Plan for emergency rollback
-
-An emergency rollback only requires the update endpoint to stop returning the offending patch version.
-Devices that already tripped crash protection have rolled back locally and will refuse to apply the same problematic patch again.
+For a detailed production playbook with diagnostic reporting code and release record templates, see [Production Playbook](doc/production-playbook.md).
 
 ---
 
 ## FAQ
 
-### Q: Must the patch and base APK use the same Flutter version?
+**Must the patch and base APK use the same Flutter version?**
+Yes. `libapp.so` is tightly coupled to the Flutter Engine. After upgrading the SDK, ship a new release.
 
-A: Yes. `libapp.so` is tightly coupled to the Flutter Engine and Dart runtime. Different Flutter versions cannot safely load each other's `libapp.so`. After upgrading the Flutter SDK or Engine, you must ship a new release.
+**Why doesn't a patch take effect immediately?**
+Once `libapp.so` is loaded by the current process, it can't be swapped at runtime. The patch is written to disk and loaded on the next cold start.
 
-### Q: A user skipped intermediate patch versions and just got the latest one — what happens?
+**Why does each patch need a `targetVersionCode`?**
+To prevent old patches from loading after an APK upgrade, and to prevent the server from shipping patches to incompatible builds.
 
-A: Each patch is a complete `libapp.so` and does not depend on previous patches. Users can jump straight from "no patch" or an old patch to the latest one.
-
-### Q: How do I iterate quickly during development without uploading to a CDN?
-
-A: For the offline flow, run the sample app from the [5-minute walkthrough](#5-minute-walkthrough). For HTTP testing, use the bundled mock server from [Local mock server](#local-mock-server):
-
-```bash
-dart run flutter_patcher:pack \
-  --apk path/to/app-release.apk \
-  --version dev-1 \
-  --target-version-code 1
-
-dart run flutter_patcher:mock_server --dist dist --port 8080
-```
-
-Then set the client `patchUrl` to:
-
-```text
-http://<your-machine-ip>:8080/patch.zip
-```
-
-### Q: How do I handle multiple ABIs?
-
-A: The server must distribute a `patch.zip` per ABI (each patch embeds one `lib/<abi>/libapp.so`). The client can read the current device ABI via `FlutterPatcher.deviceAbi` and include it in your update request.
-
-### Q: How do I handle multiple flavors?
-
-A: The server should track patches by `flavor × ABI × versionCode`. Different flavors typically have different configs, package names, resources, and business logic — never share a patch across flavors.
-
-### Q: Do I need to tweak ProGuard / R8 rules?
-
-A: Usually no. The plugin's reflection targets non-obfuscated Flutter Engine classes and is unaffected by your business obfuscation.
-
-### Q: Can a patch be revoked?
-
-A: Yes. On the client, `FlutterPatcher.rollback()` deletes the current patch. On the server, simply stop returning that version from your update endpoint and new users will not download it.
-
-### Q: Why doesn't a patch take effect immediately?
-
-A: Once the current process has loaded `libapp.so`, it can't be safely swapped at runtime. To stay safe, the patch is written to disk and loaded on the next cold start.
-
-### Q: Why does each patch need a `targetVersionCode`?
-
-A: A patch is only valid against the base APK it was built for. Binding `targetVersionCode` prevents loading old patches after an APK upgrade and prevents the server from accidentally shipping a patch to incompatible builds.
+More questions: [Full FAQ](doc/faq.md)
 
 ---
 
 ## Documentation
 
-- [API reference](https://pub.dev/documentation/flutter_patcher/latest/topics/API-reference-topic.html) — init, check-update, apply, rollback, diagnostics, error codes, and CLI flags
-- [Crash protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html) — crash protection, auto-rollback, blacklist, Android version differences, and diagnostic states
-- [Architecture](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html) — internals, self-hosted server protocol, signing, and advanced configuration
+- [API Reference](https://pub.dev/documentation/flutter_patcher/latest/topics/API-reference-topic.html) — init, check-update, apply, rollback, diagnostics, error codes, CLI flags
+- [Crash Protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html) — auto-rollback, blacklist, Android version differences
+- [Architecture](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html) — internals, server protocol, signing, advanced config
+- [Getting Started](doc/getting-started.md) — mock server, multi-ABI setup, step-by-step guides
+- [Production Playbook](doc/production-playbook.md) — staged rollout, diagnostics, emergency rollback
+- [FAQ](doc/faq.md) — common questions about versioning, cold start, and store policy
 
 中文文档：[README-zh.md](README-zh.md) · [doc/api-reference-zh.md](doc/api-reference-zh.md) · [doc/architecture-zh.md](doc/architecture-zh.md) · [doc/crash-protection-zh.md](doc/crash-protection-zh.md)
+
+---
+
+## Who's using it?
+
+If you run flutter_patcher in production, [open an issue](https://github.com/xuelinger2333/flutter_patcher/issues) and tell us about your use case — we'd love to list you here.
 
 ---
 

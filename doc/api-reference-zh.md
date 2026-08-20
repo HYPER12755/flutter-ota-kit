@@ -567,16 +567,7 @@ assets/<asset-path>    # 覆盖字节，每个 path（及每个分辨率变体�
 
 ### 支持范围
 
-| 维度             | 要求                                     |
-| -------------- | -------------------------------------- |
-| 平台             | Android                                |
-| Android minSdk | 24                                     |
-| Flutter        | `>=3.3.0`；loader hook verified on 3.19 ~ 3.38 |
-| ABI            | `armeabi-v7a` / `arm64-v8a` / `x86_64` |
-| NDK            | 27.0.12077973+                         |
-| AGP            | 8.11.1+                                |
-| Kotlin         | 2.2.20+                                |
-| Java / JVM     | 17                                     |
+完整兼容性表格见 [环境要求](../README-zh.md#环境要求)。
 
 非 Android 平台调用 API 时会 no-op：首次调用打印 warning，随后返回安全默认值，不抛异常。
 

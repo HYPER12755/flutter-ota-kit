@@ -14,8 +14,8 @@
   KGP is applied, `kotlin { compilerOptions }` under built-in Kotlin.
 
   The switch is built-in Kotlin, not the AGP major version. AGP 9 hosts
-  that opt out with `android.builtInKotlin=false` — the default the Flutter
-  3.44 template generates — still need the plugin to bring its own KGP,
+  that opt out with `android.builtInKotlin=false` (the default the Flutter
+  3.44 template generates) still need the plugin to bring its own KGP,
   exactly like AGP 8 hosts, and keep the previous code path unchanged.
 
   This is a build-time only change, with no runtime behavior change.
@@ -73,7 +73,7 @@
 
 ### Compatibility
 
-- Bare-`.so` patches produced by 0.1.0–0.1.2 still install on 0.1.3
+- Bare-`.so` patches produced by 0.1.0-0.1.2 still install on 0.1.3
   devices (the runtime keeps a quiet legacy install path); the producer
   CLI no longer emits that format. Server operators should ship
   `patch.zip` for any new patch built against a 0.1.3+ host APK.

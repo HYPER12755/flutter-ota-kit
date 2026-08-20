@@ -564,16 +564,7 @@ If validation fails, or the in-process crash guard trips, the patch is dropped a
 
 ### Supported range
 
-| Dimension | Requirement |
-| --- | --- |
-| Platform | Android |
-| Android `minSdk` | 24 |
-| Flutter | `>=3.3.0`; loader hook verified on 3.19 ~ 3.38 |
-| ABI | `armeabi-v7a` / `arm64-v8a` / `x86_64` |
-| NDK | 27.0.12077973+ |
-| AGP | 8.11.1+ |
-| Kotlin | 2.2.20+ |
-| Java / JVM | 17 |
+See [Requirements](../README.md#requirements) for the full compatibility table.
 
 On non-Android platforms every API is a no-op: a one-time warning is logged and safe defaults are returned. No exceptions are thrown.
 

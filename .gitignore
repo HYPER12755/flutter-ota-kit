@@ -35,3 +35,8 @@ migrate_working_dir/
 /build/
 /coverage/
 /dist/
+
+# Workspace scratch space (repro projects, e2e harness output, build artifacts).
+# Already excluded from the published tarball via .pubignore.
+/temp/
+/plan/
