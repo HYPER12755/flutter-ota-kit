@@ -1,5 +1,44 @@
 > Chinese version: [CHANGELOG-zh.md](CHANGELOG-zh.md)
 
+## 0.1.4
+
+### Fixed
+
+- Fixed the Android build failing on host apps that use AGP 9 built-in
+  Kotlin, with `Failed to apply plugin 'kotlin-android'` followed by
+  `project ':flutter_patcher' does not specify compileSdk`. This affects
+  projects created with or migrated to Flutter 3.44, which ship AGP 9.
+  `android/build.gradle` now checks whether built-in Kotlin is actually
+  active on the host and applies the Kotlin Gradle Plugin, plus the
+  matching jvmTarget DSL, only where that DSL exists: `kotlinOptions` when
+  KGP is applied, `kotlin { compilerOptions }` under built-in Kotlin.
+
+  The switch is built-in Kotlin, not the AGP major version. AGP 9 hosts
+  that opt out with `android.builtInKotlin=false` — the default the Flutter
+  3.44 template generates — still need the plugin to bring its own KGP,
+  exactly like AGP 8 hosts, and keep the previous code path unchanged.
+
+  This is a build-time only change, with no runtime behavior change.
+  Patches remain fully compatible: payloads produced by or for 0.1.3
+  install and boot identically on 0.1.4, and no repack is required.
+
+- No change to the minimum supported Flutter or AGP version. Existing
+  hosts on AGP 8 build exactly as before.
+
+### Known issues
+
+- On AGP 9 hosts, Flutter still prints `WARNING: Your app uses the
+  following plugins that apply Kotlin Gradle Plugin (KGP):
+  flutter_patcher`. The Flutter Gradle Plugin decides this by text-matching
+  `android/build.gradle`, so it cannot see that the `apply plugin` line is
+  guarded. The warning is safe to ignore, and the literal has to stay:
+  when the Flutter Gradle Plugin finds no KGP declaration in a plugin, it
+  applies `kotlin-android` to that plugin itself, which fails the build
+  under built-in Kotlin.
+- Flutter 3.44's own Gradle plugin does not support `android.newDsl=true`
+  and fails to apply before any plugin is evaluated. Keep the template
+  default `android.newDsl=false`.
+
 ## 0.1.3
 
 ### Added

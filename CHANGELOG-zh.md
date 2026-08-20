@@ -2,6 +2,40 @@
 
 [English](CHANGELOG.md) | **简体中文**
 
+## 0.1.4
+
+### Fixed
+
+- 修复宿主 App 启用 AGP 9 内置 Kotlin 时 Android 构建失败的问题，报错为
+  `Failed to apply plugin 'kotlin-android'`，随后是
+  `project ':flutter_patcher' does not specify compileSdk`。用 Flutter
+  3.44 新建或迁移过来的项目会带上 AGP 9，因而受影响。
+  `android/build.gradle` 现在会判断宿主是否真的启用了内置 Kotlin，只在
+  确实存在对应 DSL 的一侧应用 Kotlin Gradle Plugin 及 jvmTarget 配置：
+  应用了 KGP 时用 `kotlinOptions`，内置 Kotlin 下用
+  `kotlin { compilerOptions }`。
+
+  判据是内置 Kotlin 是否生效，而不是 AGP 主版本号。AGP 9 宿主若用
+  `android.builtInKotlin=false` 关掉内置 Kotlin（Flutter 3.44 模板生成的
+  就是这个默认值），插件仍需自带 KGP，与 AGP 8 宿主完全一致，走的还是
+  原来那条路径。
+
+  本次改动仅影响构建期，不改变任何运行时行为。补丁完全兼容：为 0.1.3
+  产出的 payload 在 0.1.4 上安装与启动的行为完全一致，无需重新打包。
+
+- 最低支持的 Flutter 与 AGP 版本没有变化。AGP 8 宿主的构建与此前完全相同。
+
+### Known issues
+
+- AGP 9 宿主下 Flutter 仍会打印 `WARNING: Your app uses the following
+  plugins that apply Kotlin Gradle Plugin (KGP): flutter_patcher`。Flutter
+  Gradle Plugin 靠文本匹配 `android/build.gradle` 来判断，看不到那行
+  `apply plugin` 已经被条件包住。该警告可以忽略，并且这行字面量必须保留：
+  Flutter Gradle Plugin 一旦在某个插件里匹配不到 KGP 声明，就会自己给该
+  插件应用 `kotlin-android`，在内置 Kotlin 下会直接构建失败。
+- Flutter 3.44 自带的 Gradle plugin 不支持 `android.newDsl=true`，会在任何
+  插件被求值之前就应用失败。请保持模板默认的 `android.newDsl=false`。
+
 ## 0.1.3
 
 ### Added
