@@ -1,0 +1,37 @@
+name: flutter_patcher_cli
+description: >-
+  Command-line interface for flutter_patcher (a hot-updater compatible OTA code
+  push tool for Flutter). Deploy bundles, manage channels/rollbacks, run
+  migrations, and inspect the backend — mirroring the `hot-updater` CLI UX.
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  args: '>=2.4.0 <3.0.0'
+  crypto: '>=3.0.3 <4.0.0'
+  path: ^1.9.0
+  archive: '>=3.4.10 <5.0.0'
+  collection: ^1.18.0
+  cryptography: ^2.7.0
+  postgres: ^3.4.0
+  flutter_patcher_core:
+    path: ../core
+  flutter_patcher_plugin_core:
+    path: ../../plugins/plugin-core
+  flutter_patcher_supabase:
+    path: ../../plugins/supabase
+  flutter_patcher_postgres:
+    path: ../../plugins/postgres
+  flutter_patcher_cloudflare:
+    path: ../../plugins/cloudflare
+  flutter_patcher_aws:
+    path: ../../plugins/aws
+  flutter_patcher_standalone:
+    path: ../../plugins/standalone
+
+dev_dependencies:
+  test: ^1.25.0
+  http: ^1.2.0

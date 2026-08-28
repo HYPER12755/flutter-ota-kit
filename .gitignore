@@ -40,3 +40,6 @@ migrate_working_dir/
 # Already excluded from the published tarball via .pubignore.
 /temp/
 /plan/
+
+# local OTA test artifacts
+.ota/

@@ -10,10 +10,15 @@ import 'src/boot_diagnostic.dart';
 import 'src/io_stub.dart' if (dart.library.io) 'src/io.dart' as platform_io;
 import 'src/patch_info.dart';
 import 'src/patcher_channel.dart';
+import 'package:flutter_patcher_client/flutter_patcher_client.dart'
+    show ServerUpdateConfig, ServerUpdateResult, ServerUpdateSource;
 
 export 'src/blacklist.dart';
 export 'src/boot_diagnostic.dart';
 export 'src/patch_info.dart';
+export 'package:flutter_patcher_client/flutter_patcher_client.dart';
+export 'package:flutter_patcher_core/flutter_patcher_core.dart'
+    show Platform, UpdateStrategy;
 
 /// Android-only Flutter hot-update entrypoint.
 ///
@@ -40,6 +45,7 @@ class FlutterPatcher {
   FlutterPatcher._();
 
   static bool _inited = false;
+  static ServerUpdateConfig? _serverConfig;
   static bool _bootReported = false;
   static bool _bootErrorReported = false;
   static bool _nonAndroidWarned = false;
@@ -180,6 +186,47 @@ class FlutterPatcher {
       _log('checkUpdate failed: $e', s);
       throw PatcherException(e.toString());
     }
+  }
+
+  /// Configures the built-in server-backed update source.
+  ///
+  /// After calling this, [checkForUpdate] performs a hot-updater-compatible
+  /// update check against the configured server (which is itself backed by any
+  /// database/storage plugin — Supabase, Postgres, Cloudflare, AWS, ...).
+  ///
+  /// ```dart
+  /// FlutterPatcher.configureServer(ServerUpdateConfig(
+  ///   baseUrl: 'https://patches.example.com',
+  ///   channel: 'production',
+  ///   platform: Platform.android,
+  ///   updateStrategy: UpdateStrategy.fingerprint,
+  ///   fingerprintHash: kBuildFingerprintHash, // baked at build time
+  /// ));
+  /// ```
+  static void configureServer(ServerUpdateConfig config) {
+    _serverConfig = config;
+  }
+
+  /// Performs a server-backed update check using the config from
+  /// [configureServer].
+  ///
+  /// Returns a [ServerUpdateResult]; when [ServerUpdateResult.hasUpdate] is
+  /// true, install it with `FlutterPatcher.applyPatch(result.patch!)`.
+  static Future<ServerUpdateResult> checkForUpdate({
+    Duration timeout = const Duration(seconds: 10),
+  }) async {
+    final config = _serverConfig;
+    if (config == null) {
+      throw PatcherException(
+        'Server not configured. Call FlutterPatcher.configureServer(...) first.',
+      );
+    }
+    final currentBundleId = await currentVersion;
+    return ServerUpdateSource().check(
+      config,
+      currentBundleId: currentBundleId,
+      timeout: timeout,
+    );
   }
 
   /// Downloads, verifies, and installs [patchInfo]'s payload.

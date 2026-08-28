@@ -1,0 +1,20 @@
+name: flutter_patcher_cloudflare
+description: Cloudflare D1 + R2 storage plugins for flutter_patcher (faithful port of hot-updater plugins/cloudflare).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter_patcher_core:
+    path: ../../packages/core
+  flutter_patcher_plugin_core:
+    path: ../../plugins/plugin-core
+  crypto: ^3.0.0
+  http: ^1.2.0
+  path: ^1.9.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^4.0.0

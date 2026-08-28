@@ -1,0 +1,22 @@
+name: flutter_patcher_server
+description: Shelf HTTP server for flutter_patcher update-check + bundle management (faithful port of hot-updater packages/server).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter_patcher_core:
+    path: ../../packages/core
+  flutter_patcher_plugin_core:
+    path: ../../plugins/plugin-core
+  shelf: ^1.4.0
+
+dev_dependencies:
+  flutter_patcher_cloudflare:
+    path: ../../plugins/cloudflare
+  flutter_patcher_standalone:
+    path: ../../plugins/standalone
+  test: ^1.25.0
+  lints: ^4.0.0

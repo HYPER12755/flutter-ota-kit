@@ -1,0 +1,32 @@
+{
+  "mcpServers": {
+    "firebase": {
+      "command": "npx",
+      "args": [
+        "-y",
+        "firebase-tools@latest",
+        "experimental:mcp"
+      ]
+    }
+  },
+  "enabledTools": {
+    "firebase": [
+      "firebase_login",
+      "firebase_logout",
+      "firebase_get_project",
+      "firebase_list_apps",
+      "firebase_list_projects",
+      "firebase_get_sdk_config",
+      "firebase_create_project",
+      "firebase_create_app",
+      "firebase_create_android_sha",
+      "firebase_get_environment",
+      "firebase_update_environment",
+      "firebase_get_security_rules",
+      "firebase_read_resources",
+      "developerknowledge_search_documents",
+      "developerknowledge_answer_query",
+      "developerknowledge_get_documents"
+    ]
+  }
+}

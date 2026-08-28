@@ -12,6 +12,9 @@ pluginManagement {
 
     repositories {
         google()
+        // Mirror of Maven Central; repo.maven.apache.org 403s from this
+        // workstation's IP.
+        maven("https://maven-central.storage-download.googleapis.com/maven2/")
         mavenCentral()
         gradlePluginPortal()
     }

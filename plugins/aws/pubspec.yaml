@@ -1,0 +1,22 @@
+name: flutter_patcher_aws
+description: AWS S3 storage + S3/DynamoDB database plugins for flutter_patcher (faithful port of hot-updater plugins/aws).
+version: 0.1.0
+publish_to: none
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter_patcher_core:
+    path: ../../packages/core
+  flutter_patcher_plugin_core:
+    path: ../../plugins/plugin-core
+  crypto: ^3.0.0
+  http: ^1.2.0
+  path: ^1.9.0
+  pointycastle: ^3.9.1
+  asn1lib: ^1.5.4
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^4.0.0

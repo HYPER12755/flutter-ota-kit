@@ -1,0 +1,15 @@
+name: flutter_patcher_plugin_core
+description: Plugin core abstractions for flutter_patcher — database, storage, and build interfaces.
+version: 0.0.1
+
+environment:
+  sdk: ">=3.3.0 <4.0.0"
+
+dependencies:
+  flutter_patcher_core:
+    path: ../../packages/core
+  mime: ^1.0.0
+
+dev_dependencies:
+  test: ^1.25.0
+  lints: ^5.1.0

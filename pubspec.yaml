@@ -20,11 +20,20 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_patcher_core:
+    path: packages/core
+  flutter_patcher_client:
+    path: packages/client
   plugin_platform_interface: '>=2.0.2 <3.0.0'
   # `dart run flutter_patcher:pack` CLI 依赖 —— 运行时 app 里都会被 tree-shake 掉
   archive: '>=3.4.10 <5.0.0'
   args: '>=2.4.0 <3.0.0'
   crypto: '>=3.0.3 <4.0.0'
+  # `bin/pack.dart` executable depends on the CLI library (kept in
+  # `dependencies`, not `dev_dependencies`, so the lint
+  # `depend_on_referenced_packages` stays quiet for the bin/ entrypoint).
+  flutter_patcher_cli:
+    path: packages/cli-tools
 
 dev_dependencies:
   flutter_test:

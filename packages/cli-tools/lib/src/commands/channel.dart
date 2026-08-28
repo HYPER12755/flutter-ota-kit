@@ -1,0 +1,140 @@
+import 'dart:io';
+
+import 'package:args/args.dart';
+import 'package:args/command_runner.dart';
+
+import '../backend.dart';
+import '../cli_base.dart';
+import '../config.dart';
+import '../operations.dart';
+
+/// `flutter_patcher channel` — manage channels.
+class ChannelCommand extends Command<int> {
+  final FlutterPatcherConfig? config;
+  final Backend? backendOverride;
+
+  ChannelCommand({this.config, this.backendOverride}) {
+    addSubcommand(ChannelListCommand(config: config, backendOverride: backendOverride));
+    addSubcommand(ChannelGetCommand(config: config, backendOverride: backendOverride));
+    addSubcommand(ChannelSetCommand(config: config, backendOverride: backendOverride));
+  }
+
+  @override
+  String get name => 'channel';
+
+  @override
+  String get description => 'Manage channels (list / get / set).';
+
+  @override
+  Future<int> run() => runGuarded(() async {
+        print(description);
+        print('');
+        print('Subcommands:');
+        print('  list              List channels');
+        print('  get <channel>     Show the live bundle for a channel');
+        print('  set <c> <id>      Promote a bundle to a channel');
+      });
+}
+
+class ChannelListCommand extends Command<int> {
+  ChannelListCommand({this.config, this.backendOverride});
+
+  final FlutterPatcherConfig? config;
+  final Backend? backendOverride;
+
+  @override
+  String get name => 'list';
+
+  @override
+  String get description => 'List channels.';
+
+  @override
+  ArgParser get argParser => ArgParser()
+    ..addOption('backend', abbr: 'b', help: 'Backend provider.');
+
+  @override
+  Future<int> run() => runGuarded(() async {
+        final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
+        final backend = requireBackend(cfg, override: backendOverride);
+        final channels = await listChannels(backend);
+        if (channels.isEmpty) {
+          stdout.writeln('(no channels)');
+          return;
+        }
+        for (final c in channels) {
+          stdout.writeln('  $c');
+        }
+      });
+}
+
+class ChannelGetCommand extends Command<int> {
+  ChannelGetCommand({this.config, this.backendOverride});
+
+  final FlutterPatcherConfig? config;
+  final Backend? backendOverride;
+
+  @override
+  String get name => 'get';
+
+  @override
+  String get description => 'Show the live (enabled) bundle for a channel.';
+
+  @override
+  ArgParser get argParser => ArgParser()
+    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
+    ..addOption('channel', help: 'Channel.');
+
+  @override
+  Future<int> run() => runGuarded(() async {
+        final channel = argResults!['channel'] as String?;
+        if (channel == null || channel.isEmpty) {
+          throw StateError('Usage: flutter_patcher channel get <channel>');
+        }
+        final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
+        final backend = requireBackend(cfg, override: backendOverride);
+        final bundle = await getChannel(backend, channel);
+        if (bundle == null) {
+          stdout.writeln('(no live bundle on channel "$channel")');
+          return;
+        }
+        stdout.writeln('channel "$channel" -> bundle ${bundle.id} '
+            '(${bundle.platform.value})');
+      });
+}
+
+class ChannelSetCommand extends Command<int> {
+  ChannelSetCommand({this.config, this.backendOverride});
+
+  final FlutterPatcherConfig? config;
+  final Backend? backendOverride;
+
+  @override
+  String get name => 'set';
+
+  @override
+  String get description => 'Promote a bundle to a channel.';
+
+  @override
+  ArgParser get argParser => ArgParser()
+    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
+    ..addOption('channel', help: 'Channel.')
+    ..addOption('bundle-id', help: 'Bundle id.');
+
+  @override
+  Future<int> run() => runGuarded(() async {
+        final channel = argResults!['channel'] as String?;
+        final bundleId = argResults!['bundle-id'] as String?;
+        if (channel == null ||
+            channel.isEmpty ||
+            bundleId == null ||
+            bundleId.isEmpty) {
+          throw StateError(
+            'Usage: flutter_patcher channel set --channel <c> --bundle-id <id>',
+          );
+        }
+        final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
+        final backend = requireBackend(cfg, override: backendOverride);
+        await promoteBundle(backend, bundleId, channel);
+        stdout.writeln('Channel "$channel" -> bundle $bundleId');
+      });
+}
