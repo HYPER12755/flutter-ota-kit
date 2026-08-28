@@ -1,13 +1,12 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:args/command_runner.dart';
 
 import '../cli_base.dart';
 import '../util.dart';
 
 /// `flutter_patcher fingerprint` — compute a build-time fingerprint hash.
-class FingerprintCommand extends Command<int> {
+class FingerprintCommand extends FlutterPatcherCommand {
   @override
   String get name => 'fingerprint';
 

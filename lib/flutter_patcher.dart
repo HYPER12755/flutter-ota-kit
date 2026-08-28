@@ -12,10 +12,24 @@ import 'src/patch_info.dart';
 import 'src/patcher_channel.dart';
 import 'package:flutter_patcher_client/flutter_patcher_client.dart'
     show ServerUpdateConfig, ServerUpdateResult, ServerUpdateSource;
+import 'src/supabase_update_source.dart'
+    show SupabaseUpdateConfig, SupabaseUpdateSource;
+import 'src/postgres_update_source.dart'
+    show PostgresUpdateConfig, PostgresUpdateSource;
+import 'src/cloudflare_update_source.dart'
+    show CloudflareUpdateConfig, CloudflareUpdateSource;
+import 'src/aws_update_source.dart' show AwsUpdateConfig, AwsUpdateSource;
 
 export 'src/blacklist.dart';
 export 'src/boot_diagnostic.dart';
 export 'src/patch_info.dart';
+export 'src/supabase_update_source.dart'
+    show SupabaseUpdateConfig, SupabaseUpdateSource;
+export 'src/postgres_update_source.dart'
+    show PostgresUpdateConfig, PostgresUpdateSource;
+export 'src/cloudflare_update_source.dart'
+    show CloudflareUpdateConfig, CloudflareUpdateSource;
+export 'src/aws_update_source.dart' show AwsUpdateConfig, AwsUpdateSource;
 export 'package:flutter_patcher_client/flutter_patcher_client.dart';
 export 'package:flutter_patcher_core/flutter_patcher_core.dart'
     show Platform, UpdateStrategy;
@@ -46,6 +60,10 @@ class FlutterPatcher {
 
   static bool _inited = false;
   static ServerUpdateConfig? _serverConfig;
+  static SupabaseUpdateConfig? _supabaseConfig;
+  static PostgresUpdateConfig? _postgresConfig;
+  static CloudflareUpdateConfig? _cloudflareConfig;
+  static AwsUpdateConfig? _awsConfig;
   static bool _bootReported = false;
   static bool _bootErrorReported = false;
   static bool _nonAndroidWarned = false;
@@ -207,6 +225,53 @@ class FlutterPatcher {
     _serverConfig = config;
   }
 
+  /// Configures the hosted **Supabase** update source.
+  ///
+  /// Unlike [configureServer], this talks to the Supabase project directly over
+  /// its REST API (PostgREST `bundles` table + Storage signed URLs) — no
+  /// separate server process is required, because Supabase *is* the backend.
+  ///
+  /// ```dart
+  /// FlutterPatcher.configureSupabase(SupabaseUpdateConfig(
+  ///   supabaseUrl: 'https://<ref>.supabase.co',
+  ///   anonKey: '<anon>',          // public anon key (RLS-protected reads)
+  ///   bucket: 'bundles',
+  ///   channel: 'production',
+  ///   platform: Platform.android,
+  ///   updateStrategy: UpdateStrategy.appVersion,
+  ///   appVersion: '1.0.0',
+  /// ));
+  /// ```
+  static void configureSupabase(SupabaseUpdateConfig config) {
+    _supabaseConfig = config;
+  }
+
+  /// Configures the **Postgres** update source (direct, no server).
+  ///
+  /// Talks to a Postgres database for bundle metadata and the bytea-backed
+  /// storage plugin for artifacts. For HTTP downloads, provide [PostgresUpdateConfig.servingBaseUrl]
+  /// (a proxy in front of the `flutter_patcher_storage` table) or use a PostgREST
+  /// layer. See `flutter_patcher_postgres` for the backend plugin used by the CLI.
+  static void configurePostgres(PostgresUpdateConfig config) {
+    _postgresConfig = config;
+  }
+
+  /// Configures the **Cloudflare** update source (direct, no server).
+  ///
+  /// Uses Cloudflare D1 for bundle metadata and R2 (S3-compatible) for artifact
+  /// storage. Presigned R2 download URLs are resolved on the device.
+  static void configureCloudflare(CloudflareUpdateConfig config) {
+    _cloudflareConfig = config;
+  }
+
+  /// Configures the **AWS S3** update source (direct, no server).
+  ///
+  /// Uses an S3-backed blob database for bundle metadata and S3 (presigned URLs,
+  /// optionally fronted by CloudFront) for artifact storage.
+  static void configureAws(AwsUpdateConfig config) {
+    _awsConfig = config;
+  }
+
   /// Performs a server-backed update check using the config from
   /// [configureServer].
   ///
@@ -215,13 +280,44 @@ class FlutterPatcher {
   static Future<ServerUpdateResult> checkForUpdate({
     Duration timeout = const Duration(seconds: 10),
   }) async {
+    final currentBundleId = await currentVersion;
+
+    final supabaseConfig = _supabaseConfig;
+    if (supabaseConfig != null) {
+      return SupabaseUpdateSource().check(
+        supabaseConfig,
+        currentBundleId: currentBundleId,
+      );
+    }
+    final postgresConfig = _postgresConfig;
+    if (postgresConfig != null) {
+      return PostgresUpdateSource().check(
+        postgresConfig,
+        currentBundleId: currentBundleId,
+      );
+    }
+    final cloudflareConfig = _cloudflareConfig;
+    if (cloudflareConfig != null) {
+      return CloudflareUpdateSource().check(
+        cloudflareConfig,
+        currentBundleId: currentBundleId,
+      );
+    }
+    final awsConfig = _awsConfig;
+    if (awsConfig != null) {
+      return AwsUpdateSource().check(
+        awsConfig,
+        currentBundleId: currentBundleId,
+      );
+    }
     final config = _serverConfig;
     if (config == null) {
       throw PatcherException(
-        'Server not configured. Call FlutterPatcher.configureServer(...) first.',
+        'No update source configured. Call FlutterPatcher.configureServer(...), '
+        'configureSupabase(...), configurePostgres(...), configureCloudflare(...), '
+        'or configureAws(...) first.',
       );
     }
-    final currentBundleId = await currentVersion;
     return ServerUpdateSource().check(
       config,
       currentBundleId: currentBundleId,

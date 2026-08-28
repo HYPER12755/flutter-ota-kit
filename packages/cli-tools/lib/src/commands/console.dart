@@ -1,13 +1,13 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:args/command_runner.dart';
+import 'package:flutter_patcher_cli/flutter_patcher_cli.dart';
 import 'package:path/path.dart' as p;
 
-import '../cli_base.dart';
+import '../ui/ui.dart';
 
 /// `flutter_patcher console` — open the web console.
-class ConsoleCommand extends Command<int> {
+class ConsoleCommand extends FlutterPatcherCommand {
   @override
   String get name => 'console';
 
@@ -33,11 +33,11 @@ class ConsoleCommand extends Command<int> {
   Future<int> run() => runGuarded(() async {
         final consoleDir = _findConsoleDir();
         if (consoleDir == null) {
-          stdout.writeln('Console package not found (expected packages/console).');
+          err('Console package not found (expected packages/console).');
           return;
         }
         if (argResults!['open'] as bool) {
-          stdout.writeln('Launching console...');
+          step('Launching console...');
           final process = await Process.start(
             'flutter',
             ['run', '-d', 'chrome'],
@@ -48,8 +48,12 @@ class ConsoleCommand extends Command<int> {
           exitCode = await process.exitCode;
           return;
         }
-        stdout.writeln('flutter_patcher web console:');
-        stdout.writeln('  cd ${consoleDir.path}');
-        stdout.writeln('  flutter run -d chrome');
+        banner('console');
+        box('flutter_patcher console', [
+          'Open the web console with Flutter:',
+          '',
+          kv('dir', consoleDir.path),
+          kv('run', 'flutter run -d chrome'),
+        ]);
       });
 }

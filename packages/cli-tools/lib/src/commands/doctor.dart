@@ -1,14 +1,12 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:args/command_runner.dart';
+import 'package:flutter_patcher_cli/flutter_patcher_cli.dart';
 
-import '../backend.dart';
-import '../cli_base.dart';
-import '../config.dart';
+import '../ui/ui.dart';
 
 /// `flutter_patcher doctor` — environment + backend connectivity check.
-class DoctorCommand extends Command<int> {
+class DoctorCommand extends FlutterPatcherCommand {
   DoctorCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -18,7 +16,8 @@ class DoctorCommand extends Command<int> {
   String get name => 'doctor';
 
   @override
-  String get description => 'Diagnose the local environment and backend connection.';
+  String get description =>
+      'Diagnose the local environment and backend connection.';
 
   @override
   ArgParser get argParser => ArgParser()
@@ -26,23 +25,32 @@ class DoctorCommand extends Command<int> {
 
   @override
   Future<int> run() => runGuarded(() async {
-        stdout.writeln('flutter_patcher CLI doctor');
-        stdout.writeln('  dart:   ${Platform.version.split(' ').first}');
-        stdout.writeln('  os:     ${Platform.operatingSystem} '
-            '${Platform.operatingSystemVersion.split('\n').first}');
+        banner('doctor');
+        final lines = <String>[
+          kv('dart', Platform.version.split(' ').first),
+          kv(
+            'os',
+            '${Platform.operatingSystem} '
+            '${Platform.operatingSystemVersion.split('\n').first}',
+          ),
+        ];
         final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
         if (cfg == null) {
-          stdout.writeln('  config: not found (run `flutter_patcher init`)');
+          lines.add(kv('config', yellow('not found — run `flutter_patcher init`')));
+          box('doctor', lines);
           return;
         }
-        stdout.writeln('  config: provider=${cfg.provider} '
-            'channel=${cfg.channel} platform=${cfg.platform}');
+        lines
+          ..add(kv('provider', cfg.provider))
+          ..add(kv('channel', cfg.channel))
+          ..add(kv('platform', cfg.platform));
         try {
           final backend = requireBackend(cfg, override: backendOverride);
           final channels = await backend.db.getChannels();
-          stdout.writeln('  backend: reachable (channels: ${channels.join(', ')})');
+          lines.add(kv('backend', green('reachable — ${channels.join(', ')}')));
         } catch (e) {
-          stdout.writeln('  backend: unreachable — $e');
+          lines.add(kv('backend', red('unreachable — $e')));
         }
+        box('doctor', lines);
       });
 }

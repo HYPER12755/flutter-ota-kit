@@ -1,16 +1,15 @@
 import 'dart:convert';
-import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:args/command_runner.dart';
 
 import '../backend.dart';
 import '../cli_base.dart';
 import '../config.dart';
 import '../sign.dart';
+import '../ui/ui.dart';
 
 /// `flutter_patcher keys` — generate an Ed25519 keypair for bundle signing.
-class KeysCommand extends Command<int> {
+class KeysCommand extends FlutterPatcherCommand {
   KeysCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -29,12 +28,19 @@ class KeysCommand extends Command<int> {
 
   @override
   Future<int> run() => runGuarded(() async {
-        final (privateB64, publicB64) = await generateEd25519KeyPair();
-        stdout.writeln('Private key (keep secret, use with `deploy --key`):');
-        stdout.writeln('  $privateB64');
-        stdout.writeln('');
-        stdout.writeln('Public key (safe to embed / configure on device):');
-        stdout.writeln('  $publicB64');
+        banner('keys');
+        final (privateB64, publicB64) = await spinner(
+          () => generateEd25519KeyPair(),
+          'Generating Ed25519 keypair',
+          done: 'Keypair generated',
+        );
+        box('ed25519 keys', [
+          '${bold('private')} (keep secret — use with `deploy --key`):',
+          '  ${red(privateB64)}',
+          '',
+          '${bold('public')} (safe to embed / configure on device):',
+          '  ${green(publicB64)}',
+        ]);
         if (argResults!['save'] as bool) {
           final file = configCandidates().first;
           final json = file.existsSync() && file.readAsStringSync().trim().isNotEmpty
@@ -42,8 +48,7 @@ class KeysCommand extends Command<int> {
               : <String, dynamic>{};
           writePath(json, 'publicKey', publicB64);
           _save(json);
-          stdout.writeln('');
-          stdout.writeln('Saved public key to ${file.path}');
+          step('Saved public key to ${file.path}');
         }
       });
 

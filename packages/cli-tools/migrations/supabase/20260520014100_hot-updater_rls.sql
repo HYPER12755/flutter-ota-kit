@@ -46,3 +46,14 @@ ALTER FUNCTION public.get_update_info_by_app_version(
   text
 )
   SET search_path = public, pg_catalog;
+
+-- OTA update checks are unauthenticated by design (the device only carries the
+-- anon key), so bundle metadata must be publicly readable. hot-updater's hosted
+-- Supabase flow relies on these policies existing.
+CREATE POLICY "allow public read bundles" ON public.bundles FOR SELECT USING (true);
+CREATE POLICY "allow public read bundle_patches" ON public.bundle_patches FOR SELECT USING (true);
+
+-- Allow anon/authenticated to resolve signed download URLs for the bundles bucket.
+CREATE POLICY "public bundles read" ON storage.objects
+  FOR SELECT TO anon, authenticated
+  USING (bucket_id = 'bundles');

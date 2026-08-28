@@ -2,13 +2,12 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:args/command_runner.dart';
 
 import '../cli_base.dart';
 import '../config.dart';
 
 /// `flutter_patcher config` — get/set/list config values.
-class ConfigCommand extends Command<int> {
+class ConfigCommand extends FlutterPatcherCommand {
   ConfigCommand() {
     addSubcommand(ConfigGetCommand());
     addSubcommand(ConfigSetCommand());
@@ -45,7 +44,7 @@ void _saveProjectJson(Map<String, dynamic> json) {
   );
 }
 
-class ConfigGetCommand extends Command<int> {
+class ConfigGetCommand extends FlutterPatcherCommand {
   @override
   String get name => 'get';
 
@@ -72,7 +71,7 @@ class ConfigGetCommand extends Command<int> {
       });
 }
 
-class ConfigSetCommand extends Command<int> {
+class ConfigSetCommand extends FlutterPatcherCommand {
   @override
   String get name => 'set';
 
@@ -98,7 +97,7 @@ class ConfigSetCommand extends Command<int> {
       });
 }
 
-class ConfigListCommand extends Command<int> {
+class ConfigListCommand extends FlutterPatcherCommand {
   @override
   String get name => 'list';
 

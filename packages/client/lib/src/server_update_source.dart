@@ -67,6 +67,7 @@ class ServerUpdateConfig {
     this.cohort,
     this.sdkVersion = '1.0.0',
     this.extraHeaders = const {},
+    this.minBundleId,
   });
 
   /// Server origin, no trailing slash. e.g. `https://patches.example.com`.
@@ -99,6 +100,11 @@ class ServerUpdateConfig {
 
   /// Extra headers (auth tokens, etc.).
   final Map<String, String> extraHeaders;
+
+  /// Build-time scan floor (hot-updater `getMinBundleId()`). Served as the
+  /// `:minBundleId` path segment so the server only scans bundles `id >=`
+  /// this value. When null the NIL uuid is used (core default).
+  final String? minBundleId;
 }
 
 /// Rich result of an update check.
@@ -159,7 +165,7 @@ class ServerUpdateSource {
         : config.baseUrl;
     final bp =
         config.basePath.startsWith('/') ? config.basePath : '/${config.basePath}';
-    final minBundleId = currentBundleId ?? nilUuid;
+    final minBundleId = config.minBundleId ?? nilUuid;
     final bundleId = currentBundleId ?? nilUuid;
     final seg = config.updateStrategy == UpdateStrategy.fingerprint
         ? 'fingerprint/${config.platform.value}/${config.fingerprintHash}/${config.channel}/$minBundleId/$bundleId'

@@ -1,6 +1,7 @@
 name: flutter_patcher
 description: Open-source, self-hosted code push (OTA updates) for Flutter Android. Patches Dart AOT libapp.so and assets on cold start with integrity checks and crash rollback.
 version: 0.1.4
+publish_to: none # monorepo root; local path deps, not published from here
 homepage: https://github.com/xuelinger2333/flutter_patcher
 repository: https://github.com/xuelinger2333/flutter_patcher
 issue_tracker: https://github.com/xuelinger2333/flutter_patcher/issues
@@ -24,6 +25,14 @@ dependencies:
     path: packages/core
   flutter_patcher_client:
     path: packages/client
+  flutter_patcher_supabase:
+    path: plugins/supabase
+  flutter_patcher_postgres:
+    path: plugins/postgres
+  flutter_patcher_cloudflare:
+    path: plugins/cloudflare
+  flutter_patcher_aws:
+    path: plugins/aws
   plugin_platform_interface: '>=2.0.2 <3.0.0'
   # `dart run flutter_patcher:pack` CLI 依赖 —— 运行时 app 里都会被 tree-shake 掉
   archive: '>=3.4.10 <5.0.0'

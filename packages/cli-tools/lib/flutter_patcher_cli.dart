@@ -31,6 +31,7 @@ export 'src/commands/console.dart';
 
 import 'src/commands/build.dart';
 import 'src/commands/bundle.dart';
+import 'src/runner.dart';
 import 'src/commands/channel.dart';
 import 'src/commands/config_command.dart';
 import 'src/commands/console.dart';
@@ -44,7 +45,7 @@ import 'src/commands/rollback.dart';
 
 /// Entry point: build the command runner and dispatch [args].
 Future<int> run(List<String> args) async {
-  final runner = CommandRunner<int>(
+  final runner = FlutterPatcherRunner(
     'flutter_patcher',
     'flutter_patcher CLI — OTA code push for Flutter (hot-updater compatible).',
   )

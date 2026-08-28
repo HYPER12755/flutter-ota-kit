@@ -245,17 +245,23 @@ class _StorageBucket implements SupabaseStorageBucketLike {
     String path,
     int expiresIn,
   ) async {
-    final uri = Uri.parse(
-      '$_baseUrl/storage/v1/object/sign/$_bucket/$path',
-    ).replace(queryParameters: {'expiresIn': expiresIn.toString()});
-    final res = await http.post(uri, headers: _headers);
+    final uri = Uri.parse('$_baseUrl/storage/v1/object/sign/$_bucket/$path');
+    final res = await http.post(
+      uri,
+      headers: {..._headers, 'Content-Type': 'application/json'},
+      body: jsonEncode({'expiresIn': expiresIn}),
+    );
     if (res.statusCode >= 400) {
       return _MockSignedUrlResult(null, jsonDecode(res.body));
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
+    final signed = body['signedURL'] as String?;
+    // Supabase returns a relative path ("/object/sign/...?token=..."); make it
+    // absolute against the project base URL.
     return _MockSignedUrlResult(
-        '$_baseUrl/storage/v1/object/sign/$_bucket/$path?...${body['signedURL']}',
-        null);
+      signed == null ? null : '$_baseUrl/storage/v1$signed',
+      null,
+    );
   }
 
   @override
@@ -279,12 +285,32 @@ class _StorageBucket implements SupabaseStorageBucketLike {
     return _MockSignedUrlListResult(
       body
           .map((e) => _MockSignedUrlResult(
-                e['signedURL'] as String?,
+                // Supabase returns a relative path; make it absolute against
+                // the project base URL, matching [createSignedUrl].
+                e['signedURL'] == null
+                    ? null
+                    : '$_baseUrl/storage/v1${e['signedURL'] as String}',
                 e['error'] as String?,
               ))
           .toList(),
       null,
     );
+  }
+
+  Future<void> _ensureBucket() async {
+    final res = await http.post(
+      Uri.parse('$_baseUrl/storage/v1/bucket'),
+      headers: {..._headers, 'Content-Type': 'application/json'},
+      body: jsonEncode({'name': _bucket, 'public': true}),
+    );
+    // 400/409 just mean it already exists — that's fine.
+    if (res.statusCode >= 400) {
+      final body = jsonDecode(res.body) as Map<String, dynamic>;
+      final msg = (body['message'] ?? body['error'] ?? '').toString();
+      if (!msg.contains('already exists') && res.statusCode != 409) {
+        throw StateError('Failed to create bucket "$_bucket": $msg');
+      }
+    }
   }
 
   @override
@@ -294,20 +320,34 @@ class _StorageBucket implements SupabaseStorageBucketLike {
     String? contentType,
     String? cacheControl,
   }) async {
-    final uri = Uri.parse('$_baseUrl/storage/v1/object/$_bucket/$path');
-    final res = await http.post(
-      uri,
-      headers: {
-        ..._headers,
-        'Content-Type': contentType ?? 'application/octet-stream',
-        if (cacheControl != null) 'Cache-Control': cacheControl,
-      },
-      body: fileBytes,
-    );
-    if (res.statusCode >= 400) {
-      return _MockUploadResult(null, jsonDecode(res.body));
+    Future<_MockUploadResult> doUpload() async {
+      final uri = Uri.parse('$_baseUrl/storage/v1/object/$_bucket/$path');
+      final res = await http.post(
+        uri,
+        headers: {
+          ..._headers,
+          'Content-Type': contentType ?? 'application/octet-stream',
+          if (cacheControl != null) 'Cache-Control': cacheControl,
+        },
+        body: fileBytes,
+      );
+      if (res.statusCode >= 400) {
+        return _MockUploadResult(null, jsonDecode(res.body));
+      }
+      return _MockUploadResult(jsonDecode(res.body), null);
     }
-    return _MockUploadResult(jsonDecode(res.body), null);
+
+    final first = await doUpload();
+    if (first.error != null) {
+      final msg =
+          (first.error is Map ? (first.error as Map)['message'] : first.error)
+              .toString();
+      if (msg.contains('Bucket not found')) {
+        await _ensureBucket();
+        return doUpload();
+      }
+    }
+    return first;
   }
 
   @override

@@ -15,6 +15,9 @@ dev_dependencies:
     path: ../../packages/server
   flutter_patcher_cloudflare:
     path: ../../plugins/cloudflare
+  flutter_patcher_plugin_core:
+    path: ../../plugins/plugin-core
   crypto: ^3.0.3
   test: ^1.25.0
   lints: ^4.0.0
+  shelf: ^1.4.0

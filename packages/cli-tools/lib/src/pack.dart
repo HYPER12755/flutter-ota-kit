@@ -42,6 +42,7 @@ Future<PackResult> packPatch({
   String? abi,
   List<String> requestedAssets = const [],
   required String out,
+  void Function(int done, int total, String label)? onProgress,
 }) async {
   final apkFile = File(apkPath);
   if (!apkFile.existsSync()) {
@@ -72,6 +73,7 @@ Future<PackResult> packPatch({
     version: version,
     targetVersionCode: targetVersionCode,
     requestedAssets: requestedAssets,
+    onProgress: onProgress,
   );
   return result;
 }
@@ -83,6 +85,7 @@ PackResult _writePatchPackage({
   required String version,
   required int targetVersionCode,
   required List<String> requestedAssets,
+  void Function(int done, int total, String label)? onProgress,
 }) {
   final patchFiles = <String, _PatchAssetFile>{};
   final operations = <Map<String, dynamic>>[];
@@ -169,9 +172,14 @@ PackResult _writePatchPackage({
 
   final package = Archive()
     ..addFile(_jsonArchiveFile('manifest.json', zipManifest));
+  final progressTotal = libs.length + 1;
+  onProgress?.call(0, progressTotal, 'libapp.so');
+  var progressDone = 0;
   for (final (currentAbi, soBytes) in libs) {
     package.addFile(
         ArchiveFile('lib/$currentAbi/libapp.so', soBytes.length, soBytes));
+    progressDone++;
+    onProgress?.call(progressDone, progressTotal, 'lib/$currentAbi/libapp.so');
   }
 
   if (requestedAssets.isNotEmpty) {
@@ -194,6 +202,7 @@ PackResult _writePatchPackage({
   final List<int> packageBytes = ZipEncoder().encode(package) ?? const <int>[];
   final outZip = File('${outDir.path}/patch.zip');
   outZip.writeAsBytesSync(packageBytes);
+  onProgress?.call(progressTotal, progressTotal, 'patch.zip');
 
   final payloadMd5 = md5.convert(packageBytes).toString();
   final outerManifest = <String, dynamic>{

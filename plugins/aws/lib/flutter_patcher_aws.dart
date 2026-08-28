@@ -8,5 +8,3 @@ export 'src/aws_cloudfront_signer.dart'
     show cloudfrontSignedUrl, verifyCloudfrontSignedUrl;
 export 'src/with_cloudfront_signed_url.dart'
     show WithCloudFrontSignedUrlOptions, withCloudFrontSignedUrl;
-export 'src/aws_lambda_edge_storage.dart'
-    show AwsLambdaEdgeStorageConfig, awsLambdaEdgeStorage, s3LambdaEdgeStorage;

@@ -110,6 +110,8 @@ class SupabaseConfigJson {
     this.anonKey,
     this.bucket,
     this.basePath,
+    this.managementKey,
+    this.databaseUrl,
   });
 
   factory SupabaseConfigJson.fromJson(Map<String, dynamic> json) =>
@@ -119,6 +121,8 @@ class SupabaseConfigJson {
         anonKey: json['anonKey'] as String?,
         bucket: json['bucket'] as String?,
         basePath: json['basePath'] as String?,
+        managementKey: json['managementKey'] as String?,
+        databaseUrl: json['databaseUrl'] as String?,
       );
 
   final String? url;
@@ -126,6 +130,8 @@ class SupabaseConfigJson {
   final String? anonKey;
   final String? bucket;
   final String? basePath;
+  final String? managementKey;
+  final String? databaseUrl;
 
   Map<String, dynamic> toJson() => {
         if (url != null) 'url': url,
@@ -133,6 +139,8 @@ class SupabaseConfigJson {
         if (anonKey != null) 'anonKey': anonKey,
         if (bucket != null) 'bucket': bucket,
         if (basePath != null) 'basePath': basePath,
+        if (managementKey != null) 'managementKey': managementKey,
+        if (databaseUrl != null) 'databaseUrl': databaseUrl,
       };
 }
 
@@ -161,13 +169,23 @@ FlutterPatcherConfig? loadConfig() {
   return null;
 }
 
-/// Persist a config to the project file (cwd).
-void saveConfig(FlutterPatcherConfig config) {
-  final file = configCandidates().first;
+/// Persist a config. By default writes the project file (cwd); pass
+/// [global: true] to write the global `~/.flutter_patcher/config.json`.
+void saveConfig(FlutterPatcherConfig config, {bool global = false}) {
+  final file = global ? configCandidates().last : configCandidates().first;
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(
     const JsonEncoder.withIndent('  ').convert(config.toJson()),
   );
+  // Config may contain secrets (service-role keys, DB passwords, tokens). On
+  // POSIX systems tighten to owner-only read/write so they aren't world-readable.
+  if (!Platform.isWindows) {
+    try {
+      Process.runSync('chmod', ['600', file.path]);
+    } catch (_) {
+      // Non-fatal: chmod may be unavailable in some sandboxes.
+    }
+  }
 }
 
 /// Nested dot-path get/set helpers used by `config get/set`.

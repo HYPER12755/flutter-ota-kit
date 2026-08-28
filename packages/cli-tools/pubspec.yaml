@@ -31,7 +31,7 @@ dependencies:
     path: ../../plugins/aws
   flutter_patcher_standalone:
     path: ../../plugins/standalone
+  http: ^1.2.0
 
 dev_dependencies:
   test: ^1.25.0
-  http: ^1.2.0

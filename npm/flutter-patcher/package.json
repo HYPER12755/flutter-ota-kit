@@ -1,6 +1,6 @@
 {
-  "name": "flutter-patcher",
-  "version": "0.1.0",
+  "name": "@_nazmiforreal/flutter-ota",
+  "version": "0.1.6",
   "description": "Command-line interface for flutter_patcher — an OTA code-push tool for Flutter, hot-updater compatible.",
   "bin": {
     "flutter-patcher": "./bin/flutter-patcher.js"
@@ -11,6 +11,7 @@
   "files": [
     "bin",
     "scripts",
+    "dart-src",
     "migrations",
     "README.md"
   ],
@@ -20,6 +21,6 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-org/flutter_patcher"
+    "url": "https://github.com/HYPER12755/flutter_patcher"
   }
 }

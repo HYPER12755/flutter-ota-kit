@@ -87,9 +87,31 @@ class _S3NodeProfile implements NodeStorageProfile {
     await writeFileBytes(filePath, bytes);
   }
 
+  String _getRelativeKey(String key) {
+    final bp = _config.basePath;
+    if (bp != null && bp.isNotEmpty && key.startsWith(bp)) {
+      var stripped = key.substring(bp.length);
+      if (stripped.startsWith('/')) stripped = stripped.substring(1);
+      return stripped;
+    }
+    return key;
+  }
+
   @override
-  Future<List<StorageObject>> listObjects([String? prefix]) =>
-      _client.listObjects(prefix == null ? null : _getListPrefix(prefix));
+  Future<List<StorageObject>> listObjects([String? prefix]) async {
+    final list = await _client.listObjects(
+      prefix == null ? null : _getListPrefix(prefix),
+    );
+    return list.map((o) {
+      final relativeKey = _getRelativeKey(o.key);
+      return StorageObject(
+        key: relativeKey,
+        storageUri: 's3://${_config.bucketName}/$relativeKey',
+        size: o.size,
+        lastModifiedAt: o.lastModifiedAt,
+      );
+    }).toList();
+  }
 
   @override
   Future<void> deleteObjects(List<String> keys) =>

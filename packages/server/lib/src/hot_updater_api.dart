@@ -1,5 +1,7 @@
+import 'dart:convert';
+
 import 'package:flutter_patcher_core/flutter_patcher_core.dart'
-    show AppUpdateAvailableInfo, Bundle, GetBundlesArgs;
+    show AppUpdateAvailableInfo, Bundle, ChangedAsset, GetBundlesArgs;
 import 'package:flutter_patcher_plugin_core/flutter_patcher_plugin_core.dart'
     show
         DatabaseBundleQueryOptions,
@@ -30,9 +32,30 @@ class _PluginHandlerAPI implements HandlerAPI {
     final storageUri = update.storageUri ?? bundle?.storageUri;
     final fileUrl =
         storageUri != null ? await _resolveFileUrl(storageUri) : null;
-    final manifestUrl = bundle?.manifestStorageUri != null
-        ? await _resolveFileUrl(bundle!.manifestStorageUri!)
-        : null;
+    final manifestUri = bundle?.manifestStorageUri;
+    final manifestUrl =
+        manifestUri != null ? await _resolveFileUrl(manifestUri) : null;
+
+    Map<String, ChangedAsset>? changedAssets;
+    if (manifestUri != null) {
+      final manifestText = await _readText(manifestUri);
+      if (manifestText != null) {
+        try {
+          final decoded = jsonDecode(manifestText) as Map<String, dynamic>;
+          final raw = decoded['changedAssets'];
+          if (raw is Map) {
+            changedAssets = <String, ChangedAsset>{
+              for (final entry in raw.entries)
+                entry.key as String: ChangedAsset.fromJson(
+                  (entry.value as Map).cast<String, dynamic>(),
+                ),
+            };
+          }
+        } catch (_) {
+          changedAssets = null;
+        }
+      }
+    }
 
     return AppUpdateAvailableInfo(
       id: update.id,
@@ -44,7 +67,7 @@ class _PluginHandlerAPI implements HandlerAPI {
       signature: bundle?.metadata?.signature,
       manifestUrl: manifestUrl,
       manifestFileHash: bundle?.manifestFileHash,
-      changedAssets: null,
+      changedAssets: changedAssets,
     );
   }
 
@@ -53,6 +76,12 @@ class _PluginHandlerAPI implements HandlerAPI {
     if (runtime == null) return null;
     final res = await runtime.getDownloadUrl(uri);
     return res['fileUrl'];
+  }
+
+  Future<String?> _readText(String uri) async {
+    final runtime = _storage?.profiles.runtime;
+    if (runtime == null) return null;
+    return runtime.readText(uri);
   }
 
   @override

@@ -1,4 +1,13 @@
-include: package:flutter_lints/flutter.yaml
-
-# Additional information about this file can be found at
-# https://dart.dev/guides/language/analysis-options
+# Root analysis options for the flutter_patcher monorepo.
+#
+# The repo is a monorepo: `packages/*`, `plugins/*`, and `example/` are each
+# standalone Dart/Flutter packages that are analyzed (and lint-configured)
+# independently. Excluding them here keeps `dart analyze .` focused on the root
+# device-SDK package (`lib/` + `test/`), which is the only thing the root
+# package owns. Each sub-package is analyzed on its own and is already clean.
+analyzer:
+  exclude:
+    - packages/**
+    - plugins/**
+    - example/**
+    - node_modules/**

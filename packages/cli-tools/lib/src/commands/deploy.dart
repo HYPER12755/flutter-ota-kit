@@ -1,16 +1,16 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:args/command_runner.dart';
 
 import '../backend.dart';
 import '../cli_base.dart';
 import '../config.dart';
 import '../operations.dart';
+import '../ui/ui.dart';
 import '../util.dart';
 
 /// `flutter_patcher deploy` — zip + upload + register a new bundle.
-class DeployCommand extends Command<int> {
+class DeployCommand extends FlutterPatcherCommand {
   DeployCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -60,36 +60,52 @@ class DeployCommand extends Command<int> {
             argResults!['git-commit-hash'] as String? ?? await gitCommitHash(source);
         final bundleId = argResults!['bundle-id'] as String?;
 
-        final bundle = await deployBundle(
-          backend,
-          DeployOptions(
-            source: source,
-            channel: channel,
-            platform: platform,
-            message: message,
-            force: force,
-            targetAppVersion: targetAppVersion,
-            fingerprintHash: fingerprintHash,
-            signingKeyBase64: signingKey,
-            gitCommitHash: resolvedGitCommitHash,
-            bundleId: bundleId,
+        banner('deploy');
+        stdout.writeln(
+          '${gray('channel')}  ${cyan(channel)}   '
+          '${gray('platform')}  ${cyan(platform)}   '
+          '${gray('source')}  ${dim(source)}',
+        );
+        final bundle = await spinner(
+          () => deployBundle(
+            backend,
+            DeployOptions(
+              source: source,
+              channel: channel,
+              platform: platform,
+              message: message,
+              force: force,
+              targetAppVersion: targetAppVersion,
+              fingerprintHash: fingerprintHash,
+              signingKeyBase64: signingKey,
+              gitCommitHash: resolvedGitCommitHash,
+              bundleId: bundleId,
+            ),
           ),
+          'Uploading & registering bundle',
+          done: 'Bundle deployed',
         );
 
-        stdout.writeln('Deployed bundle ${bundle.id}');
-        stdout.writeln('  channel:    ${bundle.channel}');
-        stdout.writeln('  platform:   ${bundle.platform.value}');
-        stdout.writeln('  enabled:    ${bundle.enabled}');
-        stdout.writeln('  storageUri: ${bundle.storageUri}');
+        final lines = <String>[
+          kv('bundle id', cyan(bundle.id)),
+          kv('channel', bundle.channel),
+          kv('platform', bundle.platform.value),
+          kv('enabled', bundle.enabled ? green('true') : yellow('false')),
+          kv('storage uri', gray(bundle.storageUri)),
+        ];
         if (bundle.targetAppVersion != null) {
-          stdout.writeln('  targetAppVersion: ${bundle.targetAppVersion}');
+          lines.add(kv('target app', bundle.targetAppVersion!));
         }
         if (bundle.fingerprintHash != null) {
-          stdout.writeln('  fingerprintHash: ${bundle.fingerprintHash}');
+          lines.add(kv('fingerprint', bundle.fingerprintHash!));
         }
         if (bundle.gitCommitHash != null) {
-          stdout.writeln('  gitCommitHash:   ${bundle.gitCommitHash}');
+          lines.add(kv('git commit', bundle.gitCommitHash!));
         }
-        if (bundle.message != null) stdout.writeln('  message:    ${bundle.message}');
+        if (bundle.message != null) lines.add(kv('message', bundle.message!));
+        if (bundle.metadata?.signature != null) {
+          lines.add(kv('signature', dim('✓ signed')));
+        }
+        box('deployed', lines);
       });
 }

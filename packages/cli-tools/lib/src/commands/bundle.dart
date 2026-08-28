@@ -1,15 +1,10 @@
-import 'dart:io';
-
 import 'package:args/args.dart';
-import 'package:args/command_runner.dart';
+import 'package:flutter_patcher_cli/flutter_patcher_cli.dart';
 
-import '../backend.dart';
-import '../cli_base.dart';
-import '../config.dart';
-import '../operations.dart';
+import '../ui/ui.dart';
 
 /// `flutter_patcher bundle` — manage bundles.
-class BundleCommand extends Command<int> {
+class BundleCommand extends FlutterPatcherCommand {
   BundleCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -32,7 +27,7 @@ class BundleCommand extends Command<int> {
       });
 }
 
-class BundleListCommand extends Command<int> {
+class BundleListCommand extends FlutterPatcherCommand {
   BundleListCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -69,24 +64,36 @@ class BundleListCommand extends Command<int> {
             limit: int.parse(argResults!['limit'] as String),
           ),
         );
+        banner('bundle · list');
         if (res.data.isEmpty) {
-          stdout.writeln('(no bundles)');
+          step('(no bundles)');
           return;
         }
-        stdout.writeln('id                                   channel      '
-            'enabled platform target');
-        for (final b in res.data) {
-          final target = b.targetAppVersion ?? b.fingerprintHash ?? '-';
-          stdout.writeln('${b.id}  ${b.channel.padRight(12)}  '
-              '${(b.enabled ? 'yes' : 'no').padRight(7)} '
-              '${b.platform.value.padRight(7)} $target');
+        final lines = <String>[];
+        for (var i = 0; i < res.data.length; i++) {
+          final b = res.data[i];
+          final target = b.targetAppVersion ?? b.fingerprintHash ?? dim('-');
+          lines
+            ..add(kv('#$i', cyan(b.id)))
+            ..add(kv('channel', b.channel))
+            ..add(kv(
+              'enabled',
+              b.enabled ? green('yes') : yellow('no'),
+            ))
+            ..add(kv('platform', b.platform.value))
+            ..add(kv('target', target));
+          if (b.message != null) lines.add(kv('message', b.message!));
+          if (b.metadata?.signature != null) {
+            lines.add(kv('signature', green('✓ signed')));
+          }
+          lines.add('');
         }
-        stdout.writeln('');
-        stdout.writeln('total: ${res.pagination.total}');
+        box('${res.data.length} bundles', lines);
+        step('total: ${res.pagination.total}');
       });
 }
 
-class BundleDeleteCommand extends Command<int> {
+class BundleDeleteCommand extends FlutterPatcherCommand {
   BundleDeleteCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -107,16 +114,20 @@ class BundleDeleteCommand extends Command<int> {
   Future<int> run() => runGuarded(() async {
         final id = argResults!['id'] as String?;
         if (id == null || id.isEmpty) {
-          throw StateError('Usage: flutter_patcher bundle delete <id>');
+          throw PackException('Usage: flutter_patcher bundle delete --id <id>', 64);
         }
         final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
         final backend = requireBackend(cfg, override: backendOverride);
-        await deleteBundle(backend, id);
-        stdout.writeln('Deleted bundle $id');
+        banner('bundle · delete');
+        await spinner(
+          () => deleteBundle(backend, id),
+          'Deleting bundle $id',
+          done: 'Deleted',
+        );
       });
 }
 
-class BundlePromoteCommand extends Command<int> {
+class BundlePromoteCommand extends FlutterPatcherCommand {
   BundlePromoteCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -139,13 +150,22 @@ class BundlePromoteCommand extends Command<int> {
         final id = argResults!['id'] as String?;
         final channel = argResults!['channel'] as String?;
         if (id == null || id.isEmpty || channel == null || channel.isEmpty) {
-          throw StateError(
-            'Usage: flutter_patcher bundle promote <id> --channel <channel>',
+          throw PackException(
+            'Usage: flutter_patcher bundle promote --id <id> --channel <channel>',
+            64,
           );
         }
         final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
         final backend = requireBackend(cfg, override: backendOverride);
-        await promoteBundle(backend, id, channel);
-        stdout.writeln('Promoted bundle $id to channel $channel');
+        banner('bundle · promote');
+        await spinner(
+          () => promoteBundle(backend, id, channel),
+          'Promoting $id to $channel',
+          done: 'Promoted',
+        );
+        box('promote', [
+          kv('bundle', cyan(id)),
+          kv('channel', channel),
+        ]);
       });
 }

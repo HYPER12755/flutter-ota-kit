@@ -8,14 +8,30 @@
 > Rules: Android only (skip iOS). Every phase battle-tested against real
 > infrastructure before moving on. Small batches, verified steps.
 >
-> **Current state:** core + plugin-core COMPLETE (1,065 tests). Supabase plugin
-> COMPLETE (20 tests). Postgres plugin COMPLETE (11 tests). Cloudflare plugin
-> COMPLETE — `d1Database` (11) + `r2Storage` (4) + `cloudflareWorkerDatabase` (5)
-> = 20 tests, clean analyze. AWS plugin COMPLETE — `s3Storage` (4) + `s3Database`
-> (6) + `s3LambdaEdgeStorage`/`withCloudFrontSignedUrl` (4) = 14 tests, clean
-> analyze. **Phase 4 shelf server COMPLETE** (`packages/server`,
-> `createHotUpdater`/`createHandler`/`HandlerAPI`, 6 integration tests, clean
-> analyze). SQL migrations + edge-function parity still pending (Phase 5).
+> **Current state (updated 2026-08-28):** core + plugin-core COMPLETE (1,065
+> tests). All four cloud backend plugins COMPLETE (supabase 20, postgres 11,
+> cloudflare 20, aws 10 tests — Lambda@Edge removed, see Phase 3.12). **Phase 4
+> shelf server COMPLETE** (`packages/server`, `createHotUpdater`/`createHandler`/
+> `HandlerAPI`, 6 integration tests, clean analyze).
+>
+> **Device SDK — direct cloud device sources (NEW):** `lib/flutter_patcher.dart`
+> now wires `configureSupabase` / `configurePostgres` / `configureCloudflare` /
+> `configureAws`, each talking DIRECTLY to its backend (no local server) and
+> reusing the same backend plugins `deploy` uses. `ServerUpdateSource` (self-hosted
+> server) is retained only for `standalone`. **Supabase verified end-to-end on
+> emulator-5554** (hasUpdate=true, signed absolute patch URL, apply ok=true, anon
+> key + RLS). postgres/cloudflare/aws device sources implemented + `dart analyze`
+> clean but NOT yet live-verified (need cloud creds).
+>
+> **Cleanup:** mock/local in-memory servers removed (`packages/server/bin/server.dart`,
+> `bin/mock_server.dart`, `standalone_server.dart`); Lambda@Edge storage removed
+> (dead/unwired). **`migrate`** is now per-backend (`migrations/<backend>/` dirs;
+> supabase via mgmt-API or postgres, postgres via direct postgres, cloudflare →
+> wrangler, aws/standalone short-circuit); dry-run verified for all 5. Server
+> `changedAssets` now resolved from the bundle manifest.
+>
+> **Pending:** live-verify postgres/cloudflare/aws device sources (need creds);
+> standalone new approach (awaiting user plan); Postgres serving proxy (infra).
 
 ---
 
@@ -260,9 +276,13 @@
       CF options) + `s3LambdaEdgeStorage`/`awsLambdaEdgeStorage` (faithful to
       `s3LambdaEdgeStorage.ts`/`awsLambdaEdgeStorage.ts`).
 - [x] **4 tests passing** (signer round-trip+verify / lambda-edge signs `s3://`
-      URLs and verifies / `publicBaseUrl` resolver / plugin name suffix) with
-      runtime-generated RSA key pairs; `dart analyze` clean. AWS package now
-      **14 tests total**.
+       URLs and verifies / `publicBaseUrl` resolver / plugin name suffix) with
+       runtime-generated RSA key pairs; `dart analyze` clean. AWS package now
+       **14 tests total**.
+- [!] **REMOVED (2026-08-28):** `aws_lambda_edge_storage.dart` + its test were
+       deleted as dead/unwired code per user direction — `awsLambdaEdgeStorage`/
+       `s3LambdaEdgeStorage` were never wired into `resolveBackend`, so the AWS
+       package is now **10 tests** (s3Storage 4 + s3Database 6).
 
 ## Phase 3.13 — AWS SQL/DynamoDB migrations — PENDING (Phase 5)
 
@@ -348,17 +368,21 @@ Source of truth: `/home/user/reference/hot-updater/{packages,plugins}` (read-onl
 
 ## Phase 5 — Device SDK upgrades (root package lib/+android/)
 
-- [x] **Backend wiring (NEW this pass):** `packages/client` (`flutter_patcher_client`)
-      adds `ServerUpdateSource` + `ServerUpdateConfig` + `ServerUpdateResult` that
-      perform the hot-updater-compatible update check and map the response to a
-      `PatchInfo`. The device SDK (`flutter_patcher`) re-exports it and adds
-      `FlutterPatcher.configureServer(...)` + `FlutterPatcher.checkForUpdate()`.
-      `PatchInfo`/apply-result types moved into `flutter_patcher_core` (data-model
-      home). Verified end-to-end: `packages/client` e2e test drives
-      `ServerUpdateSource` → shelf server (D1 mock + local storage HttpServer) and
-      asserts fingerprint/appVersion/channel/UP_TO_DATE paths + a downloadable
-      `fileUrl` whose bytes match the seeded payload. Example app wired with a
-      "Check via flutter_patcher server" button.
+- [x] **Backend wiring (NEW this pass):** device SDK now supports BOTH a self-hosted
+       `ServerUpdateSource` (`packages/client`) AND **direct cloud device sources**
+       for every cloud backend — `SupabaseUpdateSource`, `PostgresUpdateSource`,
+       `CloudflareUpdateSource`, `AwsUpdateSource` (in `lib/src/`), each wired via
+       `FlutterPatcher.configureSupabase|Postgres|Cloudflare|Aws(...)` + dispatched
+       in `checkForUpdate()`. Each source reuses the same backend plugins `deploy`
+       uses (e.g. `supabaseDatabase`/`supabaseStorage`, `postgresDatabase`/
+       `postgresStorage`, `d1Database`/`r2Storage`, `s3Database`/`s3Storage`) — no
+       server required for cloud backends. `ServerUpdateSource` (self-hosted server)
+       retained for `standalone`. `PatchInfo`/apply-result types live in
+       `flutter_patcher_core`.
+- [x] **Supabase verified end-to-end on emulator-5554:** `hasUpdate=true`, signed
+       absolute `patchUrl`, `apply result ok=true` (anon key + RLS policies).
+- [ ] **postgres/cloudflare/aws device sources:** implemented + `dart analyze` clean,
+       but NOT yet live-verified on-device (need cloud credentials / local Postgres).
 - [ ] Update strategies: send `_updateStrategy=fingerprint|appVersion`,
       fingerprintHash baked at build (gradle meta-data), appVersion passthrough.
 - [ ] Channel support: build-time channel, runtime switch + resetChannel,
@@ -377,8 +401,10 @@ Source of truth: `/home/user/reference/hot-updater/{packages,plugins}` (read-onl
 Commands (parity set, all implemented): `init`, `build` (pack a release APK into a
 device-ready `dist/patch.zip`, **all ABIs included** so one bundle serves every
 device arch), `deploy`, `bundle list|delete|promote`, `rollback`, `channel`
-(get/set/list), `fingerprint`, `doctor`, `migrate` (dry-run + live apply of supabase
-migrations), `config` (get/set/list, persisted to `.flutter_patcher.json`), `keys`
+       (get/set/list), `fingerprint`, `doctor`, `migrate` (per-backend: supabase via
+       mgmt-API or postgres, postgres via direct postgres, cloudflare → wrangler,
+       aws/standalone short-circuit; `--dry-run` lists the backend's own SQL dir),
+       `config` (get/set/list, persisted to `.flutter_patcher.json`), `keys`
 (Ed25519 keygen, priv/pub base64), `console` (launches console URL), `patch`
 (re-pack existing source), `mock_server` (in-memory local server). Flags mirror
 hot-updater UX (e.g. `deploy --channel --message --platform --target-app-version

@@ -151,11 +151,8 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
     }
 
     await verifySigned(bucket: bucket, key: storageKey);
-    final fullPath = upload.data is Map
-        ? (upload.data as Map)['fullPath'] as String?
-        : null;
     return {
-      'storageUri': 'supabase-storage://${fullPath ?? storageKey}',
+      'storageUri': 'supabase-storage://$bucketName/$storageKey',
     };
   }
 

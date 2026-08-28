@@ -93,7 +93,7 @@ Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
         : null;
 
     final bundleId = opts.bundleId ?? uuidV7();
-    final key = backend.storageKeyFor(bundleId, 'patch.zip');
+    final key = bundleId;
     final uploaded = await backend.storage.upload(key, zipPath);
     final storageUri = uploaded['storageUri'];
     if (storageUri == null || storageUri.isEmpty) {
@@ -191,6 +191,51 @@ Future<String> rollbackChannel(Backend backend, String channel) async {
   await backend.db.updateBundle(target.id, {'enabled': false});
   await backend.db.commitBundle();
   return target.id;
+}
+
+/// Roll back a channel to a specific [targetBundleId]: disable every enabled
+/// bundle newer than it (by creation order) and ensure the target is enabled.
+///
+/// Returns `(disabledBundleIds, liveBundleId)`.
+Future<(List<String>, String)> rollbackToBundle(
+  Backend backend,
+  String channel,
+  String targetBundleId, {
+  Platform? platform,
+}) async {
+  final res = await backend.db.getBundles(
+    DatabaseBundleQueryOptions(
+      where: DatabaseBundleQueryWhere(channel: channel, platform: platform),
+      orderBy: const DatabaseBundleQueryOrder(direction: 'desc'),
+      limit: 100,
+    ),
+  );
+  final bundles = res.data;
+  Bundle? target;
+  for (final b in bundles) {
+    if (b.id == targetBundleId) {
+      target = b;
+      break;
+    }
+  }
+  if (target == null) {
+    throw StateError(
+      'Bundle "$targetBundleId" not found on channel "$channel".',
+    );
+  }
+  final targetIndex = bundles.indexOf(target);
+  final disabled = <String>[];
+  for (var i = 0; i < targetIndex; i++) {
+    if (bundles[i].enabled) {
+      disabled.add(bundles[i].id);
+      await backend.db.updateBundle(bundles[i].id, {'enabled': false});
+    }
+  }
+  if (!target.enabled) {
+    await backend.db.updateBundle(target.id, {'enabled': true});
+  }
+  await backend.db.commitBundle();
+  return (disabled, target.id);
 }
 
 /// List channels configured on the backend.

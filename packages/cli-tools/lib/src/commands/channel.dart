@@ -1,15 +1,10 @@
-import 'dart:io';
-
 import 'package:args/args.dart';
-import 'package:args/command_runner.dart';
+import 'package:flutter_patcher_cli/flutter_patcher_cli.dart';
 
-import '../backend.dart';
-import '../cli_base.dart';
-import '../config.dart';
-import '../operations.dart';
+import '../ui/ui.dart';
 
 /// `flutter_patcher channel` — manage channels.
-class ChannelCommand extends Command<int> {
+class ChannelCommand extends FlutterPatcherCommand {
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
 
@@ -36,7 +31,7 @@ class ChannelCommand extends Command<int> {
       });
 }
 
-class ChannelListCommand extends Command<int> {
+class ChannelListCommand extends FlutterPatcherCommand {
   ChannelListCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -56,18 +51,17 @@ class ChannelListCommand extends Command<int> {
   Future<int> run() => runGuarded(() async {
         final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
         final backend = requireBackend(cfg, override: backendOverride);
+        banner('channel · list');
         final channels = await listChannels(backend);
         if (channels.isEmpty) {
-          stdout.writeln('(no channels)');
+          step('(no channels)');
           return;
         }
-        for (final c in channels) {
-          stdout.writeln('  $c');
-        }
+        box('${channels.length} channels', channels.map((c) => '  $c').toList());
       });
 }
 
-class ChannelGetCommand extends Command<int> {
+class ChannelGetCommand extends FlutterPatcherCommand {
   ChannelGetCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -88,21 +82,27 @@ class ChannelGetCommand extends Command<int> {
   Future<int> run() => runGuarded(() async {
         final channel = argResults!['channel'] as String?;
         if (channel == null || channel.isEmpty) {
-          throw StateError('Usage: flutter_patcher channel get <channel>');
+          throw PackException('Usage: flutter_patcher channel get --channel <channel>', 64);
         }
         final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
         final backend = requireBackend(cfg, override: backendOverride);
+        banner('channel · get');
         final bundle = await getChannel(backend, channel);
         if (bundle == null) {
-          stdout.writeln('(no live bundle on channel "$channel")');
+          err('no live bundle on channel "$channel"');
           return;
         }
-        stdout.writeln('channel "$channel" -> bundle ${bundle.id} '
-            '(${bundle.platform.value})');
+        box('channel "$channel"', [
+          kv('live bundle', cyan(bundle.id)),
+          kv('platform', bundle.platform.value),
+          kv('enabled', bundle.enabled ? green('yes') : yellow('no')),
+          kv('target', bundle.targetAppVersion ?? bundle.fingerprintHash ?? dim('-')),
+          if (bundle.message != null) kv('message', bundle.message!),
+        ]);
       });
 }
 
-class ChannelSetCommand extends Command<int> {
+class ChannelSetCommand extends FlutterPatcherCommand {
   ChannelSetCommand({this.config, this.backendOverride});
 
   final FlutterPatcherConfig? config;
@@ -128,13 +128,22 @@ class ChannelSetCommand extends Command<int> {
             channel.isEmpty ||
             bundleId == null ||
             bundleId.isEmpty) {
-          throw StateError(
+          throw PackException(
             'Usage: flutter_patcher channel set --channel <c> --bundle-id <id>',
+            64,
           );
         }
         final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
         final backend = requireBackend(cfg, override: backendOverride);
-        await promoteBundle(backend, bundleId, channel);
-        stdout.writeln('Channel "$channel" -> bundle $bundleId');
+        banner('channel · set');
+        await spinner(
+          () => promoteBundle(backend, bundleId, channel),
+          'Promoting $bundleId to $channel',
+          done: 'Channel set',
+        );
+        box('channel set', [
+          kv('channel', channel),
+          kv('bundle', cyan(bundleId)),
+        ]);
       });
 }

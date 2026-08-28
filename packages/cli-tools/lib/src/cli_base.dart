@@ -1,11 +1,11 @@
-import 'dart:io';
-
 import 'package:args/args.dart';
 
 import 'backend.dart';
 import 'config.dart';
+import 'pack.dart';
+import 'ui/ui.dart';
 
-/// Run [body], mapping errors to a non-zero exit code with a clean message.
+export 'runner.dart';
 
 /// Run [body], mapping errors to a non-zero exit code with a clean message.
 Future<int> runGuarded(Future<void> Function() body) async {
@@ -13,10 +13,13 @@ Future<int> runGuarded(Future<void> Function() body) async {
     await body();
     return 0;
   } on StateError catch (e) {
-    stderr.writeln('error: ${e.message}');
+    err(e.message);
     return 1;
+  } on PackException catch (e) {
+    err(e.message);
+    return e.exitCode;
   } catch (e) {
-    stderr.writeln('error: $e');
+    err(e.toString());
     return 1;
   }
 }
