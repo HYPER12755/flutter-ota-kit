@@ -1,5 +1,16 @@
 > Chinese version: [CHANGELOG-zh.md](CHANGELOG-zh.md)
 
+## 0.1.5
+
+### Fixed
+
+- **Forced updates now actually relaunch the app.** `handleRestartApp` used to
+  `startActivity(NEW_TASK)` and then `killProcess(myPid())` after 200ms — but a
+  NEW_TASK launch still runs in the same process, so the kill took down the
+  just-launched activity and the patched native lib never loaded. It now
+  schedules the relaunch via `AlarmManager` (outside the process) and then
+  `System.exit(0)`, so the app reopens automatically with the update applied.
+
 ## 0.1.4
 
 ### Fixed
