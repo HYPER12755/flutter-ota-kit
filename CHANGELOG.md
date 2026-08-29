@@ -6,7 +6,7 @@
 
 - Fixed the Android build failing on host apps that use AGP 9 built-in
   Kotlin, with `Failed to apply plugin 'kotlin-android'` followed by
-  `project ':flutter_patcher' does not specify compileSdk`. This affects
+  `project ':flutter_ota_kit' does not specify compileSdk`. This affects
   projects created with or migrated to Flutter 3.44, which ship AGP 9.
   `android/build.gradle` now checks whether built-in Kotlin is actually
   active on the host and applies the Kotlin Gradle Plugin, plus the
@@ -29,7 +29,7 @@
 
 - On AGP 9 hosts, Flutter still prints `WARNING: Your app uses the
   following plugins that apply Kotlin Gradle Plugin (KGP):
-  flutter_patcher`. The Flutter Gradle Plugin decides this by text-matching
+  flutter_ota_kit`. The Flutter Gradle Plugin decides this by text-matching
   `android/build.gradle`, so it cannot see that the `apply plugin` line is
   guarded. The warning is safe to ignore, and the literal has to stay:
   when the Flutter Gradle Plugin finds no KGP declaration in a plugin, it
@@ -47,7 +47,7 @@
   fonts, JSON, anything reachable via `Image.asset(...)` or
   `rootBundle.load(...)`) can be patched together with Dart code through
   the same `patch.zip` payload.
-- Added `--assets` to `dart run flutter_patcher:pack`. Pass paths inline
+- Added `--assets` to `dart run flutter_ota_kit:pack`. Pass paths inline
   (`--assets a,b`) or read them from a UTF-8 text file with the `@` prefix
   (`--assets @patch-assets.txt`, one path per line, `#` starts a comment);
   inline paths and `@file` references can be mixed in the same flag.
@@ -58,7 +58,7 @@
 
 ### Changed
 
-- `dart run flutter_patcher:pack` now always emits `dist/patch.zip` +
+- `dart run flutter_ota_kit:pack` now always emits `dist/patch.zip` +
   `dist/manifest.json` (outer `schemaVersion: 2`, `payload: patch.zip`),
   whether or not `--assets` is passed. A Dart-only `patch.zip` contains
   just `manifest.json` + `lib/<abi>/libapp.so`; its inner manifest omits
@@ -82,7 +82,7 @@
 
 ### Added
 
-- Added `dart run flutter_patcher:mock_server` for local
+- Added `dart run flutter_ota_kit:mock_server` for local
   `checkUpdate -> applyPatch` testing without maintaining an example-only
   helper script.
 
@@ -152,7 +152,7 @@ First public release (Android-only beta).
   `FlutterPatcher.blacklist` / `clearBlacklist`.
 - **Progress event stream**: `FlutterPatcher.applyProgress` exposes
   `downloading` / `verifying` / `finalizing` phase events.
-- **CLI packaging tool**: `dart run flutter_patcher:pack` extracts
+- **CLI packaging tool**: `dart run flutter_ota_kit:pack` extracts
   `libapp.so` from a release APK and produces the patch manifest.
 
 ### Known limitations

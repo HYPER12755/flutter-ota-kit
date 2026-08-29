@@ -2,7 +2,7 @@
 
 [English](api-reference.md) | **简体中文**
 
-`flutter_patcher` 的公开 API 都通过 `FlutterPatcher` 静态类调用。
+`flutter_ota_kit` 的公开 API 都通过 `FlutterPatcher` 静态类调用。
 
 目前插件仅在 Android 平台执行补丁逻辑。
 在 iOS、Web、macOS、Windows、Linux 等非 Android 平台调用这些 API 时，不会执行补丁操作，也不会抛出异常；插件会在首次调用时打印 warning，并返回安全默认值。
@@ -391,10 +391,10 @@ try {
 
 ## pack CLI
 
-`flutter_patcher:pack` 用于从 release APK 中提取 `libapp.so`（并可选地提取 Flutter 资源覆盖），生成补丁元数据。
+`flutter_ota_kit:pack` 用于从 release APK 中提取 `libapp.so`（并可选地提取 Flutter 资源覆盖），生成补丁元数据。
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.0-h1 \
   --target-version-code 100
@@ -442,7 +442,7 @@ dist/
 2. 用 `--assets` 列出要覆盖的资源 key 进行打包：
 
    ```bash
-   dart run flutter_patcher:pack \
+   dart run flutter_ota_kit:pack \
      --apk path/to/patched-release.apk \
      --version 1.0.1 \
      --target-version-code 2 \
@@ -452,7 +452,7 @@ dist/
    key 较多时，把 `--assets` 指向一个文本文件，前缀 `@`（每行一个 key，`#` 开头为注释），内联与 `@file` 可在同一个参数里混用：
 
    ```bash
-   dart run flutter_patcher:pack \
+   dart run flutter_ota_kit:pack \
      --apk path/to/patched-release.apk \
      --version 1.0.1 \
      --target-version-code 2 \
@@ -472,7 +472,7 @@ assets/<asset-path>    # 覆盖字节，每个 path（及每个分辨率变体�
 
 纯 Dart 的 `patch.zip`（未传 `--assets`）只包含第一项和第三项；内层 manifest 没有 `assets` 块，`manifest_patch.json` 也不存在。
 
-外层 `manifest.json`（本地联调时由 `mock_server` 消费，生产环境由你的更新后端消费）携带 `schemaVersion`、`version`、`targetVersionCode`、`abi`、`payload: patch.zip` 和整包 MD5。内层 `manifest.json`（位于 ZIP 内部）列出 `libapp.so` 与每个覆盖文件的逐文件 MD5。插件只消费内层的；外层的不会单独进设备。
+外层 `manifest.json`（生产环境由你的更新后端消费）携带 `schemaVersion`、`version`、`targetVersionCode`、`abi`、`payload: patch.zip` 和整包 MD5。内层 `manifest.json`（位于 ZIP 内部）列出 `libapp.so` 与每个覆盖文件的逐文件 MD5。插件只消费内层的；外层的不会单独进设备。
 
 ### `manifest_patch.json` schema
 
@@ -500,7 +500,7 @@ assets/<asset-path>    # 覆盖字节，每个 path（及每个分辨率变体�
 | `key`      | 在 `pubspec.yaml` `assets:` 下登记的 Flutter 资源路径             |
 | `variants` | 自动从补丁版 APK 的 Flutter 资源表中读取的分辨率变体（`1.0x`、`2.0x` 等）       |
 
-**安装阶段**（不是冷启动）插件把这些 op 合并进 APK 的基准资源表，把合并后的资源表与覆盖文件一起写到补丁的私有目录，并打成一个私有 `flutter_assets.apk`。冷启动时 [`LoaderHook`](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/LoaderHook.kt) 安装一个 patched `FlutterLoader` + `FlutterJNI` AssetManager，把 Flutter 的资源读取重定向到补丁目录；补丁没动过的 path 仍走 APK fallback。
+**安装阶段**（不是冷启动）插件把这些 op 合并进 APK 的基准资源表，把合并后的资源表与覆盖文件一起写到补丁的私有目录，并打成一个私有 `flutter_assets.apk`。冷启动时 [`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) 安装一个 patched `FlutterLoader` + `FlutterJNI` AssetManager，把 Flutter 的资源读取重定向到补丁目录；补丁没动过的 path 仍走 APK fallback。
 
 ### 资源路径要求
 
@@ -546,7 +546,7 @@ assets/<asset-path>    # 覆盖字节，每个 path（及每个分辨率变体�
 **下一次冷启动：**
 
 1. 校验 `current/` 与宿主 APK 的 `versionCode` 匹配，且磁盘上的 `libapp.so` 仍然与 meta 中的 MD5 一致。
-2. [`LoaderHook`](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/LoaderHook.kt) 安装 patched `FlutterLoader` + `FlutterJNI` AssetManager，把 Flutter 指向补丁的 `libapp.so` 与（若有资源）私有 `flutter_assets.apk`。
+2. [`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) 安装 patched `FlutterLoader` + `FlutterJNI` AssetManager，把 Flutter 指向补丁的 `libapp.so` 与（若有资源）私有 `flutter_assets.apk`。
 
 如果校验失败，或进程内的崩溃熔断触发，补丁会被丢弃，下次冷启动回退到 APK 内置版本。
 

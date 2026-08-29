@@ -8,7 +8,7 @@
 
 - 修复宿主 App 启用 AGP 9 内置 Kotlin 时 Android 构建失败的问题，报错为
   `Failed to apply plugin 'kotlin-android'`，随后是
-  `project ':flutter_patcher' does not specify compileSdk`。用 Flutter
+  `project ':flutter_ota_kit' does not specify compileSdk`。用 Flutter
   3.44 新建或迁移过来的项目会带上 AGP 9，因而受影响。
   `android/build.gradle` 现在会判断宿主是否真的启用了内置 Kotlin，只在
   确实存在对应 DSL 的一侧应用 Kotlin Gradle Plugin 及 jvmTarget 配置：
@@ -28,7 +28,7 @@
 ### Known issues
 
 - AGP 9 宿主下 Flutter 仍会打印 `WARNING: Your app uses the following
-  plugins that apply Kotlin Gradle Plugin (KGP): flutter_patcher`。Flutter
+  plugins that apply Kotlin Gradle Plugin (KGP): flutter_ota_kit`。Flutter
   Gradle Plugin 靠文本匹配 `android/build.gradle` 来判断，看不到那行
   `apply plugin` 已经被条件包住。该警告可以忽略，并且这行字面量必须保留：
   Flutter Gradle Plugin 一旦在某个插件里匹配不到 KGP 声明，就会自己给该
@@ -43,7 +43,7 @@
 - 新增 Android 冷启动 Flutter 资源热更新。资源（图片、字体、JSON，凡是
   `Image.asset(...)` 或 `rootBundle.load(...)` 能拿到的内容）可以和 Dart
   代码一起通过同一个 `patch.zip` 打包热更。
-- `dart run flutter_patcher:pack` 新增 `--assets`。可以内联传入
+- `dart run flutter_ota_kit:pack` 新增 `--assets`。可以内联传入
   （`--assets a,b`），也可以用 `@` 前缀指向 UTF-8 文本文件
   （`--assets @patch-assets.txt`，每行一个 path，`#` 开头为注释）；内联与
   `@file` 可在同一个参数里混用。每个 path 都必须先在新 APK 的
@@ -53,7 +53,7 @@
 
 ### Changed
 
-- `dart run flutter_patcher:pack` 现在恒定输出 `dist/patch.zip` +
+- `dart run flutter_ota_kit:pack` 现在恒定输出 `dist/patch.zip` +
   `dist/manifest.json`（外层 `schemaVersion: 2`、`payload: patch.zip`），
   无论是否传 `--assets`。纯 Dart 补丁的 `patch.zip` 内仅含 `manifest.json` +
   `lib/<abi>/libapp.so`，内部 manifest 不包含 `assets` 块。原先的裸 `.so`
@@ -74,7 +74,7 @@
 
 ### Added
 
-- 新增 `dart run flutter_patcher:mock_server`，用于本地测试
+- 新增 `dart run flutter_ota_kit:mock_server`，用于本地测试
   `checkUpdate -> applyPatch` 流程。
 
 ### Changed
@@ -111,7 +111,7 @@
 - MD5 + 可选 Ed25519 签名校验。
 - 崩溃熔断 / 自动回滚 / 本地黑名单。
 - `FlutterPatcher.applyProgress` 进度事件流。
-- `dart run flutter_patcher:pack` 打包工具。
+- `dart run flutter_ota_kit:pack` 打包工具。
 
 ### Known limitations
 

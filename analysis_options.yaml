@@ -1,4 +1,4 @@
-# Root analysis options for the flutter_patcher monorepo.
+# Root analysis options for the flutter_ota_kit monorepo.
 #
 # The repo is a monorepo: `packages/*`, `plugins/*`, and `example/` are each
 # standalone Dart/Flutter packages that are analyzed (and lint-configured)

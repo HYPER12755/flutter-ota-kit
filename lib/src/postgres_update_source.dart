@@ -1,4 +1,4 @@
-import 'package:flutter_patcher_core/flutter_patcher_core.dart'
+import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show
         AppUpdateStatus,
         AppVersionGetBundlesArgs,
@@ -8,9 +8,9 @@ import 'package:flutter_patcher_core/flutter_patcher_core.dart'
         Platform,
         UpdateInfo,
         UpdateStrategy;
-import 'package:flutter_patcher_client/flutter_patcher_client.dart'
+import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
-import 'package:flutter_patcher_postgres/flutter_patcher_postgres.dart'
+import 'package:flutter_ota_kit_postgres/flutter_ota_kit_postgres.dart'
     show postgresDatabase, postgresStorage, PostgresConfig, PostgresStorageConfig;
 import 'patch_info.dart' show PatchInfo;
 
@@ -20,7 +20,7 @@ import 'patch_info.dart' show PatchInfo;
 /// server process. The database plugin resolves the bundle metadata and the
 /// storage plugin resolves the download URL. Because Postgres cannot serve bytes
 /// over HTTP itself, [servingBaseUrl] must point at a proxy that reads from the
-/// `flutter_patcher_storage` table (or leave it null and let the device read
+/// `flutter_ota_kit_storage` table (or leave it null and let the device read
 /// directly if a PostgREST/HTTP layer is in front of the database).
 class PostgresUpdateConfig {
   const PostgresUpdateConfig({

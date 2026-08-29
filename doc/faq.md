@@ -10,22 +10,7 @@ Each patch is a complete `libapp.so` and does not depend on previous patches. Us
 
 ## How do I iterate quickly during development without uploading to a CDN?
 
-For the offline flow, run the sample app from the [5-minute walkthrough](../README.md#try-it-in-5-minutes). For HTTP testing, use the bundled mock server from [Getting Started](getting-started.md#local-mock-server):
-
-```bash
-dart run flutter_patcher:pack \
-  --apk path/to/app-release.apk \
-  --version dev-1 \
-  --target-version-code 1
-
-dart run flutter_patcher:mock_server --dist dist --port 8080
-```
-
-Then set the client `patchUrl` to:
-
-```text
-http://<your-machine-ip>:8080/patch.zip
-```
+For the offline flow, run the sample app from the [5-minute walkthrough](../README.md#try-it-in-5-minutes). For HTTP testing, deploy to a cloud backend (Supabase is fully automated via `flutter-ota init supabase` + `flutter-ota migrate supabase`) and point your app at that backend with `FlutterPatcher.configureSupabase(...)`.
 
 ## How do I handle multiple ABIs?
 
@@ -50,3 +35,9 @@ Once the current process has loaded `libapp.so`, it can't be safely swapped at r
 ## Why does each patch need a `targetVersionCode`?
 
 A patch is only valid against the base APK it was built for. Binding `targetVersionCode` prevents loading old patches after an APK upgrade and prevents the server from accidentally shipping a patch to incompatible builds.
+
+## See also
+- [Configuration](configuration.md) — env vars, `.env`, resolution order
+- [Developer Guide](developer-guide.md) — targeting, channels, strategies
+- [Beginner Guide](beginner-guide.md) — zero-to-first-OTA walkthrough
+- [Getting Started](getting-started.md) — first deploy

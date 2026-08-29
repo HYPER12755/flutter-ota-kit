@@ -1,6 +1,6 @@
 # 生产环境实践手册
 
-在生产环境发布 flutter_patcher 补丁的最佳实践和经验沉淀。
+在生产环境发布 flutter_ota_kit 补丁的最佳实践和经验沉淀。
 
 ---
 
@@ -78,4 +78,4 @@ if (diag != null && !diag.isHealthy) {
 
 ## 实战经验
 
-_本节收录来自生产用户的实战 tips。如果你有经验可以分享，欢迎 [提 issue](https://github.com/xuelinger2333/flutter_patcher/issues)，我们会加到这里。_
+_本节收录来自生产用户的实战 tips。如果你有经验可以分享，欢迎 [提 issue](https://github.com/HYPER12755/flutter_ota_kit/issues)，我们会加到这里。_

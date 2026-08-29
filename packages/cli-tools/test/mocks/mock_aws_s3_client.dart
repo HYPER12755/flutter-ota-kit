@@ -1,9 +1,9 @@
 import 'dart:convert' show utf8;
 
-import 'package:flutter_patcher_plugin_core/flutter_patcher_plugin_core.dart'
+import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
     show StorageObject;
 
-import 'package:flutter_patcher_aws/flutter_patcher_aws.dart'
+import 'package:flutter_ota_kit_aws/flutter_ota_kit_aws.dart'
     show AwsS3ClientLike, AwsS3StorageConfig;
 
 /// In-memory store backing [MockAwsS3Client].

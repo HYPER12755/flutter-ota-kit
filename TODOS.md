@@ -1,4 +1,4 @@
-# flutter_patcher — Master Roadmap (hot-updater parity)
+# flutter_ota_kit — Master Roadmap (hot-updater parity)
 
 > Goal: a fully self-hosted OTA ("code push") platform for **Flutter Android**,
 > feature-parity with [hot-updater](https://github.com/gronxb/hot-updater),
@@ -14,7 +14,7 @@
 > shelf server COMPLETE** (`packages/server`, `createHotUpdater`/`createHandler`/
 > `HandlerAPI`, 6 integration tests, clean analyze).
 >
-> **Device SDK — direct cloud device sources (NEW):** `lib/flutter_patcher.dart`
+> **Device SDK — direct cloud device sources (NEW):** `lib/flutter_ota_kit.dart`
 > now wires `configureSupabase` / `configurePostgres` / `configureCloudflare` /
 > `configureAws`, each talking DIRECTLY to its backend (no local server) and
 > reusing the same backend plugins `deploy` uses. `ServerUpdateSource` (self-hosted
@@ -37,13 +37,13 @@
 
 ## Architecture translation table
 
-| hot-updater (TS/RN)                    | flutter_patcher (Dart/Flutter)                     |
+| hot-updater (TS/RN)                    | flutter_ota_kit (Dart/Flutter)                     |
 |----------------------------------------|----------------------------------------------------|
 | root monorepo (pnpm workspaces)        | this repo (root = device SDK, like packages/react-native) |
-| `packages/core`                        | `packages/core/` → `flutter_patcher_core`          |
-| `plugins/plugin-core`                  | `plugins/plugin-core/` → `flutter_patcher_plugin_core` (NOTE: under `plugins/`, not `packages/`) |
+| `packages/core`                        | `packages/core/` → `flutter_ota_kit_core`          |
+| `plugins/plugin-core`                  | `plugins/plugin-core/` → `flutter_ota_kit_plugin_core` (NOTE: under `plugins/`, not `packages/`) |
 | `packages/react-native`                | root `lib/` + `android/` (the device SDK)          |
-| `packages/server`                      | `packages/server/` → `flutter_patcher_server`      |
+| `packages/server`                      | `packages/server/` → `flutter_ota_kit_server`      |
 | `packages/hot-updater` + `cli-tools`   | `bin/` + `packages/cli-tools/`                     |
 | `packages/console` (React web UI)      | `packages/console/` → Flutter web                  |
 | `plugins/*`                            | `plugins/` mirroring same names                    |
@@ -70,7 +70,7 @@
 
 ---
 
-## Phase 1 — `packages/flutter_patcher_core` (pure Dart) ✅ COMPLETE
+## Phase 1 — `packages/flutter_ota_kit_core` (pure Dart) ✅ COMPLETE
 
 - [x] `types.dart`: Bundle, Platform, UpdateStatus, UpdateInfo, GetBundlesArgs, etc.
 - [x] `uuid.dart`: UUIDv7 generator + NIL_UUID + lexicographic ordering.
@@ -88,7 +88,7 @@
       `get_update_info_by_fingerprint_hash`, `is_cohort_eligible` (+ helpers),
       `get_channels`, `semver_satisfies` — return shapes identical to
       hot-updater `(id, should_force_update, message, status, storage_uri, file_hash)`.
-- [ ] Storage: private bucket `flutter-patcher-storage`, key layout
+- [ ] Storage: private bucket `flutter-ota-storage`, key layout
       `bundles/<id>/patch.zip`, `bundles/<id>/manifest.json`,
       signed URL minting (3600s).
 - [ ] Deploy path A (no custom server): device SDK calls Supabase RPC directly.
@@ -129,7 +129,7 @@
 - [x] `supabase_signed_url_batcher.dart`: faithful port of `supabaseSignedUrlBatcher.ts`
       (batched signed-URL minting with 500ms debounce); fixed flush bug (reassign pending map).
 - [x] `supabase_edge_function_database.dart` + `supabase_edge_function_storage.dart`: edge variants.
-- [x] Barrel exports: `lib/flutter_patcher_supabase.dart` + `lib/edge.dart`.
+- [x] Barrel exports: `lib/flutter_ota_kit_supabase.dart` + `lib/edge.dart`.
 - [x] Monorepo restructure: `packages/plugin-core` → `plugins/plugin-core`; empty skeleton
       dirs created for server, cli-tools, console, test-utils, aws, bare, cloudflare, postgres,
       mock, standalone, rock, js, expo, firebase, sentry-plugin, datadog-plugin, bugsnag-plugin.
@@ -153,7 +153,7 @@
 - [x] `postgres_get_update_info.dart`: `getUpdateInfo` calling the PL/pgSQL RPCs
       (`get_target_app_version_list`, `get_update_info_by_app_version`,
       `get_update_info_by_fingerprint_hash`) — shares the same RPC contract as Supabase.
-- [x] Barrel `lib/flutter_patcher_postgres.dart`.
+- [x] Barrel `lib/flutter_ota_kit_postgres.dart`.
 - [x] **11 postgres tests passing** (mapper + getChannels/getBundles/getBundleById/
       commitBundle/getUpdateInfo) with a mock `PostgresClientLike`; `dart analyze` clean.
 - [ ] SQL DDL + RPC migrations (`plugins/postgres/sql/*.sql`) — deferred to Phase 5
@@ -175,7 +175,7 @@
       `commitBundle` (sequential INSERT OR REPLACE / DELETE), and `getUpdateInfo`
       resolved **in-process** via `resolveUpdateInfoFromBundles`
       (NB: cloudflare D1 does NOT use SQL RPCs, unlike supabase/postgres).
-- [x] Barrel `lib/flutter_patcher_cloudflare.dart`.
+- [x] Barrel `lib/flutter_ota_kit_cloudflare.dart`.
 - [x] **11 cloudflare tests passing** (mapper + getChannels/getBundles/
       getBundleById/commitBundle/getUpdateInfo) with a mock `D1ClientLike`;
       `dart analyze` clean.
@@ -224,7 +224,7 @@
 
 ## Phase 3.10 — AWS `s3Storage` (Dart port) ← COMPLETE (Batch 10a)
 
-- [x] `plugins/aws` package created (`flutter_patcher_aws`) with `AwsS3StorageConfig`
+- [x] `plugins/aws` package created (`flutter_ota_kit_aws`) with `AwsS3StorageConfig`
       (bucketName/region/accessKeyId/secretAccessKey/basePath/endpoint/sessionToken
       + `clientFactory` test seam) and `applyS3RuntimeAwsConfig` (region from
       `AWS_REGION`/`AWS_DEFAULT_REGION`).
@@ -290,27 +290,27 @@
       (DynamoDB not used — `s3Database` is the blob/document store) deferred to
       Phase 5 alongside the other plugins' migrations.
 
-## Module inventory — hot-updater → flutter_patcher (status)
+## Module inventory — hot-updater → flutter_ota_kit (status)
 
 Source of truth: `/home/user/reference/hot-updater/{packages,plugins}` (read-only).
 
 ### Packages
-| hot-updater package            | flutter_patcher                        | Status |
+| hot-updater package            | flutter_ota_kit                        | Status |
 |--------------------------------|----------------------------------------|--------|
-| `packages/core`                | `packages/core` (`flutter_patcher_core`)        | DONE (819 tests) |
-| `packages/plugin-core`         | `plugins/plugin-core` (`flutter_patcher_plugin_core`) | DONE (246 tests) |
+| `packages/core`                | `packages/core` (`flutter_ota_kit_core`)        | DONE (819 tests) |
+| `packages/plugin-core`         | `plugins/plugin-core` (`flutter_ota_kit_plugin_core`) | DONE (246 tests) |
 | `packages/react-native`        | root `lib/`+`android/` (device SDK)   | DONE (ported from RN) |
 | `packages/hot-updater`         | root main SDK / `bin/` CLI entry      | DONE (lib) · CLI deferred (user: end) |
 | `packages/android-helper`      | (native Gradle/Java in `android/`)    | N/A (RN-specific helper) |
 | `packages/apple-helper`        | —                                      | SKIP (iOS) |
 | `packages/bsdiff`              | native diff (defer to Phase 9)        | PENDING |
-| `packages/server`              | `packages/server` (`flutter_patcher_server`, shelf) | DONE (Phase 4) |
-| `packages/cli-tools`           | `packages/cli-tools` (`flutter_patcher_cli`) | DONE (Phase 6, 15 tests) |
+| `packages/server`              | `packages/server` (`flutter_ota_kit_server`, shelf) | DONE (Phase 4) |
+| `packages/cli-tools`           | `packages/cli-tools` (`flutter_ota_kit_cli`) | DONE (Phase 6, 15 tests) |
 | `packages/console`             | `packages/console` (Flutter web)      | SKELETON (Phase 7) |
 | `packages/test-utils`          | `packages/test-utils`                 | SKELETON |
 
 ### Plugins
-| hot-updater plugin     | flutter_patcher                  | Status |
+| hot-updater plugin     | flutter_ota_kit                  | Status |
 |------------------------|----------------------------------|--------|
 | `plugin-core`          | DONE                             | DONE |
 | `supabase`             | DONE (20 tests)                  | DONE |
@@ -337,11 +337,11 @@ Source of truth: `/home/user/reference/hot-updater/{packages,plugins}` (read-onl
 
 - **Language/runtime: Dart, wrapped by npm.** The whole project is Dart/Flutter, so
   the CLI is a Dart executable (hot-updater's `@hot-updater/cli-tools` is TS/npm — we
-  do not carry that over). It lives at `packages/cli-tools/` with a `bin/flutter_patcher.dart`
+  do not carry that over). It lives at `packages/cli-tools/` with a `bin/flutter_ota_kit.dart`
   entry, uses `package:args` `CommandRunner` for subcommand dispatch, and **reuses the
   Dart backend plugins directly** (no logic duplicated in TS). To satisfy the user's
-  `npm -g i flutter-patcher` requirement, an npm-publishable wrapper package lives at
-  `npm/flutter-patcher/` (bin launcher + `dart compile exe` postinstall + shipped
+  `npm -g i flutter-ota` requirement, an npm-publishable wrapper package lives at
+  `npm/flutter-ota/` (bin launcher + `dart compile exe` postinstall + shipped
   supabase migrations) that installs the single native binary globally. No TS copied.
 - **Command surface (mirrors hot-updater `packages/hot-updater/src/bin`):**
   `init`, `bundle` (create/pack update), `channel` (get/set/list), `deploy`,
@@ -350,7 +350,7 @@ Source of truth: `/home/user/reference/hot-updater/{packages,plugins}` (read-onl
   `migrate`, `keys`, `storage` (list/delete GC), `console` (launch web console),
   `patch` (re-pack), `config`. RN-only `buildNative`/`runNative` → adapt to Flutter
   `build`/`run` hooks or drop.
-- **Config:** `flutter_patcher.config.dart` + `defineConfig(...)` helper (Dart, not JS).
+- **Config:** `flutter_ota_kit.config.dart` + `defineConfig(...)` helper (Dart, not JS).
 - **Provider wiring:** supabase first (env-driven), then postgres/cloudflare/aws/bare.
 - **Deferred:** implement only when the user says "do the CLI".
 
@@ -378,7 +378,7 @@ Source of truth: `/home/user/reference/hot-updater/{packages,plugins}` (read-onl
        `postgresStorage`, `d1Database`/`r2Storage`, `s3Database`/`s3Storage`) — no
        server required for cloud backends. `ServerUpdateSource` (self-hosted server)
        retained for `standalone`. `PatchInfo`/apply-result types live in
-       `flutter_patcher_core`.
+       `flutter_ota_kit_core`.
 - [x] **Supabase verified end-to-end on emulator-5554:** `hasUpdate=true`, signed
        absolute `patchUrl`, `apply result ok=true` (anon key + RLS policies).
 - [ ] **postgres/cloudflare/aws device sources:** implemented + `dart analyze` clean,
@@ -396,7 +396,7 @@ Source of truth: `/home/user/reference/hot-updater/{packages,plugins}` (read-onl
 - [ ] **Battle test**: real device, kill -9 style crashes, forced rollbacks,
       channel switches, cohort pinning.
 
-## Phase 6 — CLI (`dart run flutter_patcher:<command>`) ← COMPLETE
+## Phase 6 — CLI (`dart run flutter_ota_kit:<command>`) ← COMPLETE
 
 Commands (parity set, all implemented): `init`, `build` (pack a release APK into a
 device-ready `dist/patch.zip`, **all ABIs included** so one bundle serves every
@@ -404,12 +404,12 @@ device arch), `deploy`, `bundle list|delete|promote`, `rollback`, `channel`
        (get/set/list), `fingerprint`, `doctor`, `migrate` (per-backend: supabase via
        mgmt-API or postgres, postgres via direct postgres, cloudflare → wrangler,
        aws/standalone short-circuit; `--dry-run` lists the backend's own SQL dir),
-       `config` (get/set/list, persisted to `.flutter_patcher.json`), `keys`
+       `config` (get/set/list, persisted to `.flutter_ota_kit.json`), `keys`
 (Ed25519 keygen, priv/pub base64), `console` (launches console URL), `patch`
 (re-pack existing source), `mock_server` (in-memory local server). Flags mirror
 hot-updater UX (e.g. `deploy --channel --message --platform --target-app-version
 --target-fingerprint --key --storage-uri --enabled`).
-- [x] Implementation in `packages/cli-tools/` (`flutter_patcher_cli`): `config.dart`
+- [x] Implementation in `packages/cli-tools/` (`flutter_ota_kit_cli`): `config.dart`
        (resolve supabase/storage config w/ env override), `backend.dart`, `util.dart`
        (zip/fingerprint/gitCommitHash), `sign.dart` (Ed25519 via `cryptography`),
        `operations.dart` (deployBundle/listBundles/deleteBundle/promoteBundle/
@@ -439,12 +439,12 @@ hot-updater UX (e.g. `deploy --channel --message --platform --target-app-version
        `packPatch` unit/integration tests — **15 CLI tests passing**.
 - [x] Provider wiring: supabase first (env-driven `SUPABASE_URL`/`SUPABASE_SERVICE_ROLE_KEY`,
        or `--url`/`--service-role-key`), storage uri `--storage-uri`.
-- [x] npm wrapper at `npm/flutter-patcher/`: `bin/flutter-patcher.js` launcher + `scripts/postinstall.js`
+- [x] npm wrapper at `npm/flutter-ota/`: `bin/flutter-ota.js` launcher + `scripts/postinstall.js`
       (`dart compile exe` build / prebuilt-binary resolution) + shipped `migrations/supabase/*.sql`,
-      so `npm -g i flutter-patcher` installs a working global `flutter-patcher` binary.
+      so `npm -g i flutter-ota` installs a working global `flutter-ota` binary.
 - [x] **Multi-backend support (NEW):** `resolveBackend` + all commands (`deploy`, `bundle`,
       `rollback`, `channel`, `doctor`, `migrate`) accept `--backend supabase|postgres|cloudflare|aws`
-      (flag > `FLUTTER_PATCHER_BACKEND`/env > `provider` in `.flutter_patcher.json`). Per-backend
+      (flag > `FLUTTER_PATCHER_BACKEND`/env > `provider` in `.flutter_ota_kit.json`). Per-backend
       config sections + env-resolution added (`resolvePostgres*Config`, `resolveCloudflare*Config`,
       `resolveAws*Config`). Added `postgresStorage` plugin (bytea table) so the postgres backend has
        storage. `dart analyze` clean; **15 CLI tests pass** — supabase + backend-lifecycle
@@ -452,8 +452,8 @@ hot-updater UX (e.g. `deploy --channel --message --platform --target-app-version
        `packPatch` integration tests, using in-memory mock clients exercising
        deploy → upload+register → listBundles → getChannel → promote → rollback →
        delete, plus storage upload/download.
-- [ ] Config file `flutter_patcher.config.dart` + `defineConfig(...)` helper (Dart config module)
-      — deferred; current `config` subcommand edits `.flutter_patcher.json` (JSON) instead.
+- [ ] Config file `flutter_ota_kit.config.dart` + `defineConfig(...)` helper (Dart config module)
+      — deferred; current `config` subcommand edits `.flutter_ota_kit.json` (JSON) instead.
 
 ## Phase 7 — Console (Flutter web)
 
@@ -473,9 +473,9 @@ hot-updater UX (e.g. `deploy --channel --message --platform --target-app-version
 
 ## Phase 9 — Remaining backends (FULL parity — all in scope)
 
-> **CLI multi-backend (NEW this pass):** the `flutter_patcher` CLI now supports
+> **CLI multi-backend (NEW this pass):** the `flutter_ota_kit` CLI now supports
 > `supabase` (done earlier), `postgres`, `cloudflare`, `aws`, and `standalone`
-> backends via a single `--backend` flag (or `provider` in `.flutter_patcher.json`),
+> backends via a single `--backend` flag (or `provider` in `.flutter_ota_kit.json`),
 > each with env/JSON config resolution and in-memory mock-backed (or
 > self-hosted-server) lifecycle tests
 > (deploy → upload+register → list → getChannel → promote → rollback → delete,

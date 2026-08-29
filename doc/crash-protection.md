@@ -2,7 +2,7 @@
 
 **English** | [简体中文](crash-protection-zh.md)
 
-This document explains how `flutter_patcher` automatically rolls back when a patch goes wrong, and how it prevents the same bad patch from being loaded again.
+This document explains how `flutter_ota_kit` automatically rolls back when a patch goes wrong, and how it prevents the same bad patch from being loaded again.
 
 If a patch causes a boot failure or a serious Dart-level error during early UI, the plugin rolls back to the APK's built-in version on the next cold start and adds the offending patch to a local blacklist.
 
@@ -270,7 +270,7 @@ While debugging on a real device you can directly see:
 
 ## Circuit-breaker timeline
 
-The state machine lives in [`CrashGuard.kt`](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/CrashGuard.kt) (not `FlutterPatcherApplication`). Keys are SharedPreferences-backed: `KEY_PATCH_LOADING`, `KEY_CRASH_COUNT`, `KEY_LAST_BOOTING_PID`.
+The state machine lives in [`CrashGuard.kt`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/CrashGuard.kt) (not `FlutterPatcherApplication`). Keys are SharedPreferences-backed: `KEY_PATCH_LOADING`, `KEY_CRASH_COUNT`, `KEY_LAST_BOOTING_PID`.
 
 | When | What happens |
 |---|---|
@@ -312,5 +312,10 @@ Either firing inside the window counts as one patch failure and queues a rollbac
 > Note: the plugin does **not** install Android's `Thread.UncaughtExceptionHandler`. Native (JNI / `.so`) crashes are caught indirectly on the *next* cold start via `ApplicationExitInfo` (API 30+) or the `patch_loading` fallback (API < 30). Recovery is always cross-process; the current process has already loaded the patched `.so` and cannot revert without a restart.
 
 After the window closes, both hooks still forward transparently to any prior handler but stop reporting circuit-breaker events to the native side.
+
+## See also
+- [API Reference](api-reference.md) — `rollback()`, `blacklist`, and boot diagnostics
+- [Production Playbook](production-playbook.md) — emergency rollback and monitoring
+- [Configuration](configuration.md) — signing and verification options
 
 </details>

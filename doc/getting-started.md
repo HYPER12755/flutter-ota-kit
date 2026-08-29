@@ -1,104 +1,114 @@
-# Getting Started
+# Getting Started (5 minutes)
 
-This guide covers local development workflows for flutter_patcher. For production deployment, see the [Production Playbook](production-playbook.md).
+This walks through taking a fresh Flutter app from zero to a live OTA update using
+`flutter_ota_kit` + the `flutter-ota` CLI. Pick **one** backend — Supabase, Postgres,
+Cloudflare, or AWS.
 
----
-
-## Local mock server
-
-If you want to try the HTTP `checkUpdate → applyPatch` flow without building a backend, run the bundled mock server. It is for local development only, not production patch distribution.
-
+## 1. Install the SDK + CLI
 ```bash
-# Rebuild the release APK after editing Dart code
-flutter build apk --release
+# Flutter package — the OTA runtime your app depends on
+flutter pub add flutter_ota_kit
 
-# Build the patch package
-dart run flutter_patcher:pack \
-  --apk build/app/outputs/flutter-apk/app-release.apk \
-  --version dev-1 \
-  --target-version-code 100
-
-# Serve dist/patch.zip and dist/manifest.json on 0.0.0.0:8080
-dart run flutter_patcher:mock_server --dist dist
+# CLI — builds patches and deploys them to your backend
+npm install -g @_nazmiforreal/flutter-ota
+flutter-ota --help
 ```
 
-Then call it from a phone on the same Wi-Fi network:
+## 2. Scaffold your project
+From the root of your Flutter app, choose your backend:
+```bash
+flutter-ota init supabase      # also: postgres | cloudflare | aws
+```
+This:
+- writes `.flutter_ota_kit/config.json` (git-ignored, may contain secrets),
+- ensures `flutter_ota_kit:` is present in `pubspec.yaml` (you can also add it manually with `flutter pub add flutter_ota_kit`),
+- adds the `INTERNET` permission to `android/app/src/main/AndroidManifest.xml`,
+- generates `lib/flutter_ota_kit_setup.dart` (wires your backend + forced auto-restart).
 
+```bash
+flutter pub get
+```
+
+## 2b. Fill in `.env`
+
+`init` also wrote a `.env` scaffold at your project root. Put your backend
+secrets there (e.g. `SUPABASE_URL`, `SUPABASE_ANON_KEY`) — it is git-ignored
+automatically. The app reads them at build time via `--dart-define-from-file=.env`:
+
+```bash
+# dev
+flutter run --dart-define-from-file=.env
+
+# release APK for device / E2E
+flutter build apk --release --target-platform android-x64 \
+  --dart-define-from-file=.env
+```
+
+All configurable values resolve as: **environment (`.env` / `--dart-define`) →
+`.flutter_ota_kit/config.json` → built-in defaults**. Environment wins, so
+secrets never get committed. Full reference: [configuration.md](configuration.md).
+
+## 3. Wire `main.dart`
 ```dart
-final check = await FlutterPatcher.checkUpdate(
-  'http://<your-computer-ip>:8080/check',
-);
+import 'package:flutter/material.dart';
+import 'package:flutter_ota_kit/flutter_ota_kit.dart';
+import 'flutter_ota_kit_setup.dart';
 
-if (check.hasUpdate) {
-  await FlutterPatcher.applyPatch(check.patch!);
+Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await setupFlutterOta();          // configures backend + forced auto-restart
+  runApp(const MyApp());
 }
 ```
 
-The plugin also ships with an optional minimal check-update JSON protocol, intended for quick onboarding, the example, and local testing. In production, if you already have your own update / staging / auth protocol, parse the response yourself and construct `PatchInfo` directly. The protocol format and `checkUpdate` usage live in the [API Reference](https://pub.dev/documentation/flutter_patcher/latest/topics/API-reference-topic.html) and [Architecture](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html).
+## 4. Provision the backend
+`init` wrote your backend choice; now provision it.
 
----
+- **Supabase** — fully automated:
+  ```bash
+  flutter-ota migrate supabase
+  ```
+- **Postgres** — prints SQL to run against your database:
+  ```bash
+  flutter-ota migrate postgres
+  ```
+- **Cloudflare** — prints `wrangler` commands (D1 + R2):
+  ```bash
+  flutter-ota migrate cloudflare
+  ```
+- **AWS** — prints S3 + DB setup (AWS CLI / Terraform):
+  ```bash
+  flutter-ota migrate aws
+  ```
 
-## Skipping MD5
+Per-backend credentials, env vars, and device-side `configureX` snippets are in
+[backends.md](backends.md).
 
-`PatchInfo.md5` is optional. If your server doesn't ship md5 (or you only want HTTPS-level integrity), leave it out:
-
-```dart
-PatchInfo(version: 'fix-1', patchUrl: '...', targetVersionCode: 100); // md5 defaults to ''
-```
-
-Download integrity checks are skipped. **Note that signature verification is also skipped** in this case (the Ed25519 input is the md5 hex string — without md5 there is no message to sign over). To keep signature verification you must also ship md5.
-
----
-
-## Multi-ABI setup
-
-The server must distribute a different `patch.zip` per ABI (each patch embeds one `lib/<abi>/libapp.so`). The client can read the current device ABI via `FlutterPatcher.deviceAbi` and include it in your update request.
-
----
-
-## Multi-flavor setup
-
-The server should track patches by `flavor × ABI × versionCode`. Different flavors typically have different configs, package names, resources, and business logic — never share a patch across flavors.
-
----
-
-## Advanced `--assets` syntax
-
-For long asset lists, point `--assets` at a text file prefixed with `@` — one path per line, `#` starts a comment, inline and `@file` can be mixed:
-
+## 5. Build a patch
 ```bash
-# patch-assets.txt
-assets/hero.png
-assets/strings/zh.json
-assets/illustrations/onboarding-1.png
+flutter build apk --release
+flutter-ota build --name 1.0.1 --platform android --arch x86_64
+# -> dist/patch.zip
 ```
 
+## 6. Deploy it
 ```bash
-dart run flutter_patcher:pack \
-  --apk build/app/outputs/flutter-apk/app-release.apk \
-  --version 1.0.1 \
-  --target-version-code 100 \
-  --assets @patch-assets.txt,assets/last-minute.png
+# Non-forced: staged, applies on next launch
+flutter-ota deploy --backend supabase --source dist/patch.zip \
+  --channel production --platform android --target-app-version 1.0.0
+
+# Forced: applies + auto-restarts the app immediately (zero clicks)
+flutter-ota deploy --backend supabase --source dist/patch.zip \
+  --channel production --platform android --target-app-version 1.0.0 --force
 ```
+(Replace `supabase` with your chosen backend. Short flags also work:
+`-b` backend, `-c` channel, `-f` force, `-s` source, `-k` key.)
 
----
+## 7. Watch it land
+- **Non-forced**: the next time the user opens the app (cold start) the new code is active.
+- **Forced**: `init(autoApplyUpdates: true)` (set by `setupFlutterOta`) checks on launch,
+  downloads, and restarts the process automatically — no button required.
 
-## Crash protection tuning
-
-If you need to tune crash protection, pass parameters explicitly to `init`:
-
-```dart
-await FlutterPatcher.init(
-  maxCrashCount: 1,
-  verifyAfter: const Duration(seconds: 5),
-);
-```
-
-| Parameter | Default | Description |
-|---|---|---|
-| `maxCrashCount` | `1` | Number of consecutive failures before the patch is tripped |
-| `verifyAfter` | `5 seconds` | Window during which post-first-frame Dart error hooks keep watching |
-
-Android 11+ uses `ApplicationExitInfo` to distinguish crashes, ANRs, user dismissal, and system reclaim more accurately. Android 10 and below have weaker signals; pair the SDK with your own crash monitoring and a server-side kill switch.
-
-Full design: [Crash protection docs](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html).
+## Next
+- Full reference: [developer-guide.md](developer-guide.md)
+- Per-backend details: [backends.md](backends.md)

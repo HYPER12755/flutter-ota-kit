@@ -9,11 +9,11 @@ Future<Map<String, dynamic>> getJson(
   Map<String, String>? headers,
   Duration timeout = const Duration(seconds: 10),
 }) {
-  throw UnsupportedError('flutter_patcher only supports Android');
+  throw UnsupportedError('flutter_ota_kit only supports Android');
 }
 
 Future<String> stagePatchBytes(String dir, Uint8List bytes) {
-  throw UnsupportedError('flutter_patcher only supports Android');
+  throw UnsupportedError('flutter_ota_kit only supports Android');
 }
 
 Future<void> deleteFileIfExists(String path) async {}

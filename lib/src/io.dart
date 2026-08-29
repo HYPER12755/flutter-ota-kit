@@ -34,7 +34,7 @@ Future<Map<String, dynamic>> getJson(
 
 Future<String> stagePatchBytes(String dir, Uint8List bytes) async {
   final staged = File(
-    '$dir/flutter_patcher_staged_${DateTime.now().microsecondsSinceEpoch}.so',
+    '$dir/flutter_ota_kit_staged_${DateTime.now().microsecondsSinceEpoch}.so',
   );
   await staged.writeAsBytes(bytes, flush: true);
   return staged.path;

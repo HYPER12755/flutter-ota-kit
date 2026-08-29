@@ -2,7 +2,7 @@
 
 **English** | [简体中文](architecture-zh.md)
 
-This document covers how `flutter_patcher` works, the self-hosted server protocol, and a small number of advanced configuration options.
+This document covers how `flutter_ota_kit` works and a small number of advanced configuration options.
 
 If you only want to integrate quickly, read the API reference first. This document is more useful when:
 
@@ -13,8 +13,31 @@ If you only want to integrate quickly, read the API reference first. This docume
 
 Related docs:
 
-- The public API, pack CLI flags, performance, and compatibility live in the [API reference](https://pub.dev/documentation/flutter_patcher/latest/topics/API-reference-topic.html)
-- Crash protection, auto-rollback, and blacklist behavior live in [Crash protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html)
+- The public API, pack CLI flags, performance, and compatibility live in the [API reference](https://pub.dev/documentation/flutter_ota_kit/latest/topics/API-reference-topic.html)
+- Crash protection, auto-rollback, and blacklist behavior live in [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html)
+
+---
+
+## Backends
+
+`flutter_ota_kit` ships four first-party, cloud-native backends. They are selected on the
+device via `FlutterPatcher.configureSupabase(...)` / `configurePostgres(...)` /
+`configureCloudflare(...)` / `configureAws(...)`, and on the CLI via
+`flutter-ota init <supabase|postgres|cloudflare|aws>` (which writes `.flutter_ota_kit/config.json`).
+
+| Backend     | Storage                     | Database            | `migrate` does                          |
+|-------------|-----------------------------|---------------------|-----------------------------------------|
+| Supabase    | Supabase Storage (`bundles`)| Postgres (Supabase) | **Full**: SQL + bucket auto-provisioned |
+| Postgres    | Postgres `bytea` column     | Postgres            | Prints SQL to run manually              |
+| Cloudflare  | R2 (S3-compatible)          | D1 (SQLite)         | Prints `wrangler` commands              |
+| AWS         | S3 (+ optional CloudFront)  | S3 blob DB          | Prints AWS CLI / Terraform steps        |
+
+All four are implemented as backend plugins behind one `Backend` abstraction
+(`resolveBackend` in the CLI). The device SDK is likewise backend-agnostic: every
+source returns the same `ServerUpdateResult`, so verification, staging, crash
+protection, and rollback are identical regardless of where the patch came from. You can
+also bypass the built-in sources and build a `PatchInfo` yourself from your own
+update / staging / auth protocol.
 
 ---
 
@@ -22,7 +45,7 @@ Related docs:
 
 ### Overview
 
-A `flutter_patcher` rollout involves three actors: the developer machine, the server, and the user device.
+A `flutter_ota_kit` rollout involves three actors: the developer machine, the server, and the user device.
 
 ```text
   Dev machine                Server                   User device
@@ -71,11 +94,11 @@ Boot fails:    auto-rollback on next start
 
 The bulk of the work (decryption-free integrity checks, asset overlay synthesis, asset-table merge, private archive packaging) happens during `applyPatch` and is committed to `current/` atomically before the call returns. Cold start only re-validates what's on disk and installs the loader hook; it never reopens the ZIP or re-runs the overlay merge.
 
-Validation order at install (per [PatchManager.kt:303-446](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L303-L446)): payload MD5 → Ed25519 signature → `versionCode` match (against the inner package manifest) → per-file integrity inside the ZIP. Signature is only checked when `md5` is present (the signed message is the md5 hex string).
+Validation order at install (per [PatchManager.kt:303-446](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L303-L446)): payload MD5 → Ed25519 signature → `versionCode` match (against the inner package manifest) → per-file integrity inside the ZIP. Signature is only checked when `md5` is present (the signed message is the md5 hex string).
 
 At cold start the plugin re-verifies that the on-disk artifacts still belong to this APK (`versionCode` and stored MD5) before loading them. If the patch is invalid, corrupt, mismatched, or blacklisted, the plugin drops it and falls back to the APK's built-in version.
 
-For the full crash-protection decision flow, Android-version differences, and blacklist behavior, see [Crash protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html).
+For the full crash-protection decision flow, Android-version differences, and blacklist behavior, see [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html).
 
 ---
 
@@ -94,7 +117,7 @@ This guards against:
 That's why building a patch must explicitly name the base APK's `versionCode`:
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.0-h1 \
   --target-version-code 100
@@ -110,11 +133,11 @@ If multiple `versionCode`s are live at once, build and ship a separate patch for
 
 ### Crash safety
 
-`flutter_patcher` is fail-fast by default.
+`flutter_ota_kit` is fail-fast by default.
 If a patch causes a boot failure, or a serious Dart-level error fires during early UI, the plugin rolls back to the APK's built-in version on the next cold start and prevents the same bad patch from being loaded again.
 
 Production deployments should still combine this with server-side monitoring and staged rollouts.
-For the full mechanism, see [Crash protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html).
+For the full mechanism, see [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html).
 
 ---
 
@@ -137,7 +160,7 @@ A Dart-only `patch.zip` contains only the inner `manifest.json` and `lib/<abi>/l
 
 ### Atomic install
 
-Patch installs are crash-safe. The install path ([PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L482-L615), `finalizePatch` at [L622-767](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L622-L767)) writes everything in a side directory first, then commits with a sequence of renames:
+Patch installs are crash-safe. The install path ([PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L482-L615), `finalizePatch` at [L622-767](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L622-L767)) writes everything in a side directory first, then commits with a sequence of renames:
 
 ```text
 staging/      ← extract libapp.so; synthesize flutter_assets/ + flutter_assets.apk
@@ -149,15 +172,15 @@ current/      ← what the next cold start loads; previous version moves to prev
 previous/     ← garbage-collected as part of the same commit
 ```
 
-`pending/` is **not** "waiting for first successful boot" — it's the temporary rename target inside `finalizePatch`. Once `applyPatch` returns successfully, `current/` is already promoted and `previous/` has been cleaned up. The "first successful boot" gate is the *crash guard* (see [Crash protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html)) which deletes `current/` on the next boot if the previous boot tripped the breaker — that's a separate mechanism from the on-disk transaction.
+`pending/` is **not** "waiting for first successful boot" — it's the temporary rename target inside `finalizePatch`. Once `applyPatch` returns successfully, `current/` is already promoted and `previous/` has been cleaned up. The "first successful boot" gate is the *crash guard* (see [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html)) which deletes `current/` on the next boot if the previous boot tripped the breaker — that's a separate mechanism from the on-disk transaction.
 
-A power-loss or kill mid-install can leave any of `pending/` or `previous/` around with an install marker; on next boot, `recoverInterruptedInstall` ([PatchManager.kt:1146-1172](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L1146-L1172)) reconciles them by completing the rollback to `previous/` or discarding the half-installed payload.
+A power-loss or kill mid-install can leave any of `pending/` or `previous/` around with an install marker; on next boot, `recoverInterruptedInstall` ([PatchManager.kt:1146-1172](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L1146-L1172)) reconciles them by completing the rollback to `previous/` or discarding the half-installed payload.
 
 ---
 
 ### Asset overlay synthesis (install phase)
 
-When a patch carries asset overlays, the plugin produces a self-contained, Flutter-readable asset bundle during install. The flow ([PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L482-L615), [L848-983](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L848-L983)):
+When a patch carries asset overlays, the plugin produces a self-contained, Flutter-readable asset bundle during install. The flow ([PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L482-L615), [L848-983](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L848-L983)):
 
 1. Copy the base APK's `assets/flutter_assets/*` to a staging directory.
 2. Overlay each path listed in the inner manifest with the bytes packed inside `patch.zip`.
@@ -167,7 +190,7 @@ When a patch carries asset overlays, the plugin produces a self-contained, Flutt
 
 Cold start does none of the above. It just walks `current/`, verifies that `libapp.so` + `flutter_assets.apk` (if present) match their stored MD5s, and lets the loader hook do its thing:
 
-[`LoaderHook`](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/LoaderHook.kt) intercepts `FlutterLoader.findAppBundlePath` to point at the patched `libapp.so`, and (when assets are present) installs a patched `FlutterJNI` AssetManager that opens the private `flutter_assets.apk`. APK fallback still works for paths the patch didn't touch.
+[`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) intercepts `FlutterLoader.findAppBundlePath` to point at the patched `libapp.so`, and (when assets are present) installs a patched `FlutterJNI` AssetManager that opens the private `flutter_assets.apk`. APK fallback still works for paths the patch didn't touch.
 
 `Image.asset(...)`, `rootBundle.load(...)`, and font lookups go through the redirected bundle automatically — no app-side code changes needed.
 
@@ -175,7 +198,7 @@ Cold start does none of the above. It just walks `current/`, verifies that `liba
 
 ### Download retry policy
 
-The runtime retries failed HTTP downloads up to **3 times** with exponential backoff (~2s, 4s, 8s — see [PatchManager.kt:355-405](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L355-L405)). After the final failure the apply result is `network`. Servers can rely on this without their own client-side retry layer; if you want jitter or different bounds, wrap `applyPatch` in your own backoff loop.
+The runtime retries failed HTTP downloads up to **3 times** with exponential backoff (~2s, 4s, 8s — see [PatchManager.kt:355-405](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L355-L405)). After the final failure the apply result is `network`. Servers can rely on this without their own client-side retry layer; if you want jitter or different bounds, wrap `applyPatch` in your own backoff loop.
 
 ---
 
@@ -201,7 +224,7 @@ There is no on-device fallback across ABIs — your server is responsible for se
 
 ## Self-hosting
 
-`flutter_patcher` is not coupled to any particular backend. You can use your own server, CDN, or object storage to distribute patches.
+`flutter_ota_kit` is not coupled to any particular backend. You can use your own server, CDN, or object storage to distribute patches.
 
 The client only needs a `PatchInfo`; pass it to `applyPatch`.
 
@@ -307,7 +330,7 @@ Pass it in the check-update request and have the server return the matching URL.
 
 ### Patch signing
 
-`flutter_patcher` supports Ed25519 signature verification.
+`flutter_ota_kit` supports Ed25519 signature verification.
 
 Signing provides extra integrity protection beyond HTTPS, in case the CDN or an intermediate hop ever returns a tampered file.
 
@@ -388,23 +411,9 @@ In that case **both download integrity and signature verification are skipped** 
 ### Recommended backend practices
 
 - **Stage the rollout.** A typical ramp is `1% → 5% → 20% → 50% → 100%`; watch crash rate, boot-failure rate, and key business metrics between steps.
-- **Wire crash reporting to `lastBootDiagnostic`.** Report abnormal states (see [Crash protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html)); auto-stop delivery if the same patch trips multiple rollbacks in a short window.
+- **Wire crash reporting to `lastBootDiagnostic`.** Report abnormal states (see [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html)); auto-stop delivery if the same patch trips multiple rollbacks in a short window.
 - **Emergency rollback is server-side.** Stop returning the patch from the check-update endpoint — new users won't download it, and devices that already tripped crash protection refuse to reload it. No remote-delete RPC is needed.
 - **Keep release records.** For every patch, persist: `version`, `targetVersionCode`, ABI, MD5/signature (if shipped), release time, rollout %, and lifecycle state (ramping / full / rolled back). This is what makes incident triage tractable.
-
----
-
-### Local mock server
-
-The repository ships `dart run flutter_patcher:mock_server` for local end-to-end testing.
-
-It serves a local `libapp.so` and `manifest.json` over HTTP for development only. It is never bundled into a release APK and should never be used in production.
-
-```bash
-dart run flutter_patcher:mock_server --dist dist
-```
-
-A typical workflow is to validate the full flow against the mock server, then plug your own backend in.
 
 ---
 
@@ -426,7 +435,7 @@ Remove the auto-init provider from `AndroidManifest.xml`:
 ```xml
 <provider
     android:name="com.flutter_patcher.flutter_patcher.FlutterPatcherAutoInitProvider"
-    android:authorities="${applicationId}.flutter_patcher.autoinit"
+    android:authorities="${applicationId}.flutter_ota_kit.autoinit"
     tools:node="remove" />
 ```
 
@@ -447,7 +456,7 @@ Only do this when you know the project creates a `FlutterEngine` ahead of time.
 
 ### Flutter compatibility
 
-`flutter_patcher` needs to influence Flutter Engine's loader during early Android startup.
+`flutter_ota_kit` needs to influence Flutter Engine's loader during early Android startup.
 
 The current `pubspec` allows Flutter `>=3.3.0`; the loader hook is verified on Flutter `3.19 ~ 3.44`. If a future Flutter release changes the loader internals, you may temporarily override the field name without upgrading the plugin:
 
@@ -465,7 +474,7 @@ After upgrading Flutter, check the `FlutterPatcher/Hook` tag in logcat to confir
 
 ### Android only
 
-`flutter_patcher` only supports Android.
+`flutter_ota_kit` only supports Android.
 
 iOS does not allow shipping executable code dynamically. On Web, macOS, Windows and Linux every API is a no-op — patch logic never runs.
 
@@ -492,3 +501,8 @@ After upgrading Flutter, validate on a real device that patches still load, roll
 ### App-store policies and compliance
 
 Dynamic executable-code delivery is restricted by some app stores and regulated verticals (finance, healthcare, government, apps for minors). The README TL;DR covers the basics; the plugin provides the technical capability — it doesn't substitute for your own compliance review.
+
+## See also
+- [API Reference](api-reference.md) — `FlutterPatcher` methods and error codes
+- [Crash Protection](crash-protection.md) — how the circuit breaker and rollback work
+- [Configuration](configuration.md) — backends, channels, and targeting

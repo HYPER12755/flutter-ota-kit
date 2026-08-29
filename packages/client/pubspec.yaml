@@ -1,22 +1,21 @@
-name: flutter_patcher_client
-description: Server-API client for flutter_patcher — maps the hot-updater-compatible update-check HTTP contract to a PatchInfo the device SDK can install.
+name: flutter_ota_kit_client
+description: Server-API client for flutter_ota_kit — maps the hot-updater-compatible update-check HTTP contract to a PatchInfo the device SDK can install.
 version: 0.1.0
-publish_to: none
+homepage: https://github.com/HYPER12755/flutter_ota_kit
+repository: https://github.com/HYPER12755/flutter_ota_kit
+issue_tracker: https://github.com/HYPER12755/flutter_ota_kit/issues
+documentation: https://github.com/HYPER12755/flutter_ota_kit#readme
+license: MIT
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
-  flutter_patcher_core:
-    path: ../../packages/core
+  flutter_ota_kit_core: ^0.1.0
 
 dev_dependencies:
-  flutter_patcher_server:
-    path: ../../packages/server
-  flutter_patcher_cloudflare:
-    path: ../../plugins/cloudflare
-  flutter_patcher_plugin_core:
-    path: ../../plugins/plugin-core
+  flutter_ota_kit_cloudflare: ^0.1.0
+  flutter_ota_kit_plugin_core: ^0.0.1
   crypto: ^3.0.3
   test: ^1.25.0
   lints: ^4.0.0

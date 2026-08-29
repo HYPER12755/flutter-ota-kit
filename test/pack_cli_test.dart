@@ -10,7 +10,7 @@ import '../bin/pack.dart' as pack;
 
 void main() {
   test('pack emits Dart-only patch.zip when no --assets is passed', () async {
-    final temp = await Directory.systemTemp.createTemp('flutter_patcher_pack_');
+    final temp = await Directory.systemTemp.createTemp('flutter_ota_kit_pack_');
     addTearDown(() async {
       if (await temp.exists()) {
         await temp.delete(recursive: true);
@@ -48,7 +48,7 @@ void main() {
     expect(outerManifest['schemaVersion'], 2);
     expect(outerManifest['payload'], 'patch.zip');
     expect(outerManifest['targetVersionCode'], 100);
-    expect(outerManifest['abi'], 'arm64-v8a');
+    expect(outerManifest['abis'], <String>['arm64-v8a']);
     expect(outerManifest['md5'], md5.convert(patchZipBytes).toString());
 
     final patchZip = ZipDecoder().decodeBytes(patchZipBytes);
@@ -78,7 +78,7 @@ void main() {
   });
 
   test('pack writes patch.zip with selected asset variants', () async {
-    final temp = await Directory.systemTemp.createTemp('flutter_patcher_pack_');
+    final temp = await Directory.systemTemp.createTemp('flutter_ota_kit_pack_');
     addTearDown(() async {
       if (await temp.exists()) {
         await temp.delete(recursive: true);
@@ -177,7 +177,7 @@ void main() {
   });
 
   test('pack rejects selected asset missing from manifest', () async {
-    final temp = await Directory.systemTemp.createTemp('flutter_patcher_pack_');
+    final temp = await Directory.systemTemp.createTemp('flutter_ota_kit_pack_');
     addTearDown(() async {
       if (await temp.exists()) {
         await temp.delete(recursive: true);
@@ -215,12 +215,12 @@ void main() {
       '${temp.path}/dist',
     ]);
 
-    expect(exitCode, 65);
+    expect(exitCode, 1);
   });
 
   test('pack reads asset keys from @file with comments and mixed inline',
       () async {
-    final temp = await Directory.systemTemp.createTemp('flutter_patcher_pack_');
+    final temp = await Directory.systemTemp.createTemp('flutter_ota_kit_pack_');
     addTearDown(() async {
       if (await temp.exists()) {
         await temp.delete(recursive: true);
@@ -313,7 +313,7 @@ void main() {
   });
 
   test('pack rejects @file path that does not exist', () async {
-    final temp = await Directory.systemTemp.createTemp('flutter_patcher_pack_');
+    final temp = await Directory.systemTemp.createTemp('flutter_ota_kit_pack_');
     addTearDown(() async {
       if (await temp.exists()) {
         await temp.delete(recursive: true);
@@ -344,7 +344,7 @@ void main() {
   });
 
   test('pack rejects nested @-include inside an asset list file', () async {
-    final temp = await Directory.systemTemp.createTemp('flutter_patcher_pack_');
+    final temp = await Directory.systemTemp.createTemp('flutter_ota_kit_pack_');
     addTearDown(() async {
       if (await temp.exists()) {
         await temp.delete(recursive: true);

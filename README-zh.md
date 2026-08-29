@@ -1,15 +1,15 @@
-# flutter_patcher
+# flutter_ota_kit
 
 [English](README.md) | **简体中文**
 
-[![pub package](https://img.shields.io/pub/v/flutter_patcher.svg)](https://pub.dev/packages/flutter_patcher)
+[![pub package](https://img.shields.io/pub/v/flutter_ota_kit.svg)](https://pub.dev/packages/flutter_ota_kit)
 [![Platform](https://img.shields.io/badge/platform-Android-brightgreen)](https://flutter.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-开源、自托管的 Flutter Android **热更新（Code Push）** 插件。
-无需发版、无需第三方云服务，通过 OTA 方式将 Dart 代码和资源补丁推送到已安装的 App。
+开源的 Flutter Android **热更新（Code Push）** 插件。
+无需发版，通过 OTA 方式将 Dart 代码和资源补丁推送到已安装的 App。
 
-如果你用过 [Shorebird](https://shorebird.dev/)、[CodePush](https://learn.microsoft.com/en-us/appcenter/distribution/codepush/) 或 [Expo EAS Update](https://docs.expo.dev/eas-update/introduction/) —— flutter_patcher 将相同的 OTA 更新模式带到 Flutter Android，完全自托管、MIT 协议。
+如果你用过 [Shorebird](https://shorebird.dev/)、[CodePush](https://learn.microsoft.com/en-us/appcenter/distribution/codepush/) 或 [Expo EAS Update](https://docs.expo.dev/eas-update/introduction/) —— flutter_ota_kit 将相同的 OTA 更新模式带到 Flutter Android，MIT 协议，并支持你自选的云端后端（Supabase / Postgres / Cloudflare / AWS）或自建 CDN。
 
 ![功能演示：应用补丁、冷启动生效和回滚](doc/feature-presentation.gif)
 
@@ -17,30 +17,31 @@
 
 ## 横向对比
 
-|                | flutter_patcher          | Shorebird                     | CodePush (React Native)       |
+|                | flutter_ota_kit          | Shorebird                     | CodePush (React Native)       |
 |----------------|--------------------------|-------------------------------|-------------------------------|
 | 框架           | Flutter                  | Flutter                       | React Native                  |
 | 平台           | Android                  | Android + iOS                 | Android + iOS（2025 年已退役）|
-| 托管方式       | 你自己的服务器 / CDN      | Shorebird 云端                 | AppCenter 云端（已废弃）       |
+| 托管方式       | 你选的云端后端（Supabase / Postgres / Cloudflare / AWS）或自建 CDN | Shorebird 云端                 | AppCenter 云端（已废弃）       |
 | 更新范围       | Dart 代码 + 资源          | Dart 代码（引擎级 diff）       | JS bundle                     |
 | 生效时机       | 下次冷启动                | 下次重启                       | 下次重启                       |
 | 费用           | 免费（MIT）               | 免费额度 + 付费方案             | —                             |
-| 可自托管       | 是 — 完全自控             | 云端托管                       | —                             |
+| 云端后端       | Supabase / Postgres / Cloudflare / AWS（也支持自建） | 云端托管                       | —                             |
 
 **选 Shorebird**：如果你需要 iOS 支持或完全托管的服务。
-**选 flutter_patcher**：如果你需要在自己控制的基础设施上进行 OTA 更新 —— 企业应用、区域分发或非 Play 渠道。
+**选 flutter_ota_kit**：如果你需要在自己控制的基础设施上进行 OTA 更新 —— 企业应用、区域分发或非 Play 渠道。
 
-> Google Play 和部分应用商店限制运行时下载可执行代码。flutter_patcher 面向自控分发、企业 / 内部应用或明确允许此行为的渠道。上线前请确认你的分发渠道政策。
+> Google Play 和部分应用商店限制运行时下载可执行代码。flutter_ota_kit 面向自控分发、企业 / 内部应用或明确允许此行为的渠道。上线前请确认你的分发渠道政策。
 
 ---
 
 ## 功能特性
 
 - **OTA 热更新** — 下次冷启动时替换 Dart AOT 产物 `libapp.so` 和 Flutter 资源
-- **自托管** — 补丁放在你的 CDN / 对象存储 / 内部服务器，零供应商锁定
+- **后端灵活** — 补丁存放在你选择的云端后端存储（Supabase / Postgres / Cloudflare / AWS），或自建 CDN / 对象存储，零供应商锁定
+- **四大云端后端** — Supabase（全自动化）、Postgres、Cloudflare（R2 + D1）、AWS（S3），也支持自建
 - **完整性校验** — MD5 + 可选 Ed25519 签名（Android 13+）
 - **崩溃回滚** — 启动失败自动回滚，问题补丁进入黑名单不会重复加载
-- **配套工具** — `pack` 打包 CLI、运行时诊断、本地 mock server 和示例 App
+- **配套工具** — `pack` 打包 CLI、运行时诊断、和示例 App
 
 ---
 
@@ -49,8 +50,8 @@
 不需要服务器。克隆仓库即可体验完整的 补丁 → 重启 → 回滚 流程：
 
 ```bash
-git clone https://github.com/xuelinger2333/flutter_patcher.git
-cd flutter_patcher/example
+git clone https://github.com/HYPER12755/flutter_ota_kit.git
+cd flutter_ota_kit/example
 flutter build apk --release
 flutter install
 ```
@@ -63,7 +64,7 @@ flutter install
 
 示例内置了预编译的 `patch.zip`，全程离线运行。
 
-如需测试 HTTP 流程，参见 [本地 mock server 指南](doc/getting-started-zh.md#本地-mock-server)。
+如需测试 HTTP 流程，参见 [快速上手](doc/getting-started-zh.md) 部署到云端后端（Supabase / Postgres / Cloudflare / AWS）。
 
 ---
 
@@ -92,16 +93,16 @@ flutter install
 
 ```yaml
 dependencies:
-  flutter_patcher: ^0.1.4
+  flutter_ota_kit: ^0.1.4
 ```
 
 或使用 Git 依赖：
 
 ```yaml
 dependencies:
-  flutter_patcher:
+  flutter_ota_kit:
     git:
-      url: https://github.com/xuelinger2333/flutter_patcher.git
+      url: https://github.com/HYPER12755/flutter_ota_kit.git
 ```
 
 ### 2. 初始化
@@ -121,7 +122,7 @@ void main() async {
 重新构建 release APK 后，运行 `pack`：
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.0-h1 \
   --target-version-code 100
@@ -130,7 +131,7 @@ dart run flutter_patcher:pack \
 包含资源（0.1.3 起），追加 `--assets`：
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.1 \
   --target-version-code 100 \
@@ -222,7 +223,7 @@ await FlutterPatcher.rollback();
 
 插件默认 fail-fast：补丁导致启动失败时自动回滚，并将问题版本加入黑名单。可通过 `maxCrashCount`（默认 1）和 `verifyAfter`（默认 5s）调整。
 
-完整设计和 Android 版本差异：[崩溃保护文档](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html)。
+完整设计和 Android 版本差异：[崩溃保护文档](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html)。
 
 ### 完整性与签名
 
@@ -231,7 +232,7 @@ await FlutterPatcher.rollback();
 - 补丁与宿主 APK `versionCode` 强绑定，APK 升级后旧补丁自动失效
 - 始终通过 HTTPS 下载；私钥只放在服务端
 
-详情：[架构设计 → 安全](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html)。
+详情：[架构设计 → 安全](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Architecture-topic.html)。
 
 ---
 
@@ -264,13 +265,13 @@ await FlutterPatcher.rollback();
 
 在线版（pub.dev，英文）：
 
-- [API Reference](https://pub.dev/documentation/flutter_patcher/latest/topics/API-reference-topic.html) — 初始化、检查更新、应用补丁、回滚、诊断、错误码、CLI 参数
-- [Crash Protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html) — 自动回滚、黑名单、Android 版本差异
-- [Architecture](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html) — 工作原理、服务端协议、签名、进阶配置
+- [API Reference](https://pub.dev/documentation/flutter_ota_kit/latest/topics/API-reference-topic.html) — 初始化、检查更新、应用补丁、回滚、诊断、错误码、CLI 参数
+- [Crash Protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html) — 自动回滚、黑名单、Android 版本差异
+- [Architecture](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Architecture-topic.html) — 工作原理、服务端协议、签名、进阶配置
 
 仓库内中文文档：
 
-- [快速上手](doc/getting-started-zh.md) — mock server、多 ABI 配置、分步指引
+- [快速上手](doc/getting-started-zh.md) — 多 ABI 配置、分步指引
 - [API 参考](doc/api-reference-zh.md) — 初始化、检查更新、应用补丁、回滚、诊断、错误码和 CLI 参数
 - [崩溃保护](doc/crash-protection-zh.md) — 崩溃保护、自动回滚、黑名单、Android 版本差异和诊断状态
 - [架构设计](doc/architecture-zh.md) — 工作原理、自托管服务端协议、签名和进阶配置
@@ -283,7 +284,7 @@ English: [README.md](README.md)
 
 ## 谁在使用？
 
-如果你在生产环境使用了 flutter_patcher，欢迎 [提 issue](https://github.com/xuelinger2333/flutter_patcher/issues) 告诉我们你的用法 —— 我们很乐意在此展示。
+如果你在生产环境使用了 flutter_ota_kit，欢迎 [提 issue](https://github.com/HYPER12755/flutter_ota_kit/issues) 告诉我们你的用法 —— 我们很乐意在此展示。
 
 ---
 

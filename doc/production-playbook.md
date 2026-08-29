@@ -1,6 +1,6 @@
 # Production Playbook
 
-Best practices and field notes for shipping flutter_patcher patches in production.
+Best practices and field notes for shipping flutter_ota_kit patches in production.
 
 ---
 
@@ -78,4 +78,10 @@ Different flavors typically have different configs, package names, resources, an
 
 ## Field notes
 
-_This section collects real-world tips from production users. If you have experience to share, [open an issue](https://github.com/xuelinger2333/flutter_patcher/issues) — we'll add it here._
+_This section collects real-world tips from production users. If you have experience to share, [open an issue](https://github.com/HYPER12755/flutter_ota_kit/issues) — we'll add it here._
+
+## See also
+- [CLI Reference](cli-reference.md) — `bundle`, `rollback`, `keys` for ops
+- [Crash Protection](crash-protection.md) — auto-rollback and blacklist behavior
+- [Configuration](configuration.md) — channels, targeting, and signing
+- [Developer Guide](developer-guide.md) — the full command reference

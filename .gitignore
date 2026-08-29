@@ -43,3 +43,10 @@ migrate_working_dir/
 
 # local OTA test artifacts
 .ota/
+
+# CLI / SDK project config written by `flutter-ota init` (may contain secrets).
+.flutter_ota_kit/
+
+# Example app local secrets (real Supabase creds). Keep out of git;
+# example/.env.example (placeholders) is committed instead.
+example/.env

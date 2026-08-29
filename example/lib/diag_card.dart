@@ -1,19 +1,21 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_patcher/flutter_patcher.dart';
+import 'package:flutter_ota_kit/flutter_ota_kit.dart';
 
-/// 上次冷启动诊断的只读卡片 —— 把 `FlutterPatcher.lastBootDiagnostic` 的结果
-/// 渲染成业务可一眼看懂的 UI，避免真机调试时一直看 logcat。
+/// A read-only card showing the last cold-start diagnostic — renders the result of
+/// `FlutterPatcher.lastBootDiagnostic` into a UI the app can read at a glance,
+/// instead of staring at logcat during on-device debugging.
 ///
-/// 状态视觉编码：
-/// - 绿色 ✅：patched / noPatch（健康）
-/// - 红色 ❌：droppedSignatureInvalid / droppedCircuitBreaker（强告警）
-/// - 黄色 ⚠️：其他被丢弃 / hook 失败（一般提醒）
+/// Visual status encoding:
+/// - green ✅: patched / noPatch (healthy)
+/// - red ❌: droppedSignatureInvalid / droppedCircuitBreaker (strong alert)
+/// - yellow ⚠️: other dropped / hook failure (gentle reminder)
 class DiagCard extends StatefulWidget {
   const DiagCard({super.key});
 
-  /// 让外部代码（比如刚做完 apply / rollback）触发卡片重新拉取诊断。
-  /// 注意：lastBootDiagnostic 反映的是**上次冷启动**结果，apply 当下不会变；
-  /// 但卡片的 `app vc` 等字段重新读一遍也无害，且能视觉上刷一下"我点过了"。
+  /// Lets external code (e.g. right after an apply / rollback) trigger the card to
+  /// re-fetch diagnostics. Note: `lastBootDiagnostic` reflects the **last cold
+  /// start** — it won't change immediately after apply; but re-reading fields like
+  /// `app vc` is harmless and gives a visual "I clicked" refresh.
   static void refresh() => _refreshTick.value++;
 
   static final ValueNotifier<int> _refreshTick = ValueNotifier(0);
@@ -168,8 +170,9 @@ class _DiagCardState extends State<DiagCard> {
   static List<String> _detailLines(PatchBootDiagnostic? d) {
     if (d == null) return const [];
     final lines = <String>[];
-    // versionCode mismatch 时两个值都有意义；其他场景只有 appVersionCode，
-    // 此时单独显示更直观，避免出现 "patch vc=?, app vc=1" 这种半残提示。
+    // When versionCode mismatches, both values are meaningful; in other cases only
+    // appVersionCode is present, and showing it alone is clearer than a half-empty
+    // "patch vc=?, app vc=1" hint.
     if (d.patchTargetVersionCode != null && d.appVersionCode != null) {
       lines.add(
         'patch vc=${d.patchTargetVersionCode}, app vc=${d.appVersionCode}',

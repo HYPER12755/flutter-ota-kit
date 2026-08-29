@@ -1,4 +1,4 @@
-import 'package:flutter_patcher_core/flutter_patcher_core.dart'
+import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show
         AppUpdateStatus,
         AppVersionGetBundlesArgs,
@@ -8,10 +8,10 @@ import 'package:flutter_patcher_core/flutter_patcher_core.dart'
         Platform,
         UpdateInfo,
         UpdateStrategy;
-import 'package:flutter_patcher_client/flutter_patcher_client.dart'
+import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
 import 'patch_info.dart' show PatchInfo;
-import 'package:flutter_patcher_supabase/flutter_patcher_supabase.dart'
+import 'package:flutter_ota_kit_supabase/flutter_ota_kit_supabase.dart'
     show
         supabaseDatabase,
         supabaseStorage,
@@ -20,8 +20,7 @@ import 'package:flutter_patcher_supabase/flutter_patcher_supabase.dart'
 
 /// Configuration for a hosted **Supabase** update source.
 ///
-/// Unlike [ServerUpdateConfig] (which points at a self-hosted flutter_patcher
-/// server), this talks to the Supabase project directly over its REST API
+/// Talks to the Supabase project directly over its REST API
 /// (PostgREST `bundles` table + Storage signed URLs). No separate server is
 /// required — Supabase *is* the backend.
 class SupabaseUpdateConfig {

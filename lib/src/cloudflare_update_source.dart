@@ -1,4 +1,4 @@
-import 'package:flutter_patcher_core/flutter_patcher_core.dart'
+import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show
         AppUpdateStatus,
         AppVersionGetBundlesArgs,
@@ -8,9 +8,9 @@ import 'package:flutter_patcher_core/flutter_patcher_core.dart'
         Platform,
         UpdateInfo,
         UpdateStrategy;
-import 'package:flutter_patcher_client/flutter_patcher_client.dart'
+import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
-import 'package:flutter_patcher_cloudflare/flutter_patcher_cloudflare.dart'
+import 'package:flutter_ota_kit_cloudflare/flutter_ota_kit_cloudflare.dart'
     show d1Database, r2Storage, D1DatabaseConfig, R2S3StorageConfig;
 import 'patch_info.dart' show PatchInfo;
 

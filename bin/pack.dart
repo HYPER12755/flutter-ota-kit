@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:flutter_patcher_cli/flutter_patcher_cli.dart';
+import 'package:flutter_ota_kit/src/pack/pack.dart';
 
 Future<int> main(List<String> argv) async {
   final parser = ArgParser()
@@ -48,7 +48,7 @@ Future<int> main(List<String> argv) async {
   }
 
   if (args['help'] as bool) {
-    stdout.writeln('flutter_patcher pack CLI\n');
+    stdout.writeln('flutter_ota_kit pack CLI\n');
     stdout.writeln('usage: dart run bin/pack.dart [options]\n');
     stdout.writeln(parser.usage);
     return 0;

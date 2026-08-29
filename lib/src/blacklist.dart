@@ -1,8 +1,8 @@
 import 'package:flutter/foundation.dart';
 
-/// 本地补丁黑名单条目，与原生侧 `BlacklistStore` 的 JSON 结构一一对应。
+/// A local patch blacklist entry. Mirrors the native `BlacklistStore` JSON shape.
 ///
-/// 业务侧通常用法：
+/// Typical usage on the app side:
 /// ```dart
 /// final entries = await FlutterPatcher.blacklist;
 /// for (final e in entries) {
@@ -11,20 +11,21 @@ import 'package:flutter/foundation.dart';
 /// ```
 @immutable
 class BlacklistEntry {
-  /// 入黑补丁的 version（与 PatchInfo.version 对应）。
+  /// The blacklisted patch version (matches [PatchInfo.version]).
   final String version;
 
-  /// 入黑补丁的 md5（小写 hex）。
+  /// The blacklisted patch md5 (lowercase hex).
   final String md5;
 
-  /// 入黑原因分类（原生常量，跨边界用字符串而非 enum 保留前向兼容）。
-  /// 当前可能值：
-  /// - `BOOT_CRASH`：连续启动失败触发熔断
-  /// - `MD5_MISMATCH`：本地文件 md5 校验失败
-  /// - `SIGNATURE_INVALID`：Ed25519 签名校验失败
+  /// The reason the patch was blacklisted (a native constant; passed as a string
+  /// across the platform boundary instead of an enum for forward compatibility).
+  /// Possible values:
+  /// - `BOOT_CRASH`: circuit breaker tripped after repeated boot failures
+  /// - `MD5_MISMATCH`: local file md5 verification failed
+  /// - `SIGNATURE_INVALID`: Ed25519 signature verification failed
   final String reason;
 
-  /// 入黑时间。
+  /// When the entry was blacklisted.
   final DateTime blacklistedAt;
 
   const BlacklistEntry({

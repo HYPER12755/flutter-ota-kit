@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-/// 极简日志累积 + 可滚动面板 —— 只给 example 用。
+/// Minimal accumulating-log + scrollable panel — for the example app only.
 ///
-/// 用法：
+/// Usage:
 /// ```dart
 /// final log = LogController();
 /// log.log('hello');
@@ -12,7 +12,8 @@ class LogController extends ChangeNotifier {
   final List<String> _lines = [];
   List<String> get lines => List.unmodifiable(_lines);
 
-  /// 追加到末尾：界面从上往下按时间顺序显示，第一条在顶，最新一条在底。
+  /// Appends to the end: the UI shows lines top-to-bottom in time order, the first
+  /// at the top and the newest at the bottom.
   void log(String msg) {
     _lines.add(msg);
     notifyListeners();
@@ -48,8 +49,9 @@ class _LogPanelState extends State<LogPanel> {
     super.dispose();
   }
 
-  /// 日志超出可视区时自动滚到底部，保证最新一条可见。
-  /// addPostFrameCallback 等到 ListView 把新 item 布局完再滚。
+  /// Auto-scrolls to the bottom when the log overflows the viewport, keeping the
+  /// newest line visible. `addPostFrameCallback` waits until ListView has laid out
+  /// the new item before scrolling.
   void _scrollToBottom() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!_scrollCtrl.hasClients) return;

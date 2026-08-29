@@ -37,3 +37,16 @@ temp/
 # OS junk
 .DS_Store
 Thumbs.db
+
+# Monorepo sub-packages — each is published separately to pub.dev
+packages/
+plugins/
+npm/
+
+# Internal / non-package directories
+doc/
+.ota/
+scripts/
+.idx/
+TODOS.md
+example/dist/

@@ -16,7 +16,7 @@ import io.flutter.app.FlutterApplication
  *    → PatchManager.getValidPatchPath() 磁盘补丁验签
  *    → LoaderHook.install() 反射替换 FlutterLoader
  *    → CrashGuard.markBooting() 标记「启动中」并记录 pid（API 30+ 用于 ExitInfo 查询）
- * 2. Dart 首帧 → MethodChannel("flutter_patcher#reportBootSuccess")
+ * 2. Dart 首帧 → MethodChannel("flutter_ota_kit#reportBootSuccess")
  *    → CrashGuard.markBootSuccess() 重置计数
  *
  * API 30+ 上，用户主动从最近任务划掉 / OOM kill / 强停等「非崩溃退出」不计入

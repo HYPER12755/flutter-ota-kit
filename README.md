@@ -1,15 +1,15 @@
-# flutter_patcher
+# flutter_ota_kit
 
 **English** | [简体中文](README-zh.md)
 
-[![pub package](https://img.shields.io/pub/v/flutter_patcher.svg)](https://pub.dev/packages/flutter_patcher)
+[![pub package](https://img.shields.io/pub/v/flutter_ota_kit.svg)](https://pub.dev/packages/flutter_ota_kit)
 [![Platform](https://img.shields.io/badge/platform-Android-brightgreen)](https://flutter.dev)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-Open-source, self-hosted **code push** for Flutter Android.
-Ship Dart code and asset hotfixes over the air — no store release, no third-party cloud.
+Open-source **code push** for Flutter Android.
+Ship Dart code and asset hotfixes over the air — no store release, no forced vendor lock-in.
 
-If you've used [Shorebird](https://shorebird.dev/), [CodePush](https://learn.microsoft.com/en-us/appcenter/distribution/codepush/), or [Expo EAS Update](https://docs.expo.dev/eas-update/introduction/) — flutter_patcher brings the same OTA update model to Flutter Android, fully self-hosted and MIT-licensed.
+If you've used [Shorebird](https://shorebird.dev/), [CodePush](https://learn.microsoft.com/en-us/appcenter/distribution/codepush/), or [Expo EAS Update](https://docs.expo.dev/eas-update/introduction/) — flutter_ota_kit brings the same OTA update model to Flutter Android, MIT-licensed, with your choice of cloud backend (Supabase, Postgres, Cloudflare, or AWS) or your own CDN.
 
 ![Feature demo: apply a patch, cold restart, and rollback](doc/feature-presentation.gif)
 
@@ -17,30 +17,31 @@ If you've used [Shorebird](https://shorebird.dev/), [CodePush](https://learn.mic
 
 ## How it compares
 
-|                | flutter_patcher          | Shorebird                     | CodePush (React Native)       |
+|                | flutter_ota_kit          | Shorebird                     | CodePush (React Native)       |
 |----------------|--------------------------|-------------------------------|-------------------------------|
 | Framework      | Flutter                  | Flutter                       | React Native                  |
 | Platforms      | Android                  | Android + iOS                 | Android + iOS (retired 2025)  |
-| Hosting        | Your server / CDN        | Shorebird cloud               | AppCenter cloud (deprecated)  |
+| Hosting        | Your backend (Supabase / Postgres / Cloudflare / AWS) or your own CDN | Shorebird cloud               | AppCenter cloud (deprecated)  |
 | Update scope   | Dart code + assets       | Dart code (engine-level diff) | JS bundle                     |
 | Takes effect   | Next cold start          | Next restart                  | Next restart                  |
 | Cost           | Free (MIT)               | Free tier + paid plans        | —                             |
-| Self-hostable  | Yes — full control       | Cloud-managed                 | —                             |
+| Backends       | Supabase / Postgres / Cloudflare / AWS (+ bring-your-own) | Cloud-managed                 | —                             |
 
 **Choose Shorebird** if you need iOS support or a fully managed service.
-**Choose flutter_patcher** if you need self-hosted OTA updates on infrastructure you control — enterprise apps, regional distribution, or non-Play channels.
+**Choose flutter_ota_kit** if you need OTA updates on infrastructure you control — enterprise apps, regional distribution, or non-Play channels.
 
-> Google Play and some stores restrict downloading executable code at runtime. flutter_patcher targets self-controlled, enterprise, or permissive distribution channels. Check your channel's policy before shipping.
+> Google Play and some stores restrict downloading executable code at runtime. flutter_ota_kit targets self-controlled, enterprise, or permissive distribution channels. Check your channel's policy before shipping.
 
 ---
 
 ## Features
 
 - **OTA code push** — replace Dart AOT `libapp.so` and Flutter assets on the next cold start
-- **Self-hosted** — patches live on your CDN / object storage / internal server; zero vendor lock-in
+- **Backend-flexible** — patches live on your chosen backend's storage (Supabase, Postgres, Cloudflare, or AWS) or your own CDN / object storage; zero vendor lock-in
+- **Four cloud backends** — Supabase (fully automated), Postgres, Cloudflare (R2 + D1), and AWS (S3); or bring your own
 - **Integrity verification** — MD5 checksum + optional Ed25519 signature (Android 13+)
 - **Crash rollback** — automatic rollback on boot failure with a bad-patch blacklist
-- **Tooling included** — `pack` CLI, runtime diagnostics, local mock server, and sample app
+- **Tooling included** — `pack` CLI, runtime diagnostics, and sample app
 
 ---
 
@@ -49,8 +50,9 @@ If you've used [Shorebird](https://shorebird.dev/), [CodePush](https://learn.mic
 No server needed. Clone and experience the full patch → restart → rollback flow:
 
 ```bash
-git clone https://github.com/xuelinger2333/flutter_patcher.git
-cd flutter_patcher/example
+git clone https://github.com/HYPER12755/flutter_ota_kit.git
+cd flutter_ota_kit/example
+flutter pub get
 flutter build apk --release
 flutter install
 ```
@@ -63,7 +65,7 @@ flutter install
 
 The example bundles a precompiled `patch.zip`. Everything runs offline on the device.
 
-For HTTP-based testing, see the [Local mock server guide](doc/getting-started.md#local-mock-server).
+For HTTP-based testing, see the [Getting Started guide](doc/getting-started.md) to deploy a patch to a cloud backend (Supabase, Postgres, Cloudflare, or AWS).
 
 ---
 
@@ -92,16 +94,16 @@ On iOS, macOS, Windows, Linux, and Web, every API is safe to call but does nothi
 
 ```yaml
 dependencies:
-  flutter_patcher: ^0.1.4
+  flutter_ota_kit: ^0.1.4
 ```
 
 Or as a Git dependency:
 
 ```yaml
 dependencies:
-  flutter_patcher:
+  flutter_ota_kit:
     git:
-      url: https://github.com/xuelinger2333/flutter_patcher.git
+      url: https://github.com/HYPER12755/flutter_ota_kit.git
 ```
 
 ### 2. Initialize
@@ -121,7 +123,7 @@ void main() async {
 Rebuild the release APK, then run `pack`:
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.0-h1 \
   --target-version-code 100
@@ -130,7 +132,7 @@ dart run flutter_patcher:pack \
 To include assets (since 0.1.3), append `--assets`:
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.1 \
   --target-version-code 100 \
@@ -222,7 +224,7 @@ For edge cases (ProGuard/R8, multi-ABI/flavor, state migrations), see [API Refer
 
 The plugin is fail-fast by default. If a patch causes a boot failure, it auto-rolls back and blacklists the offending version so it won't be retried. Configurable via `maxCrashCount` (default 1) and `verifyAfter` (default 5s).
 
-Full design and Android version differences: [Crash protection docs](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html).
+Full design and Android version differences: [Crash protection docs](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html).
 
 ### Integrity & signing
 
@@ -231,7 +233,7 @@ Full design and Android version differences: [Crash protection docs](https://pub
 - Patches are bound to the host APK's `versionCode` — old patches expire after an APK upgrade
 - Always download over HTTPS; keep private keys on the server only
 
-Details: [Architecture → Security](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html).
+Details: [Architecture → Security](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Architecture-topic.html).
 
 ---
 
@@ -262,20 +264,31 @@ More questions: [Full FAQ](doc/faq.md)
 
 ## Documentation
 
-- [API Reference](https://pub.dev/documentation/flutter_patcher/latest/topics/API-reference-topic.html) — init, check-update, apply, rollback, diagnostics, error codes, CLI flags
-- [Crash Protection](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html) — auto-rollback, blacklist, Android version differences
-- [Architecture](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html) — internals, server protocol, signing, advanced config
-- [Getting Started](doc/getting-started.md) — mock server, multi-ABI setup, step-by-step guides
-- [Production Playbook](doc/production-playbook.md) — staged rollout, diagnostics, emergency rollback
-- [FAQ](doc/faq.md) — common questions about versioning, cold start, and store policy
+**Guides**
+- [Beginner Guide](doc/beginner-guide.md) — zero-to-first-OTA walkthrough, as a human would do it
+- [Getting Started](doc/getting-started.md) — scaffold → build → deploy in 5 minutes ([中文](doc/getting-started-zh.md))
+- [Developer Guide](doc/developer-guide.md) — full workflow reference (init/migrate/build/deploy, SDK API, targeting, troubleshooting)
+- [Configuration](doc/configuration.md) — env vars, `.env`, resolution order, secrets policy
+- [CLI Reference](doc/cli-reference.md) — every command, subcommand, and flag
+- [Backends](doc/backends.md) — Supabase / Postgres / Cloudflare / AWS setup
+- [Production Playbook](doc/production-playbook.md) — staged rollout, diagnostics, emergency rollback ([中文](doc/production-playbook-zh.md))
+- [FAQ](doc/faq.md) — versioning, cold start, store policy ([中文](doc/faq-zh.md))
 
-中文文档：[README-zh.md](README-zh.md) · [doc/api-reference-zh.md](doc/api-reference-zh.md) · [doc/architecture-zh.md](doc/architecture-zh.md) · [doc/crash-protection-zh.md](doc/crash-protection-zh.md)
+**Reference** (also published on pub.dev)
+- [API Reference](doc/api-reference.md) ([中文](doc/api-reference-zh.md)) — init, check-update, apply, rollback, diagnostics, error codes, asset patching
+- [Architecture](doc/architecture.md) ([中文](doc/architecture-zh.md)) — internals, server protocol, signing, advanced config
+- [Crash Protection](doc/crash-protection.md) ([中文](doc/crash-protection-zh.md)) — auto-rollback, blacklist, Android version differences
+
+**Changelog**
+- [CHANGELOG.md](CHANGELOG.md) ([中文](CHANGELOG-zh.md))
+
+中文文档：[README-zh.md](README-zh.md) · [api-reference-zh](doc/api-reference-zh.md) · [architecture-zh](doc/architecture-zh.md) · [crash-protection-zh](doc/crash-protection-zh.md) · [getting-started-zh](doc/getting-started-zh.md) · [production-playbook-zh](doc/production-playbook-zh.md) · [faq-zh](doc/faq-zh.md)
 
 ---
 
 ## Who's using it?
 
-If you run flutter_patcher in production, [open an issue](https://github.com/xuelinger2333/flutter_patcher/issues) and tell us about your use case — we'd love to list you here.
+If you run flutter_ota_kit in production, [open an issue](https://github.com/HYPER12755/flutter_ota_kit/issues) and tell us about your use case — we'd love to list you here.
 
 ---
 

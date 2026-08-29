@@ -2,7 +2,7 @@
 
 [English](crash-protection.md) | **简体中文**
 
-本文介绍 `flutter_patcher` 如何在补丁出问题时自动回滚，并避免同一个问题补丁被反复加载。
+本文介绍 `flutter_ota_kit` 如何在补丁出问题时自动回滚，并避免同一个问题补丁被反复加载。
 
 当补丁导致启动失败，或首屏阶段出现严重 Dart 异常时，插件会在下次冷启动回到 APK 内置版本，并将问题补丁加入本地黑名单。
 
@@ -271,7 +271,7 @@ adb logcat | grep FlutterPatcher/Guard
 
 ## 熔断器时序
 
-状态机位于 [`CrashGuard.kt`](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/CrashGuard.kt)（不在 `FlutterPatcherApplication` 中）。状态键由 SharedPreferences 持久化：`KEY_PATCH_LOADING`、`KEY_CRASH_COUNT`、`KEY_LAST_BOOTING_PID`。
+状态机位于 [`CrashGuard.kt`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/CrashGuard.kt)（不在 `FlutterPatcherApplication` 中）。状态键由 SharedPreferences 持久化：`KEY_PATCH_LOADING`、`KEY_CRASH_COUNT`、`KEY_LAST_BOOTING_PID`。
 
 | 时机 | 行为 |
 |---|---|

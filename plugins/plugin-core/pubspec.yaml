@@ -1,13 +1,17 @@
-name: flutter_patcher_plugin_core
-description: Plugin core abstractions for flutter_patcher — database, storage, and build interfaces.
+name: flutter_ota_kit_plugin_core
+description: Plugin core abstractions for flutter_ota_kit — database, storage, and build interfaces.
 version: 0.0.1
+homepage: https://github.com/HYPER12755/flutter_ota_kit
+repository: https://github.com/HYPER12755/flutter_ota_kit
+issue_tracker: https://github.com/HYPER12755/flutter_ota_kit/issues
+documentation: https://github.com/HYPER12755/flutter_ota_kit#readme
+license: MIT
 
 environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
-  flutter_patcher_core:
-    path: ../../packages/core
+  flutter_ota_kit_core: ^0.1.0
   mime: ^1.0.0
 
 dev_dependencies:

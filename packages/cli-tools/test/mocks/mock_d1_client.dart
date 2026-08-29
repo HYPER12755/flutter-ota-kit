@@ -1,13 +1,13 @@
 import 'dart:convert' show jsonDecode;
 
-import 'package:flutter_patcher_cloudflare/flutter_patcher_cloudflare.dart'
+import 'package:flutter_ota_kit_cloudflare/flutter_ota_kit_cloudflare.dart'
     show
         CloudflareWorkerDatabaseConfig,
         D1ClientLike,
         D1DatabaseConfig,
         cloudflareWorkerDatabase,
         d1Database;
-import 'package:flutter_patcher_plugin_core/flutter_patcher_plugin_core.dart'
+import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
     show DatabasePlugin;
 
 /// In-memory store backing [MockD1Client], mirroring the D1 tables.

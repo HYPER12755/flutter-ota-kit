@@ -10,22 +10,7 @@
 
 ## 开发期间怎么快速验证，不想每次上传 CDN？
 
-离线流程可以直接跑 [5 分钟体验](../README-zh.md#5-分钟体验) 里的示例 App；HTTP 流程可以使用 [本地 mock server](getting-started-zh.md#本地-mock-server)：
-
-```bash
-dart run flutter_patcher:pack \
-  --apk path/to/app-release.apk \
-  --version dev-1 \
-  --target-version-code 1
-
-dart run flutter_patcher:mock_server --dist dist --port 8080
-```
-
-然后将客户端 `patchUrl` 填为：
-
-```text
-http://<你的电脑 IP>:8080/patch.zip
-```
+离线流程可以直接跑 [5 分钟体验](../README-zh.md#5-分钟体验) 里的示例 App；HTTP 流程可以部署到云端后端（Supabase 最省事：先 `flutter-ota init supabase`，再 `flutter-ota migrate supabase`），然后在 App 里用 `FlutterPatcher.configureSupabase(...)` 指向该后端。
 
 ## 多个 ABI 怎么处理？
 

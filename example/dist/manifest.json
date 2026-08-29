@@ -1,0 +1,10 @@
+{
+  "schemaVersion": 2,
+  "version": "forced-v2.1",
+  "md5": "466c7f832b92f068aefa246586325836",
+  "targetVersionCode": 1,
+  "abis": [
+    "x86_64"
+  ],
+  "payload": "patch.zip"
+}

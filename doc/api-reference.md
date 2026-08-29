@@ -2,7 +2,7 @@
 
 **English** | [简体中文](api-reference-zh.md)
 
-Every public API in `flutter_patcher` is exposed as a static member on the `FlutterPatcher` class.
+Every public API in `flutter_ota_kit` is exposed as a static member on the `FlutterPatcher` class.
 
 The plugin only executes patch logic on Android.
 On iOS, Web, macOS, Windows, and Linux, calling these APIs is a no-op — they don't throw, they print a one-time warning on first call, and they return safe defaults.
@@ -23,7 +23,21 @@ void main() async {
 }
 ```
 
-Most projects need no parameters. `init()` prepares the patch loader, the crash-protection state machine, and the boot diagnostic recorder. Repeated calls are safe.
+Most projects need no parameters. `init()` prepares the patch loader, the
+crash-protection state machine, and the boot diagnostic recorder, and — if no
+backend was explicitly configured — auto-detects one from the environment
+(`SUPABASE_URL` / `SUPABASE_ANON_KEY` / `CHANNEL`, or the Postgres / Cloudflare /
+AWS equivalents). Repeated calls are safe.
+
+Pass `autoApplyUpdates: true` to make `init()` download + apply a forced update
+and restart the app automatically (zero clicks):
+
+```dart
+await FlutterPatcher.init(autoApplyUpdates: true);
+```
+
+The full set of environment variables and the resolution order is in
+[Configuration](configuration.md).
 
 If you want to enable signature verification, change the circuit-breaker threshold, or work around an unusual Flutter build, override the defaults:
 
@@ -46,6 +60,7 @@ await FlutterPatcher.init(
 | `loaderFieldCandidates` | Candidate field names used to locate `FlutterLoader`. Rarely needs changing. |
 | `loaderFallbackHeuristic` | If the candidates fail, use a heuristic last-resort scan. Off by default. |
 | `verifyAfter` | Window after launch during which the patch is still considered "under verification". |
+| `autoApplyUpdates` | When `true`, `init()` checks for a forced update in the background and, if found, downloads, stages, and restarts the process automatically (zero clicks). Default `false`. |
 
 ---
 
@@ -390,10 +405,10 @@ try {
 
 ## pack CLI
 
-`flutter_patcher:pack` extracts `libapp.so` (and, optionally, Flutter asset overlays) from a release APK and emits the patch metadata.
+`flutter_ota_kit:pack` extracts `libapp.so` (and, optionally, Flutter asset overlays) from a release APK and emits the patch metadata.
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.0-h1 \
   --target-version-code 100
@@ -439,7 +454,7 @@ Since 0.1.3, Flutter assets (images, fonts, JSON, etc.) can be hot-patched toget
 2. Pack with `--assets` listing the asset keys to overlay:
 
    ```bash
-   dart run flutter_patcher:pack \
+   dart run flutter_ota_kit:pack \
      --apk path/to/patched-release.apk \
      --version 1.0.1 \
      --target-version-code 2 \
@@ -449,7 +464,7 @@ Since 0.1.3, Flutter assets (images, fonts, JSON, etc.) can be hot-patched toget
    For long key lists, point `--assets` at a text file with `@` (one key per line, `#` for comments). Inline keys and `@file` can be mixed in the same flag:
 
    ```bash
-   dart run flutter_patcher:pack \
+   dart run flutter_ota_kit:pack \
      --apk path/to/patched-release.apk \
      --version 1.0.1 \
      --target-version-code 2 \
@@ -469,7 +484,7 @@ assets/<asset-path>    # overlay bytes, one entry per requested path (and per re
 
 A Dart-only `patch.zip` (no `--assets`) contains only the first and third entries; the inner manifest omits the `assets` block and `manifest_patch.json` is absent.
 
-The outer `manifest.json` (consumed by `mock_server` for local testing and by your own backend in production) carries `schemaVersion`, `version`, `targetVersionCode`, `abi`, `payload: patch.zip`, and the package-payload MD5. The inner `manifest.json` (inside the ZIP) lists per-file MD5s for `libapp.so` and every overlay file. The plugin only consumes the inner one; the outer one never reaches the device by itself.
+The outer `manifest.json` (consumed by your update backend in production) carries `schemaVersion`, `version`, `targetVersionCode`, `abi`, `payload: patch.zip`, and the package-payload MD5. The inner `manifest.json` (inside the ZIP) lists per-file MD5s for `libapp.so` and every overlay file. The plugin only consumes the inner one; the outer one never reaches the device by itself.
 
 ### `manifest_patch.json` schema
 
@@ -497,7 +512,7 @@ The outer `manifest.json` (consumed by `mock_server` for local testing and by yo
 | `key` | Flutter asset path as registered under `assets:` in `pubspec.yaml`. |
 | `variants` | Resolution-aware variants (`1.0x`, `2.0x`, etc.) auto-discovered from the patched APK's Flutter asset table. |
 
-During install (not cold start) the runtime merges these operations into the APK's baseline asset table, writes the merged table plus overlay files into the patch's private directory, and packages the result as a private `flutter_assets.apk`. At cold start [`LoaderHook`](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/LoaderHook.kt) installs a patched `FlutterLoader` + `FlutterJNI` AssetManager that resolves Flutter asset reads to the patched directory; APK fallback still works for paths the patch didn't touch.
+During install (not cold start) the runtime merges these operations into the APK's baseline asset table, writes the merged table plus overlay files into the patch's private directory, and packages the result as a private `flutter_assets.apk`. At cold start [`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) installs a patched `FlutterLoader` + `FlutterJNI` AssetManager that resolves Flutter asset reads to the patched directory; APK fallback still works for paths the patch didn't touch.
 
 ### Asset path requirements
 
@@ -543,7 +558,7 @@ The outer MD5 / signature in the server's update response cover the whole `patch
 **On the next cold start:**
 
 1. Verify `current/` matches the host APK's `versionCode` and that the on-disk `libapp.so` still matches its meta MD5.
-2. [`LoaderHook`](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/LoaderHook.kt) installs a patched `FlutterLoader` + `FlutterJNI` AssetManager that points Flutter at the patched `libapp.so` and (if assets are present) at the private `flutter_assets.apk`.
+2. [`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) installs a patched `FlutterLoader` + `FlutterJNI` AssetManager that points Flutter at the patched `libapp.so` and (if assets are present) at the private `flutter_assets.apk`.
 
 If validation fails, or the in-process crash guard trips, the patch is dropped and the next cold start falls back to the APK's built-in version.
 

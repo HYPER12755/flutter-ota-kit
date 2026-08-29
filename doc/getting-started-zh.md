@@ -1,40 +1,44 @@
 # 快速上手
 
-本文档覆盖 flutter_patcher 的本地开发流程。生产部署相关内容见 [生产环境实践手册](production-playbook-zh.md)。
+本文档覆盖 flutter_ota_kit 的本地开发流程。生产部署相关内容见 [生产环境实践手册](production-playbook-zh.md)。
 
 ---
 
-## 本地 mock server
+## 没有后端时如何快速体验
 
-如果你想在没有后端的情况下体验 HTTP `checkUpdate → applyPatch` 流程，可以直接启动内置 mock server。它只用于本地开发联调，不适合作为生产补丁分发服务。
+如果没有现成后端，推荐直接接入 Supabase（全自动化，几分钟即可跑通完整 HTTP 流程）：
 
 ```bash
-# 修改 Dart 代码后重新构建 release APK
+npm i -g @_nazmiforreal/flutter-ota
+flutter-ota init supabase
+flutter-ota migrate supabase
 flutter build apk --release
-
-# 构建补丁包
-dart run flutter_patcher:pack \
-  --apk build/app/outputs/flutter-apk/app-release.apk \
-  --version dev-1 \
-  --target-version-code 100
-
-# 在 0.0.0.0:8080 暴露 dist/patch.zip 和 dist/manifest.json
-dart run flutter_patcher:mock_server --dist dist
+flutter-ota build --name dev-1 --platform android --arch x86_64
+flutter-ota deploy --source dist --channel production --backend supabase --key <PRIVATE_KEY_BASE64>
 ```
 
-手机和电脑处于同一 Wi-Fi 后，在客户端请求：
+然后在 App 中：
 
 ```dart
-final check = await FlutterPatcher.checkUpdate(
-  'http://<你的电脑局域网IP>:8080/check',
+await FlutterPatcher.init(
+  publicKey: '<PUBLIC_KEY_BASE64>',
+  autoApplyUpdates: true,
 );
-
-if (check.hasUpdate) {
-  await FlutterPatcher.applyPatch(check.patch!);
-}
+await FlutterPatcher.configureSupabase(SupabaseUpdateConfig(
+  supabaseUrl: 'https://<ref>.supabase.co',
+  anonKey: '<ANON_KEY>',
+  bucket: 'bundles',
+  channel: 'production',
+  platform: Platform.android,
+  updateStrategy: UpdateStrategy.fingerprint,
+  appVersion: '1.0.0',
+));
+await FlutterPatcher.checkAndApplyUpdates();
 ```
 
-插件还提供一个可选的最小 check-update JSON 协议，主要用于快速接入、示例和本地联调。生产环境如果已有自己的更新、灰度或鉴权协议，建议直接解析业务响应并构造 `PatchInfo`。协议格式与 `checkUpdate` 用法见 [API 参考](https://pub.dev/documentation/flutter_patcher/latest/topics/API-reference-topic.html) 和 [架构设计](https://pub.dev/documentation/flutter_patcher/latest/topics/Architecture-topic.html)。
+`flutter-ota init` 支持四种云端后端：`supabase`（全自动化）、`postgres`、`cloudflare`（R2 + D1）、`aws`（S3）。除 Supabase 外，其余后端的 `migrate` 只打印需要手动执行的命令。各后端的凭据、环境变量与设备侧 `configureX` 示例见 [架构设计](architecture-zh.md) 的「后端」一节。
+
+更多后端协议细节见 [API 参考](https://pub.dev/documentation/flutter_ota_kit/latest/topics/API-reference-topic.html) 和 [架构设计](architecture-zh.md)。
 
 ---
 
@@ -74,7 +78,7 @@ assets/illustrations/onboarding-1.png
 ```
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.1 \
   --target-version-code 100 \
@@ -101,4 +105,4 @@ await FlutterPatcher.init(
 
 Android 11+ 可以通过 `ApplicationExitInfo` 更准确地区分崩溃、ANR、用户主动关闭和系统回收。Android 10 及以下识别能力有限，建议结合线上崩溃监控和服务端下架策略。
 
-完整设计见 [崩溃保护文档](https://pub.dev/documentation/flutter_patcher/latest/topics/Crash-protection-topic.html)。
+完整设计见 [崩溃保护文档](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html)。

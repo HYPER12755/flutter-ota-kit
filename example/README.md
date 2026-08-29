@@ -1,4 +1,4 @@
-# flutter_patcher example
+# flutter_ota_kit example
 
 The smallest end-to-end asset-replacement demo. The screen renders
 `Image.asset('assets/patch_demo.png')`; the bundled patch swaps the image
@@ -18,20 +18,46 @@ For `--assets` usage, the `patch.zip` layout, and other pack CLI flags, see
 [API Reference → Asset Patching](../doc/api-reference.md#asset-patching).
 The bundled `assets/asset_patch_preload.zip` was produced by the same flow.
 
-## Mock server flow
+## HTTP flow against a cloud backend
 
-For a real over-HTTP flow, build a patched APK and pack it, then run the
-mock server:
+For a real over-HTTP flow, build a patched APK, pack it, and deploy to a cloud
+backend such as Supabase:
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk path/to/patched-app-release.apk \
   --version dev-asset-1 \
   --target-version-code 1 \
   --assets assets/patch_demo.png
 
-dart run flutter_patcher:mock_server --dist dist
+flutter-ota deploy --source dist \
+  --channel production --backend supabase \
+  --key <PRIVATE_KEY_BASE64>
 ```
 
-The mock server reads `dist/manifest.json` and serves the payload named by
-`manifest.payload`, exposing `GET /check` plus the payload URL.
+The app is then configured with `FlutterPatcher.configureSupabase(...)` and pulls
+updates from the backend.
+
+## Configuration (config file OR `.env`, both supported)
+
+The example is wired by the generated `lib/flutter_ota_kit_setup.dart`
+(produced by `flutter-ota init`). Every configurable value is resolved from:
+
+1. build-time environment (`--dart-define`, e.g. `--dart-define-from-file=example/.env`)
+2. the project config written by `init` under `.flutter_ota_kit/` (git-ignored)
+3. built-in defaults
+
+Environment wins. So secrets live only in `.env` and are never committed; the
+config file and `lib/flutter_ota_kit_setup.dart` hold only non-secret defaults.
+
+```bash
+cp example/.env.example example/.env   # then fill in your project URL + anon key
+flutter run --dart-define-from-file=example/.env
+# or build a release APK for device/E2E:
+flutter build apk --release --target-platform android-x64 \
+  --dart-define-from-file=example/.env
+```
+
+`example/.env` is gitignored; only `example/.env.example` (placeholders) is
+committed. Without credentials the bundled asset-patch demo still runs, but the
+over-HTTP update flow is skipped.

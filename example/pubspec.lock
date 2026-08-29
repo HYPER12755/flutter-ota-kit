@@ -105,14 +105,6 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.7"
-  cryptography:
-    dependency: transitive
-    description:
-      name: cryptography
-      sha256: "3eda3029d34ec9095a27a198ac9785630fe525c0eb6a49f3d575272f8e792ef0"
-      url: "https://pub.dev"
-    source: hosted
-    version: "2.9.0"
   cupertino_icons:
     dependency: "direct main"
     description:
@@ -174,75 +166,68 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "6.0.0"
-  flutter_patcher:
+  flutter_ota_kit:
     dependency: "direct main"
     description:
       path: ".."
       relative: true
     source: path
     version: "0.1.4"
-  flutter_patcher_aws:
+  flutter_ota_kit_aws:
     dependency: transitive
     description:
-      path: "../plugins/aws"
-      relative: true
-    source: path
+      name: flutter_ota_kit_aws
+      sha256: a7cbededcbc6557cf7cd9c637926b17a955d5e923b52a1e0c59ba3eeb7c8f8f9
+      url: "https://pub.dev"
+    source: hosted
     version: "0.1.0"
-  flutter_patcher_cli:
+  flutter_ota_kit_client:
     dependency: transitive
     description:
-      path: "../packages/cli-tools"
-      relative: true
-    source: path
+      name: flutter_ota_kit_client
+      sha256: "90a5c34beaf0f880b50c33de8eb92d77af9019823ea7f3b8ef727eeb09a38aa5"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.1.0"
-  flutter_patcher_client:
+  flutter_ota_kit_cloudflare:
     dependency: transitive
     description:
-      path: "../packages/client"
-      relative: true
-    source: path
+      name: flutter_ota_kit_cloudflare
+      sha256: "020da3c70c0760dc7c86bb349c82708c85e64799aa7621467352c93c4ad31938"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.1.0"
-  flutter_patcher_cloudflare:
+  flutter_ota_kit_core:
     dependency: transitive
     description:
-      path: "../plugins/cloudflare"
-      relative: true
-    source: path
+      name: flutter_ota_kit_core
+      sha256: "1d310e9da464de728f369f04ee96b95a3821caf225abfb794d98e826283106b6"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.1.0"
-  flutter_patcher_core:
+  flutter_ota_kit_plugin_core:
     dependency: transitive
     description:
-      path: "../packages/core"
-      relative: true
-    source: path
-    version: "0.1.0"
-  flutter_patcher_plugin_core:
-    dependency: transitive
-    description:
-      path: "../plugins/plugin-core"
-      relative: true
-    source: path
+      name: flutter_ota_kit_plugin_core
+      sha256: b1eab9ca437d958ffd6beb3d217b9e5f8ec50116a1b136630d53a75387f8ff48
+      url: "https://pub.dev"
+    source: hosted
     version: "0.0.1"
-  flutter_patcher_postgres:
+  flutter_ota_kit_postgres:
     dependency: transitive
     description:
-      path: "../plugins/postgres"
-      relative: true
-    source: path
+      name: flutter_ota_kit_postgres
+      sha256: "5bb68f9ff34e9c586ec163d0012cf4954b66e471476eeeb48d117797c731917f"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.1.0"
-  flutter_patcher_standalone:
+  flutter_ota_kit_supabase:
     dependency: transitive
     description:
-      path: "../plugins/standalone"
-      relative: true
-    source: path
-    version: "0.1.0"
-  flutter_patcher_supabase:
-    dependency: transitive
-    description:
-      path: "../plugins/supabase"
-      relative: true
-    source: path
+      name: flutter_ota_kit_supabase
+      sha256: "28179859e0fa00f0e741a1b28f5217b9bcba76120c4a4e957404fe0600cd4a15"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.1.0"
   flutter_test:
     dependency: "direct dev"
@@ -397,10 +382,10 @@ packages:
     dependency: transitive
     description:
       name: pool
-      sha256: "978783255c543aa3586a1b3c21f6e9d720eb315376a915872c61ef8b5c20177d"
+      sha256: "4177f68c237ea2128d1bee66ac17b2ce05ba3dbaafcbdd54c5d40a39d0b6b11c"
       url: "https://pub.dev"
     source: hosted
-    version: "1.5.2"
+    version: "1.5.3"
   posix:
     dependency: transitive
     description:

@@ -2,7 +2,7 @@
 
 [English](architecture.md) | **简体中文**
 
-本文介绍 `flutter_patcher` 的工作原理、自托管服务端协议，以及少数进阶配置。
+本文介绍 `flutter_ota_kit` 的工作原理、四种云端后端，以及少数进阶配置。
 
 如果你只想快速接入，请先阅读 API 文档。本文更适合以下场景：
 
@@ -18,11 +18,31 @@
 
 ---
 
+## 后端
+
+`flutter_ota_kit` 内置四种云端后端，均通过设备侧 `FlutterPatcher.configureSupabase(...)` /
+`configurePostgres(...)` / `configureCloudflare(...)` / `configureAws(...)` 配置，并通过 CLI
+`flutter-ota init <supabase|postgres|cloudflare|aws>`（写入 `.flutter_ota_kit/config.json`）选择。
+
+| 后端       | 存储                         | 数据库            | `migrate` 行为                          |
+|------------|------------------------------|-------------------|------------------------------------------|
+| Supabase   | Supabase Storage (`bundles`) | Postgres (Supabase)| **全自动**：执行 SQL 并自动建桶          |
+| Postgres   | Postgres `bytea` 列          | Postgres          | 仅打印需要手动执行的 SQL                 |
+| Cloudflare | R2 (S3 兼容)                | D1 (SQLite)       | 打印 `wrangler` 命令                     |
+| AWS        | S3（可选 CloudFront）        | S3 blob DB        | 打印 AWS CLI / Terraform 步骤            |
+
+四种后端都实现为同一套 `Backend` 抽象之下的插件（CLI 中的 `resolveBackend`）。设备侧 SDK
+同样是后端无关的：每个 source 都返回统一的 `ServerUpdateResult`，因此校验、暂存、崩溃保护、
+回滚逻辑与补丁来自哪个后端完全无关。你也可以完全绕过内置 source，自行解析你的更新 / 灰度 /
+鉴权协议并直接构造 `PatchInfo`。
+
+---
+
 ## 工作原理
 
 ### 概览
 
-`flutter_patcher` 的补丁流程涉及三个角色：开发机、服务端和用户设备。
+`flutter_ota_kit` 的补丁流程涉及三个角色：开发机、服务端和用户设备。
 
 ```text
   开发机                      服务端                       用户设备
@@ -71,7 +91,7 @@ LoaderHook 把 Flutter 指向补丁 libapp.so
 
 重活（完整性校验、资源 overlay 合成、资源表合并、私有归档打包）都发生在 `applyPatch` 内部，并且在调用返回前已经原子提交到 `current/`。冷启动只重新校验磁盘上的产物并装好 loader hook，**不会**重新打开 ZIP 或重跑 overlay 合并。
 
-安装阶段的校验顺序（见 [PatchManager.kt:303-446](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L303-L446)）：整包 MD5 → Ed25519 签名 → `versionCode` 匹配（对照内层 package manifest）→ ZIP 内逐文件完整性。签名只在 `md5` 存在时才校验（签名的明文就是 md5 十六进制串）。
+安装阶段的校验顺序（见 [PatchManager.kt:303-446](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L303-L446)）：整包 MD5 → Ed25519 签名 → `versionCode` 匹配（对照内层 package manifest）→ ZIP 内逐文件完整性。签名只在 `md5` 存在时才校验（签名的明文就是 md5 十六进制串）。
 
 冷启动时，插件会重新校验磁盘上的产物是否仍属于当前 APK（`versionCode` 与存储的 MD5），再进行加载。
 如果补丁无效、损坏、版本不匹配，或命中本地黑名单，插件会丢弃该补丁并回到 APK 内置版本。
@@ -95,7 +115,7 @@ LoaderHook 把 Flutter 指向补丁 libapp.so
 因此，构建补丁时必须明确指定基准 APK 的 `versionCode`：
 
 ```bash
-dart run flutter_patcher:pack \
+dart run flutter_ota_kit:pack \
   --apk build/app/outputs/flutter-apk/app-release.apk \
   --version 1.0.0-h1 \
   --target-version-code 100
@@ -111,7 +131,7 @@ dart run flutter_patcher:pack \
 
 ### 崩溃安全
 
-`flutter_patcher` 默认采用 fail-fast 策略。  
+`flutter_ota_kit` 默认采用 fail-fast 策略。  
 当补丁导致启动失败或首屏阶段出现严重 Dart 异常时，插件会在下次冷启动回到 APK 内置版本，并避免反复加载同一个问题补丁。
 
 生产环境仍建议配合服务端监控和灰度发布。  
@@ -138,7 +158,7 @@ assets/<asset-path>    # 每个 path 一条（含分辨率变体）
 
 ### 原子安装
 
-补丁安装是崩溃安全的。安装路径（[PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L482-L615)，`finalizePatch` 在 [L622-767](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L622-L767)）先把所有产物写到副本目录，再用一连串 rename 提交：
+补丁安装是崩溃安全的。安装路径（[PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L482-L615)，`finalizePatch` 在 [L622-767](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L622-L767)）先把所有产物写到副本目录，再用一连串 rename 提交：
 
 ```text
 staging/      ← 解压 libapp.so；合成 flutter_assets/ + flutter_assets.apk
@@ -152,13 +172,13 @@ previous/     ← 在同一次提交中被清理
 
 `pending/` **不是**"等首次启动成功"的中间态 —— 它只是 `finalizePatch` 里 rename 的临时目标。`applyPatch` 调用一旦成功返回，`current/` 就已经提升完成，`previous/` 也已清理。"首次启动成功"那道门槛是 **崩溃熔断**（见 [Crash protection](crash-protection-zh.md)）—— 上一次启动触发熔断时，下次启动会删除 `current/`；这是独立于落盘事务的另一套机制。
 
-掉电或进程被杀可能留下 `pending/` 或 `previous/` 以及一个 install marker；下次启动 `recoverInterruptedInstall`（[PatchManager.kt:1146-1172](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L1146-L1172)）会自动协调：要么回滚到 `previous/`，要么丢弃半装态。
+掉电或进程被杀可能留下 `pending/` 或 `previous/` 以及一个 install marker；下次启动 `recoverInterruptedInstall`（[PatchManager.kt:1146-1172](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L1146-L1172)）会自动协调：要么回滚到 `previous/`，要么丢弃半装态。
 
 ---
 
 ### 资源 overlay 合成（安装阶段）
 
-补丁带资源覆盖时，插件会在安装阶段产出一份自包含、可被 Flutter 直接读取的资源 bundle。流程（[PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L482-L615)、[L848-983](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L848-L983)）：
+补丁带资源覆盖时，插件会在安装阶段产出一份自包含、可被 Flutter 直接读取的资源 bundle。流程（[PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L482-L615)、[L848-983](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L848-L983)）：
 
 1. 把基准 APK 的 `assets/flutter_assets/*` 拷到 staging 目录。
 2. 按内层 manifest 列出的 path，逐条用 `patch.zip` 里的字节覆盖。
@@ -168,7 +188,7 @@ previous/     ← 在同一次提交中被清理
 
 冷启动不做以上任何一步。它只遍历 `current/`，确认 `libapp.so` + `flutter_assets.apk`（若存在）仍与存储的 MD5 一致，然后交给 loader hook：
 
-[`LoaderHook`](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/LoaderHook.kt) 劫持 `FlutterLoader.findAppBundlePath` 指向补丁 `libapp.so`，并在带资源时安装 patched `FlutterJNI` AssetManager 打开私有 `flutter_assets.apk`。未被补丁覆盖的 path 仍走 APK fallback。
+[`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) 劫持 `FlutterLoader.findAppBundlePath` 指向补丁 `libapp.so`，并在带资源时安装 patched `FlutterJNI` AssetManager 打开私有 `flutter_assets.apk`。未被补丁覆盖的 path 仍走 APK fallback。
 
 `Image.asset(...)`、`rootBundle.load(...)` 以及字体查找都会自动走重定向后的 bundle —— 业务代码无需改动。
 
@@ -176,7 +196,7 @@ previous/     ← 在同一次提交中被清理
 
 ### 下载重试策略
 
-下载失败时，运行时最多重试 **3 次**，指数退避约 2s / 4s / 8s（见 [PatchManager.kt:355-405](../android/src/main/kotlin/com/flutter_patcher/flutter_patcher/PatchManager.kt#L355-L405)）。最终失败时 apply 结果是 `network`。服务端可以依赖这一行为，不再额外加客户端重试层；若需要自定义抖动或上下限，可以在 `applyPatch` 外面再包一层退避循环。
+下载失败时，运行时最多重试 **3 次**，指数退避约 2s / 4s / 8s（见 [PatchManager.kt:355-405](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L355-L405)）。最终失败时 apply 结果是 `network`。服务端可以依赖这一行为，不再额外加客户端重试层；若需要自定义抖动或上下限，可以在 `applyPatch` 外面再包一层退避循环。
 
 ---
 
@@ -202,7 +222,7 @@ previous/     ← 在同一次提交中被清理
 
 ## 自托管
 
-`flutter_patcher` 不绑定任何特定后端。你可以使用自己的服务端、CDN 或对象存储来分发补丁。
+`flutter_ota_kit` 不绑定任何特定后端。你可以使用自己的服务端、CDN 或对象存储来分发补丁。
 
 客户端侧只需要拿到一个 `PatchInfo`，然后调用 `applyPatch` 即可。
 
@@ -308,7 +328,7 @@ final abi = await FlutterPatcher.deviceAbi;
 
 ### 补丁签名
 
-`flutter_patcher` 支持 Ed25519 签名校验。
+`flutter_ota_kit` 支持 Ed25519 签名校验。
 
 签名用于在 HTTPS 之外提供额外完整性保护，防止 CDN 或中间链路返回被篡改的补丁。
 
@@ -395,17 +415,9 @@ PatchInfo(version: 'fix-1', patchUrl: 'https://...', targetVersionCode: 100);
 
 ---
 
-### 本地 mock server
+### 本地联调
 
-仓库中的 `dart run flutter_patcher:mock_server` 提供了一个本地 mock server，可用于开发联调。
-
-它会通过 HTTP 暴露本地 `libapp.so` 和 `manifest.json`，仅用于开发环境，不会被打包进 release apk，也不应在生产中使用。
-
-```bash
-dart run flutter_patcher:mock_server --dist dist
-```
-
-你可以先用 mock server 跑通完整流程，再接入自己的服务端。
+推荐使用云端后端（如 Supabase）做端到端联调：执行 `flutter-ota init supabase` 与 `flutter-ota migrate supabase` 后部署补丁，再用 `FlutterPatcher.configureSupabase(...)` 指向该后端即可。无需自建本地服务进程。
 
 ---
 
@@ -427,7 +439,7 @@ dart run flutter_patcher:mock_server --dist dist
 ```xml
 <provider
     android:name="com.flutter_patcher.flutter_patcher.FlutterPatcherAutoInitProvider"
-    android:authorities="${applicationId}.flutter_patcher.autoinit"
+    android:authorities="${applicationId}.flutter_ota_kit.autoinit"
     tools:node="remove" />
 ```
 
@@ -448,7 +460,7 @@ class MyApp : FlutterApplication() {
 
 ### Flutter 兼容性
 
-`flutter_patcher` 需要在 Android 启动早期引导 Flutter Engine 加载补丁 `.so`。
+`flutter_ota_kit` 需要在 Android 启动早期引导 Flutter Engine 加载补丁 `.so`。
 
 当前 pubspec 允许 Flutter `>=3.3.0`；loader hook 已验证 Flutter `3.19 ~ 3.44`。如果未来 Flutter 修改了 loader 内部结构，可能需要通过 `loaderFieldCandidates` 临时指定字段名：
 
@@ -466,7 +478,7 @@ await FlutterPatcher.init(
 
 ### 仅支持 Android
 
-`flutter_patcher` 仅支持 Android。
+`flutter_ota_kit` 仅支持 Android。
 
 iOS 不支持动态下发可执行代码。Web、macOS、Windows、Linux 等平台调用 API 时会 no-op，不会执行补丁逻辑。
 
