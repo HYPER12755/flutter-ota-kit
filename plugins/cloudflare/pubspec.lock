@@ -101,10 +101,10 @@ packages:
     dependency: "direct main"
     description:
       name: flutter_ota_kit_plugin_core
-      sha256: b1eab9ca437d958ffd6beb3d217b9e5f8ec50116a1b136630d53a75387f8ff48
+      sha256: a7198f136389eedff9960f9de011f40a4eee6389cb6f6ab77f7e9ae1334ba85f
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.1"
+    version: "0.0.2"
   frontend_server_client:
     dependency: transitive
     description:

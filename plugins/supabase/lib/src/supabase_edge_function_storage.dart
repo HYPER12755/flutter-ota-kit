@@ -6,6 +6,7 @@ import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart';
 import 'supabase_client_adapter.dart';
 import 'supabase_client_http.dart';
 import 'supabase_signed_url_batcher.dart';
+import 'error_message.dart' show errorMessage;
 
 /// Config for the Supabase edge-function storage plugin.
 class SupabaseEdgeFunctionStorageConfig {
@@ -69,7 +70,7 @@ class RuntimeStorageProfileImplEdge implements RuntimeStorageProfile {
     }
     final res = await supabase.storage.from(parsed.bucket).download(parsed.key);
     if (res.error != null) {
-      final msg = (res.message ?? _errorToString(res.error))
+      final msg = (res.message ?? errorMessage(res.error))
           .toString();
       if (msg.contains('not found')) return null;
       throw StateError('Failed to read storage text: $msg');
@@ -86,14 +87,5 @@ class RuntimeStorageProfileImplEdge implements RuntimeStorageProfile {
     }
     final signedUrl = await resolveSignedUrl(parsed.bucket, parsed.key);
     return {'fileUrl': signedUrl};
-  }
-
-  String _errorToString(Object? error) {
-    if (error is Error) return error.toString();
-    if (error is Exception) return error.toString();
-    if (error is Map && error['message'] is String) {
-      return error['message'] as String;
-    }
-    return error.toString();
   }
 }

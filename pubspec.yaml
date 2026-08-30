@@ -1,6 +1,6 @@
 name: flutter_ota_kit
 description: Open-source, self-hosted code push (OTA updates) for Flutter Android. Patches Dart AOT libapp.so and assets on cold start with integrity checks and crash rollback.
-version: 0.1.7
+version: 0.1.9
 homepage: https://github.com/HYPER12755/flutter_ota_kit
 repository: https://github.com/HYPER12755/flutter_ota_kit
 issue_tracker: https://github.com/HYPER12755/flutter_ota_kit/issues
@@ -21,13 +21,22 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  flutter_ota_kit_core: ^0.1.0
-  flutter_ota_kit_client: ^0.1.0
-  flutter_ota_kit_supabase: ^0.1.0
-  flutter_ota_kit_postgres: ^0.1.0
-  flutter_ota_kit_cloudflare: ^0.1.0
-  flutter_ota_kit_aws: ^0.1.0
+  flutter_ota_kit_core:
+    path: packages/core
+  flutter_ota_kit_client:
+    path: packages/client
+  flutter_ota_kit_supabase:
+    path: plugins/supabase
+  flutter_ota_kit_postgres:
+    path: plugins/postgres
+  flutter_ota_kit_cloudflare:
+    path: plugins/cloudflare
+  flutter_ota_kit_aws:
+    path: plugins/aws
+  flutter_ota_kit_plugin_core:
+    path: plugins/plugin-core
   plugin_platform_interface: '>=2.0.2 <3.0.0'
+  package_info_plus: ^8.0.0
   # The npm `flutter-ota` CLI (`flutter_ota_kit_cli`) is intentionally NOT a pub
   # dependency; `dart run flutter_ota_kit:pack` is implemented in `lib/src/pack`.
   archive: '>=3.4.10 <5.0.0'

@@ -6,19 +6,12 @@ import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
         RuntimeStorageProfile,
         StorageObject,
         createStorageKeyBuilder,
+        ensureExpectedBucket,
         getContentType,
         parseStorageUri;
 
 import 'r2_config.dart' show R2S3StorageConfig, resolveR2Client;
 import 'r2_s3_client.dart' show R2S3ClientLike, readFileBytes, writeFileBytes;
-
-void _ensureExpectedBucket(String bucket, String bucketName) {
-  if (bucket != bucketName) {
-    throw ArgumentError(
-      'Bucket name mismatch: expected "$bucketName", but found "$bucket".',
-    );
-  }
-}
 
 /// Build the node (deploy/CLI) storage profile for R2 S3.
 NodeStorageProfile createS3StorageProfile(R2S3StorageConfig config) {
@@ -55,21 +48,21 @@ class _R2NodeProfile implements NodeStorageProfile {
   @override
   Future<bool> exists(String storageUri) async {
     final parsed = parseStorageUri(storageUri, 'r2');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     return _client.headObject(parsed.key);
   }
 
   @override
   Future<void> delete(String storageUri) async {
     final parsed = parseStorageUri(storageUri, 'r2');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     await _client.deleteObject(parsed.key);
   }
 
   @override
   Future<void> downloadFile(String storageUri, String filePath) async {
     final parsed = parseStorageUri(storageUri, 'r2');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     final bytes = await _client.getObjectAsBytes(parsed.key);
     await writeFileBytes(filePath, bytes);
   }
@@ -92,7 +85,7 @@ class _R2RuntimeProfile implements RuntimeStorageProfile {
   @override
   Future<Map<String, String>> getDownloadUrl(String storageUri) async {
     final parsed = parseStorageUri(storageUri, 'r2');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     final fileUrl = await _client.getSignedUrl(parsed.key);
     return {'fileUrl': fileUrl};
   }
@@ -100,7 +93,7 @@ class _R2RuntimeProfile implements RuntimeStorageProfile {
   @override
   Future<String?> readText(String storageUri) async {
     final parsed = parseStorageUri(storageUri, 'r2');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     try {
       return await _client.getObjectAsString(parsed.key);
     } catch (_) {

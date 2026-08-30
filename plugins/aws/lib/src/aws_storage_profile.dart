@@ -6,19 +6,12 @@ import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
         RuntimeStorageProfile,
         StorageObject,
         createStorageKeyBuilder,
+        ensureExpectedBucket,
         getContentType,
         parseStorageUri;
 
 import 'aws_config.dart' show AwsS3StorageConfig, resolveAwsS3Client;
 import 'aws_s3_client.dart' show AwsS3ClientLike, readFileBytes, writeFileBytes;
-
-void _ensureExpectedBucket(String bucket, String bucketName) {
-  if (bucket != bucketName) {
-    throw ArgumentError(
-      'Bucket name mismatch: expected "$bucketName", but found "$bucket".',
-    );
-  }
-}
 
 /// Build the node (deploy/CLI) storage profile for AWS S3.
 NodeStorageProfile createS3StorageProfile(AwsS3StorageConfig config) {
@@ -63,14 +56,14 @@ class _S3NodeProfile implements NodeStorageProfile {
   @override
   Future<bool> exists(String storageUri) async {
     final parsed = parseStorageUri(storageUri, 's3');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     return _client.headObject(parsed.key);
   }
 
   @override
   Future<void> delete(String storageUri) async {
     final parsed = parseStorageUri(storageUri, 's3');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
 
     final list = await _client.listObjects(parsed.key);
     if (list.isEmpty) {
@@ -82,7 +75,7 @@ class _S3NodeProfile implements NodeStorageProfile {
   @override
   Future<void> downloadFile(String storageUri, String filePath) async {
     final parsed = parseStorageUri(storageUri, 's3');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     final bytes = await _client.getObjectAsBytes(parsed.key);
     await writeFileBytes(filePath, bytes);
   }
@@ -127,7 +120,7 @@ class _S3RuntimeProfile implements RuntimeStorageProfile {
   @override
   Future<Map<String, String>> getDownloadUrl(String storageUri) async {
     final parsed = parseStorageUri(storageUri, 's3');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     final fileUrl = await _client.getPresignedUrl(parsed.key);
     return {'fileUrl': fileUrl};
   }
@@ -135,7 +128,7 @@ class _S3RuntimeProfile implements RuntimeStorageProfile {
   @override
   Future<String?> readText(String storageUri) async {
     final parsed = parseStorageUri(storageUri, 's3');
-    _ensureExpectedBucket(parsed.bucket, _config.bucketName);
+    ensureExpectedBucket(parsed.bucket, _config.bucketName);
     try {
       return await _client.getObjectAsString(parsed.key);
     } catch (_) {

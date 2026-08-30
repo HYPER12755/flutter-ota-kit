@@ -1,18 +1,10 @@
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
-    show
-        AppUpdateStatus,
-        AppVersionGetBundlesArgs,
-        FingerprintGetBundlesArgs,
-        GetBundlesArgs,
-        nilUuid,
-        Platform,
-        UpdateInfo,
-        UpdateStrategy;
+    show nilUuid, Platform, UpdateStrategy;
 import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
 import 'package:flutter_ota_kit_postgres/flutter_ota_kit_postgres.dart'
     show postgresDatabase, postgresStorage, PostgresConfig, PostgresStorageConfig;
-import 'patch_info.dart' show PatchInfo;
+import 'shared_update_check.dart';
 
 /// Configuration for a **Postgres** update source.
 ///
@@ -58,12 +50,8 @@ class PostgresUpdateConfig {
   final String minBundleId;
 }
 
-final _uuidRe = RegExp(
-  r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
-);
-
 class PostgresUpdateSource {
-  PostgresUpdateSource();
+  const PostgresUpdateSource();
 
   Future<ServerUpdateResult> check(
     PostgresUpdateConfig config, {
@@ -85,57 +73,16 @@ class PostgresUpdateSource {
     final db = postgresDatabase(dbConfig)();
     final storage = postgresStorage(storageConfig);
 
-    final bundleId = (currentBundleId != null && _uuidRe.hasMatch(currentBundleId))
-        ? currentBundleId
-        : nilUuid;
-
-    final GetBundlesArgs args;
-    if (config.updateStrategy == UpdateStrategy.fingerprint) {
-      args = FingerprintGetBundlesArgs(
-        channel: config.channel,
-        platform: config.platform,
-        bundleId: bundleId,
-        minBundleId: config.minBundleId,
-        fingerprintHash: config.fingerprintHash ?? '',
-      );
-    } else {
-      args = AppVersionGetBundlesArgs(
-        channel: config.channel,
-        platform: config.platform,
-        bundleId: bundleId,
-        minBundleId: config.minBundleId,
-        appVersion: config.appVersion ?? '',
-      );
-    }
-
-    final UpdateInfo? info = await db.getUpdateInfo(args);
-    if (info == null) return ServerUpdateResult.upToDate();
-
-    final storageUri = info.storageUri;
-    if (storageUri == null || storageUri.isEmpty) {
-      return ServerUpdateResult.upToDate();
-    }
-
-    final runtime = storage.profiles.runtime;
-    if (runtime == null) return ServerUpdateResult.upToDate();
-    final dl = await runtime.getDownloadUrl(storageUri);
-    final fileUrl = dl['fileUrl'];
-    if (fileUrl == null || fileUrl.isEmpty) {
-      return ServerUpdateResult.upToDate();
-    }
-
-    final patch = PatchInfo(
-      version: info.id,
-      patchUrl: fileUrl,
-      md5: info.fileHash ?? '',
-    );
-    return ServerUpdateResult(
-      isUpToDate: false,
-      patch: patch,
-      status: AppUpdateStatus.update,
-      shouldForceUpdate: info.shouldForceUpdate,
-      id: info.id,
-      message: info.message,
+    return performSharedUpdateCheck(
+      db: db,
+      storage: storage,
+      channel: config.channel,
+      platform: config.platform,
+      updateStrategy: config.updateStrategy,
+      appVersion: config.appVersion,
+      fingerprintHash: config.fingerprintHash,
+      minBundleId: config.minBundleId,
+      currentBundleId: currentBundleId,
     );
   }
 }

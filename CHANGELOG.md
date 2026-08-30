@@ -1,5 +1,51 @@
 > Chinese version: [CHANGELOG-zh.md](CHANGELOG-zh.md)
 
+## 0.1.9
+
+### Changed
+
+- **Shared the update-check orchestration across all backends.** The
+  (previously copy-pasted) `check()` body in `SupabaseUpdateSource`,
+  `PostgresUpdateSource`, `CloudflareUpdateSource` and `AwsUpdateSource` is now
+  a single backend-agnostic `performSharedUpdateCheck()` in
+  `lib/src/shared_update_check.dart`. Each backend keeps only its own config
+  building + plugin factory calls; everything else (bundle-id normalization,
+  `appVersion`/fingerprint argument building, the `getUpdateInfo` call,
+  download-URL resolution and `ServerUpdateResult` mapping) lives in exactly one
+  place. Behavior is unchanged. Added `flutter_ota_kit_plugin_core` as a direct
+  dependency (for the shared `DatabasePlugin` / `StoragePlugin` types).
+
+### Fixed
+
+- **Runtime `appVersion` auto-detection now applies to Postgres, Cloudflare and
+  AWS too, not just Supabase.** Those three sources had the same silent-failure
+  bug described in 0.1.8 (they reported a hardcoded/empty `APP_VERSION` and the
+  backend dropped the bundle), but only the Supabase source was fixed in 0.1.8.
+  `resolveAppVersion()` (in `lib/src/app_version_resolver.dart`) is now the
+  single shared resolver used by all four sources.
+- **`resolveAppVersion()` no longer caches an empty detection forever.** A
+  transient `PackageInfo.fromPlatform()` failure previously cached `''` and
+  permanently pinned the reported version to empty, silently breaking
+  `appVersion`-strategy targeting on every later check. It now only caches a
+  successful, non-empty detection and retries on the next check.
+
+## 0.1.8
+
+### Fixed
+
+- **Clients now auto-detect their real app version, so OTA updates no longer
+  silently fail.** Previously the generated `flutter_ota_kit_setup.dart`
+  defaulted `APP_VERSION` to the hardcoded string `'1.0.0'`. When a bundle was
+  deployed with a different `--target-app-version` (e.g. `1.0.1`), the client
+  reported `1.0.0`, the backend's `filterCompatibleAppVersions` dropped the
+  bundle (`semverSatisfies('1.0.1','1.0.0')` is false), and the app stayed
+  "up to date" forever — no update, no error. `SupabaseUpdateSource` now
+  resolves the version from the host app's `versionName` via
+  `package_info_plus` whenever `SupabaseUpdateConfig.appVersion` is null or
+  empty, and the `flutter-ota init` generator now writes an empty default
+  (which triggers detection) instead of `'1.0.0'`. An explicit
+  `--dart-define=APP_VERSION=…` / `SupabaseUpdateConfig.appVersion` still wins.
+
 ## 0.1.7
 
 ### Fixed

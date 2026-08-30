@@ -3,13 +3,17 @@ import 'dart:convert' show jsonDecode;
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show Bundle, BundleMetadata, BundlePatchArtifact, Platform, getBundlePatches;
 
+import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
+    show buildBundlePatchId, normalizeMetadata;
+// Re-export the shared `buildBundlePatchId` so the cloudflare package's public
+// API still exposes it; `parseMetadata` remains a backward-compatible alias of
+// the shared `normalizeMetadata`.
+export 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
+    show buildBundlePatchId;
+
 /// Default rollout cohort count — full rollout in the Dart port's per-mille
 /// scale (matches core's `defaultRolloutCohortCount` = `numericCohortSize`).
 const int defaultRolloutCohortCount = 1000;
-
-/// Compound patch id `${bundleId}:${baseBundleId}` (matches D1 schema).
-String buildBundlePatchId(String bundleId, String baseBundleId) =>
-    '$bundleId:$baseBundleId';
 
 /// Parse `target_cohorts` which is stored as a JSON string (or already a list).
 List<String>? parseTargetCohorts(dynamic value) {
@@ -36,21 +40,8 @@ List<String>? parseTargetCohorts(dynamic value) {
   return null;
 }
 
-/// Parse `metadata` which may be a JSON string or an already-decoded object.
-Map<String, Object?>? parseMetadata(dynamic value) {
-  if (value == null) return null;
-  if (value is String) {
-    try {
-      return parseMetadata(jsonDecode(value));
-    } catch (_) {
-      return null;
-    }
-  }
-  if (value is Map) {
-    return value.cast<String, Object?>();
-  }
-  return null;
-}
+/// Backward-compatible alias for [normalizeMetadata].
+Map<String, Object?>? parseMetadata(dynamic value) => normalizeMetadata(value);
 
 /// Convert a [Bundle] into the rows inserted into `bundle_patches`.
 List<Map<String, dynamic>> bundleToPatchRows(Bundle bundle) =>
@@ -72,7 +63,7 @@ Bundle transformRowToBundle(
   Map<String, dynamic> row, [
   List<Map<String, dynamic>> patchRows = const [],
 ]) {
-  final rawMetadata = parseMetadata(row['metadata']);
+  final rawMetadata = normalizeMetadata(row['metadata']);
   final metadata = rawMetadata == null
       ? null
       : BundleMetadata.fromJson(rawMetadata.cast<String, dynamic>());

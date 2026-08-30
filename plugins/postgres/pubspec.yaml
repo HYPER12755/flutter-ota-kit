@@ -1,6 +1,6 @@
 name: flutter_ota_kit_postgres
 description: Postgres plugin for flutter_ota_kit — database backend.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/HYPER12755/flutter_ota_kit
 repository: https://github.com/HYPER12755/flutter_ota_kit
 issue_tracker: https://github.com/HYPER12755/flutter_ota_kit/issues
@@ -11,8 +11,10 @@ environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
-  flutter_ota_kit_core: ^0.1.0
-  flutter_ota_kit_plugin_core: ^0.0.1
+  flutter_ota_kit_core:
+    path: ../../packages/core
+  flutter_ota_kit_plugin_core:
+    path: ../plugin-core
   postgres: ^3.4.0
 
 dev_dependencies:

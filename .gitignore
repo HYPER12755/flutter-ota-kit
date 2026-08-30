@@ -50,3 +50,6 @@ migrate_working_dir/
 # Example app local secrets (real Supabase creds). Keep out of git;
 # example/.env.example (placeholders) is committed instead.
 example/.env
+
+# Monorepo package build dirs
+**/build/

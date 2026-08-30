@@ -2,8 +2,6 @@
 /// (the `mapRowToBundle` / `bundleToRowValues` / `bundleToPatchRows` helpers).
 library;
 
-import 'dart:convert';
-
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show
         Bundle,
@@ -16,36 +14,17 @@ import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
         getManifestStorageUri,
         stripBundleArtifactMetadata;
 
+import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
+    show buildBundlePatchId, normalizeMetadata;
+
 import 'postgres_types.dart';
-
-/// Normalize metadata from various shapes to a plain map.
-Map<String, Object?>? _normalizeMetadata(Object? value) {
-  if (value == null) return null;
-
-  if (value is String) {
-    try {
-      final parsed = jsonDecode(value);
-      return _normalizeMetadata(parsed);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  if (value is Map) return value.cast<String, Object?>();
-
-  return null;
-}
-
-/// Build the compound primary key for a patch row.
-String _buildBundlePatchId(String bundleId, String baseBundleId) =>
-    '$bundleId:$baseBundleId';
 
 /// Map a Postgres bundle row + optional patch rows to a [Bundle].
 Bundle mapRowToBundle(
   PostgresBundleRow data, [
   List<PostgresBundlePatchRow> patchRows = const [],
 ]) {
-  final rawMetadata = _normalizeMetadata(data.metadata);
+  final rawMetadata = normalizeMetadata(data.metadata);
   final patches = patchRows.toList()
     ..sort((a, b) {
       final cmp = a.orderIndex.compareTo(b.orderIndex);
@@ -118,7 +97,7 @@ List<Map<String, dynamic>> bundleToPatchRows(Bundle bundle) {
   return [
     for (var i = 0; i < patchArtifacts.length; i++)
       PostgresBundlePatchRow(
-        id: _buildBundlePatchId(bundle.id, patchArtifacts[i].baseBundleId),
+        id: buildBundlePatchId(bundle.id, patchArtifacts[i].baseBundleId),
         bundleId: bundle.id,
         baseBundleId: patchArtifacts[i].baseBundleId,
         baseFileHash: patchArtifacts[i].baseFileHash,

@@ -1,3 +1,12 @@
+## 0.1.2
+
+### Changed
+
+- **De-duplicated the error-to-message helper.** `_getErrorMessage` (supabase_storage,
+  supabase_signed_url_batcher) and `_errorToString` (supabase_edge_function_storage)
+  were byte-identical copies. They now all call one shared `errorMessage(Object?)` in
+  `lib/src/error_message.dart`. No behavior change; the internal names are gone.
+
 ## 0.1.1
 
 - fix(supabase): the `migrate` RLS migration now creates the public-read policies

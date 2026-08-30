@@ -1,7 +1,7 @@
 import 'dart:convert' show jsonDecode, jsonEncode, utf8;
 
 import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
-    show BlobOperations, createBlobDatabasePlugin;
+    show BlobOperations, createBlobDatabasePlugin, updateJsonKeyRegex;
 
 import 'aws_cloudfront_client.dart'
     show AwsCloudFrontClient, AwsCloudFrontClientLike, AwsCloudFrontConfig;
@@ -101,9 +101,6 @@ AwsCloudFrontClientLike defaultAwsCloudFrontClientFactory(
       ),
     );
 
-bool _isUpdateJsonKey(String key) =>
-    RegExp(r'^[^/]+/(?:ios|android)/[^/]+/update\.json$').hasMatch(key);
-
 /// S3-backed [BlobOperations] for the AWS `s3Database` plugin.
 class S3BlobOperations implements BlobOperations {
   S3BlobOperations(this.config)
@@ -130,7 +127,7 @@ class S3BlobOperations implements BlobOperations {
     final objects = await _client.listObjects(_toStorageKey(prefix));
     return objects
         .map((o) => _fromStorageKey(o.key))
-        .where(_isUpdateJsonKey)
+        .where((key) => updateJsonKeyRegex.hasMatch(key))
         .toList();
   }
 

@@ -523,6 +523,32 @@ hot-updater UX (e.g. `deploy --channel --message --platform --target-app-version
 
 - [ ] iOS support (explicitly out of scope for now).
 
+## Phase 11 — Plugin-core cross-plugin de-duplication (DONE)
+
+> Context: the device SDK refactor (Phase 9.x) extracted the 4 hosted
+> `XxxUpdateSource.check()` bodies into `lib/src/shared_update_check.dart`
+> (faithful, no redesign, verified). A follow-up audit of `plugins/` found
+> more shareable helpers that still live duplicated inside each backend plugin
+> and should move into `plugins/plugin-core`. The monorepo now uses **local
+> `path:` dependencies for development** (root + `packages/client` + all four
+> backend plugins + `plugin-core` resolve locally), so this de-duplication was
+> done in-tree without requiring an immediate publish.
+
+DONE (extracted into `plugins/plugin-core/lib/src/{storage_helpers,bundle_helpers}.dart`,
+exported from the barrel, `plugin-core` bumped to 0.0.2 — local `^0.0.1`
+constraints still satisfy):
+- [x] `_ensureExpectedBucket` → `ensureExpectedBucket` (used by cloudflare `r2_storage_profile` + aws `aws_storage_profile`).
+- [x] patch-id builder → `buildBundlePatchId` (supabase/postgres mappers + cloudflare `d1_bundle_mapper`, which re-exports it for backward compat).
+- [x] metadata normalization → `normalizeMetadata` (supabase/postgres mappers + cloudflare `parseMetadata` alias).
+- [x] `update.json` regex → `updateJsonKeyRegex` const (aws `aws_database` + `createBlobDatabasePlugin`).
+- [x] Also fixed a pre-existing duplicate export in the `plugin-core` barrel.
+
+Still OPEN (explicitly left — redesign-ish / not user-facing, decide later):
+- [ ] S3-compatible storage profile family — `cloudflare` `_R2*Profile` and `aws` `_S3*Profile` are near-identical → consider an `S3CompatibleStorageProfile` family in `plugin-core` (bigger, redesign-ish).
+- [ ] supabase intra-plugin `_getErrorMessage`/`_errorToString` repeated in 3 files → one shared helper.
+- [ ] Minor inconsistency (not a bug): S3 `delete` uses prefix list+bulk-delete (aws) vs single-object delete (cloudflare). Align if desired.
+- [ ] Postgres uses custom `postgres://` `_strip` parser instead of `parseStorageUri` — intentional (custom scheme), left as-is.
+
 ---
 
 ## Verification discipline (applies to every phase)

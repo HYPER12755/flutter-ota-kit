@@ -13,6 +13,8 @@ export 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
 export 'src/types.dart';
 
 // Helpers.
+export 'src/storage_helpers.dart';
+export 'src/bundle_helpers.dart';
 export 'src/calculate_pagination.dart';
 export 'src/query_bundles.dart';
 export 'src/paginate_bundles.dart';
@@ -38,5 +40,4 @@ export 'src/create_storage_plugin.dart';
 export 'src/generate_min_bundle_id.dart';
 export 'src/uuidv7.dart';
 export 'src/get_update_info.dart';
-export 'src/resolve_update_info_from_bundles.dart';
 export 'src/resolve_update_info_from_bundles.dart';

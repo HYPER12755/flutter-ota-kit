@@ -258,6 +258,19 @@ Once `libapp.so` is loaded by the current process, it can't be swapped at runtim
 **Why does each patch need a `targetVersionCode`?**
 To prevent old patches from loading after an APK upgrade, and to prevent the server from shipping patches to incompatible builds.
 
+**How does the client report its app version, and why must it match `--target-app-version`?**
+The client reports an `appVersion` that the backend matches against each bundle's
+`target_app_version` (the `--target-app-version` you pass to `deploy`). By
+default this is **auto-detected at runtime** from the host app's `versionName`
+via `package_info_plus` — no build flag needed. You can override it explicitly
+with `--dart-define=APP_VERSION=1.2.3` or `SupabaseUpdateConfig.appVersion`.
+The backend keeps only bundles whose `target_app_version` is semver-compatible
+with the reported version (`semverSatisfies(target, reported)`). **If they don't
+match, the backend returns no bundle and the app silently stays "up to date"**
+— so always deploy with `--target-app-version` equal to the app's real
+`versionName` (e.g. `1.0.1` for a `version: 1.0.1+2` pubspec). A mismatched
+version is the most common cause of "the update never arrives".
+
 More questions: [Full FAQ](doc/faq.md)
 
 ---

@@ -4,6 +4,7 @@ library;
 import 'dart:async';
 
 import 'supabase_client_adapter.dart';
+import 'error_message.dart' show errorMessage;
 
 /// A pending signed URL request waiting for the next flush.
 class _PendingSignedUrl {
@@ -16,16 +17,6 @@ class _PendingSignedUrl {
     required this.reject,
     required this.resolve,
   });
-}
-
-/// Extract a human-readable message from an unknown error value.
-String _getErrorMessage(Object? error) {
-  if (error is Error) return error.toString();
-  if (error is Exception) return error.toString();
-  if (error is Map && error['message'] is String) {
-    return error['message'] as String;
-  }
-  return error.toString();
 }
 
 /// Signature of the batch signed URL generator. Returns the same shape as the
@@ -60,7 +51,7 @@ ResolveSignedUrl createSupabaseSignedUrlBatcher({
   ) =>
       StateError(
         'Failed to generate download URL for '
-        '"${formatObjectPath(bucketName, key)}": ${_getErrorMessage(error)}',
+        '"${formatObjectPath(bucketName, key)}": ${errorMessage(error)}',
       );
 
   Future<void> flush() async {

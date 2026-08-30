@@ -3,12 +3,17 @@ import 'dart:convert';
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart';
 
 import 'bundle_unit_of_work.dart';
+import 'storage_helpers.dart' show updateJsonKeyRegex;
 import 'create_database_plugin.dart';
 import 'filter_compatible_app_versions.dart';
 import 'paginate_bundles.dart';
 import 'query_bundles.dart';
 import 'resolve_update_info_from_bundles.dart';
 import 'types.dart';
+
+/// Capture-group variant of [updateJsonKeyRegex] — extracts the channel.
+final RegExp _updateJsonChannelRegex =
+    RegExp(r'^([^/]+)/(?:ios|android)/[^/]+/update\.json$');
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -180,8 +185,7 @@ List<String> _getManagementListPrefixes(DatabaseBundleQueryWhere? where) {
 }
 
 String? _getChannelFromUpdateJsonKey(String key) {
-  final match =
-      RegExp(r'^([^/]+)/(?:ios|android)/[^/]+/update\.json$').firstMatch(key);
+  final match = _updateJsonChannelRegex.firstMatch(key);
   return match?.group(1);
 }
 
@@ -318,9 +322,7 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
       (prefix, _) => ops.listObjects(prefix),
     ))
         .expand((keys) => keys)
-        .where((key) =>
-            RegExp(r'^[^/]+/(?:ios|android)/[^/]+/update\.json$')
-                .hasMatch(key))
+        .where((key) => updateJsonKeyRegex.hasMatch(key))
         .toList();
 
     final allBundles = (await _mapWithConcurrency(

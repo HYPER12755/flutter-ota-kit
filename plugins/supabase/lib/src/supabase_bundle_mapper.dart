@@ -1,9 +1,10 @@
 /// Faithful port of hot-updater `plugins/supabase/src/supabaseBundleMapper.ts`.
 library;
 
-import 'dart:convert';
-
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart';
+
+import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
+    show buildBundlePatchId, normalizeMetadata;
 
 import 'types.dart';
 
@@ -13,34 +14,12 @@ const String bundleSelectColumns =
     'storage_uri, metadata, manifest_storage_uri, manifest_file_hash, '
     'asset_base_storage_uri, rollout_cohort_count, target_cohorts';
 
-/// Normalize metadata from various shapes to a plain map.
-Map<String, Object?>? _normalizeMetadata(Object? value) {
-  if (value == null) return null;
-
-  if (value is String) {
-    try {
-      final parsed = jsonDecode(value);
-      return _normalizeMetadata(parsed);
-    } catch (_) {
-      return null;
-    }
-  }
-
-  if (value is Map) return value.cast<String, Object?>();
-
-  return null;
-}
-
-/// Build the compound primary key for a patch row.
-String _buildBundlePatchId(String bundleId, String baseBundleId) =>
-    '$bundleId:$baseBundleId';
-
 /// Map a Supabase bundle row + optional patch rows to a [Bundle].
 Bundle mapRowToBundle(
   SupabaseBundleRow row, [
   List<SupabaseBundlePatchRow> patchRows = const [],
 ]) {
-  final rawMetadata = _normalizeMetadata(row.metadata);
+  final rawMetadata = normalizeMetadata(row.metadata);
   final patches = patchRows.toList()
     ..sort((a, b) {
       final cmp = a.orderIndex.compareTo(b.orderIndex);
@@ -116,7 +95,7 @@ List<SupabaseBundlePatchRow> bundleToPatchRows(Bundle bundle) {
   return [
     for (var i = 0; i < patchArtifacts.length; i++)
       SupabaseBundlePatchRow(
-        id: _buildBundlePatchId(
+        id: buildBundlePatchId(
             bundle.id, patchArtifacts[i].baseBundleId),
         bundleId: bundle.id,
         baseBundleId: patchArtifacts[i].baseBundleId,

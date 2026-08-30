@@ -9,6 +9,7 @@ import 'supabase_client_adapter.dart';
 import 'supabase_client_http.dart';
 import 'supabase_config.dart';
 import 'supabase_signed_url_batcher.dart';
+import 'error_message.dart' show errorMessage;
 
 /// Parse a `supabase-storage://` URI into bucket + key.
 ParsedStorageUri parseSupabaseStorageUri(String storageUri) =>
@@ -29,15 +30,6 @@ class SupabaseStorageConfig extends SupabaseServiceRoleConfig {
     required this.bucketName,
     this.basePath,
   });
-}
-
-String _getErrorMessage(Object? error) {
-  if (error is Error) return error.toString();
-  if (error is Exception) return error.toString();
-  if (error is Map && error['message'] is String) {
-    return error['message'] as String;
-  }
-  return error.toString();
 }
 
 Future<String> _createSignedUrlOrThrow({
@@ -61,7 +53,7 @@ Future<String> _createSignedUrlOrThrow({
 
   throw StateError(
     'Failed to generate download URL for "$key": '
-    '${_getErrorMessage(error ?? StateError("missing signed URL"))}',
+    '${errorMessage(error ?? StateError("missing signed URL"))}',
   );
 }
 
@@ -147,7 +139,7 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
       cacheControl: 'max-age=31536000',
     );
     if (upload.error != null) {
-      throw StateError(_getErrorMessage(upload.error));
+      throw StateError(errorMessage(upload.error));
     }
 
     await verifySigned(bucket: bucket, key: storageKey);
@@ -168,7 +160,7 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
     final res = await bucket.exists(parsed.key);
     if (res.data == false) return false;
     if (res.error != null) {
-      throw StateError(_getErrorMessage(res.error));
+      throw StateError(errorMessage(res.error));
     }
     await verifySigned(bucket: bucket, key: parsed.key);
     return res.data as bool;
@@ -185,7 +177,7 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
     }
     final res = await bucket.remove([parsed.key]);
     if (res.error != null) {
-      final msg = res.message ?? _getErrorMessage(res.error);
+      final msg = res.message ?? errorMessage(res.error);
       if (msg.contains('not found')) {
         throw StateError('Bundle not found');
       }
@@ -219,7 +211,7 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
     final res = await bucket.list(prefix);
     if (res.error != null) {
       throw StateError(
-        'Failed to list objects: ${_getErrorMessage(res.error)}',
+        'Failed to list objects: ${errorMessage(res.error)}',
       );
     }
     final data = res.data ?? const <SupabaseStorageObject>[];
@@ -242,7 +234,7 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
     if (keys.isEmpty) return;
     final res = await bucket.remove(keys);
     if (res.error != null) {
-      final msg = res.message ?? _getErrorMessage(res.error);
+      final msg = res.message ?? errorMessage(res.error);
       if (!msg.contains('not found')) {
         throw StateError('Failed to delete objects: $msg');
       }
@@ -272,7 +264,7 @@ class RuntimeStorageProfileImpl implements RuntimeStorageProfile {
     }
     final res = await bucket.download(parsed.key);
     if (res.error != null) {
-      final msg = res.message ?? _getErrorMessage(res.error);
+      final msg = res.message ?? errorMessage(res.error);
       if (msg.contains('not found')) return null;
       throw StateError('Failed to read storage text: $msg');
     }

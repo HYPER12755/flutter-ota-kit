@@ -337,7 +337,7 @@ class InitCommand extends FlutterPatcherCommand {
         entries['POSTGRES_PASSWORD'] = c.password ?? '';
         entries['POSTGRES_SERVING_BASE_URL'] = c.servingBaseUrl ?? '';
         entries['CHANNEL'] = cfg.channel;
-        entries['APP_VERSION'] = '1.0.0';
+        entries['APP_VERSION'] = '';
       case 'cloudflare':
         final c = cfg.cloudflare;
         entries['CLOUDFLARE_ACCOUNT_ID'] = c.accountId ?? '';
@@ -348,7 +348,7 @@ class InitCommand extends FlutterPatcherCommand {
         entries['R2_SECRET_ACCESS_KEY'] = c.r2SecretAccessKey ?? '';
         entries['R2_BASE_PATH'] = c.r2BasePath ?? '';
         entries['CHANNEL'] = cfg.channel;
-        entries['APP_VERSION'] = '1.0.0';
+        entries['APP_VERSION'] = '';
       case 'aws':
         final c = cfg.aws;
         entries['AWS_BUCKET'] = c.bucket ?? '';
@@ -359,7 +359,7 @@ class InitCommand extends FlutterPatcherCommand {
         entries['AWS_BASE_PATH'] = c.basePath ?? '';
         entries['AWS_SESSION_TOKEN'] = c.sessionToken ?? '';
         entries['CHANNEL'] = cfg.channel;
-        entries['APP_VERSION'] = '1.0.0';
+        entries['APP_VERSION'] = '';
       case 'supabase':
       default:
         final c = cfg.supabase;
@@ -367,7 +367,7 @@ class InitCommand extends FlutterPatcherCommand {
         entries['SUPABASE_ANON_KEY'] = c.anonKey ?? '';
         entries['SUPABASE_BUCKET'] = c.bucket ?? 'bundles';
         entries['CHANNEL'] = cfg.channel;
-        entries['APP_VERSION'] = '1.0.0';
+        entries['APP_VERSION'] = '';
         entries['SDK_VERSION'] = '1.0.0';
     }
 
@@ -414,7 +414,7 @@ class InitCommand extends FlutterPatcherCommand {
   String _setupBody(FlutterPatcherConfig cfg, String provider) {
     final channel = _q(cfg.channel);
     final appVersionExpr =
-        "const String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0')";
+        "const String.fromEnvironment('APP_VERSION', defaultValue: '')";
 
     late final String configure;
     switch (provider) {

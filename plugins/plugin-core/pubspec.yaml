@@ -1,6 +1,6 @@
 name: flutter_ota_kit_plugin_core
 description: Plugin core abstractions for flutter_ota_kit — database, storage, and build interfaces.
-version: 0.0.1
+version: 0.0.2
 homepage: https://github.com/HYPER12755/flutter_ota_kit
 repository: https://github.com/HYPER12755/flutter_ota_kit
 issue_tracker: https://github.com/HYPER12755/flutter_ota_kit/issues
@@ -11,7 +11,8 @@ environment:
   sdk: ">=3.3.0 <4.0.0"
 
 dependencies:
-  flutter_ota_kit_core: ^0.1.0
+  flutter_ota_kit_core:
+    path: ../../packages/core
   mime: ^1.0.0
 
 dev_dependencies:
