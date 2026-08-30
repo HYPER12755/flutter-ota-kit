@@ -1,6 +1,6 @@
 name: flutter_ota_kit
 description: Open-source, self-hosted code push (OTA updates) for Flutter Android. Patches Dart AOT libapp.so and assets on cold start with integrity checks and crash rollback.
-version: 0.1.6
+version: 0.1.7
 homepage: https://github.com/HYPER12755/flutter_ota_kit
 repository: https://github.com/HYPER12755/flutter_ota_kit
 issue_tracker: https://github.com/HYPER12755/flutter_ota_kit/issues

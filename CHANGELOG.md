@@ -1,5 +1,14 @@
 > Chinese version: [CHANGELOG-zh.md](CHANGELOG-zh.md)
 
+## 0.1.7
+
+### Fixed
+
+- Added the missing `android.os.Process` / `kotlin.system.exitProcess`
+  imports for the forced-update restart (`Process.killProcess`,
+  `Process.myPid`, `exitProcess`). The 0.1.6 upload missed these, so the
+  Android native build failed to compile.
+
 ## 0.1.6
 
 ### Fixed
