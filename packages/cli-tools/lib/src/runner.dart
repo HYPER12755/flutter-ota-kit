@@ -72,14 +72,41 @@ abstract class FlutterPatcherCommand extends Command<int> {
   @override
   String get usage {
     final buf = StringBuffer();
-    buf.writeln('  ${cyan(bold(name))} ${dim('·')} $description');
+    buf.writeln('  ${cyan('▶')} ${cyan(bold(name))} '
+        '${dim('·')} $description');
+    buf.writeln('  ${dim('─' * 60)}');
     buf.writeln('');
     buf.writeln('  ${bold('USAGE')}');
     buf.writeln('    ${_fullName(this)} [arguments]');
+    if (subcommands.isNotEmpty) {
+      buf.writeln('');
+      buf.writeln('  ${bold('COMMANDS')}');
+      final names = subcommands.keys.toList()..sort();
+      var maxName = 0;
+      for (final n in names) {
+        maxName = maxName < n.length ? n.length : maxName;
+      }
+      for (final n in names) {
+        final c = subcommands[n]!;
+        buf.writeln('    ${cyan(n.padRight(maxName))}  ${dim(c.description)}');
+      }
+      buf.writeln('');
+      buf.writeln('  ${dim('Run "${_fullName(this)} <command>" for more about a command.')}');
+    }
     if (argParser.options.isNotEmpty) {
       buf.writeln('');
       buf.writeln('  ${bold('OPTIONS')}');
-      buf.writeln('  ${argParser.usage.replaceAll('\n', '\n  ')}');
+      final optLines =
+          argParser.usage.split('\n').where((l) => l.trim().isNotEmpty);
+      for (final l in optLines) {
+        final m = RegExp(r'^\s*(-{1,2}[\w-]+)(.*)$').firstMatch(l);
+        if (m != null) {
+          buf.writeln(
+              '    ${cyan(m.group(1)!)}${dim(m.group(2) ?? '')}'.replaceAll('\n', '\n    '));
+        } else {
+          buf.writeln('    ${dim(l.trim())}');
+        }
+      }
     }
     return buf.toString();
   }

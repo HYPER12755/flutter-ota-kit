@@ -72,14 +72,36 @@ abstract class FlutterPatcherCommand extends Command<int> {
   @override
   String get usage {
     final buf = StringBuffer();
-    buf.writeln('  ${cyan(bold(name))} ${dim('·')} $description');
+    buf.writeln('  ${cyan('▶')} ${cyan(bold(name))} ${dim('·')} ${bold(description)}');
+    buf.writeln('  ${dim('─' * 60)}');
     buf.writeln('');
     buf.writeln('  ${bold('USAGE')}');
     buf.writeln('    ${_fullName(this)} [arguments]');
+    if (subcommands.isNotEmpty) {
+      final names = subcommands.keys.toList()..sort();
+      var maxName = 0;
+      for (final n in names) {
+        if (n.length > maxName) maxName = n.length;
+      }
+      buf.writeln('');
+      buf.writeln('  ${bold('COMMANDS')}');
+      for (final n in names) {
+        final c = subcommands[n]!;
+        buf.writeln('    ${cyan(n.padRight(maxName))}  ${dim(c.description)}');
+      }
+      buf.writeln('');
+      buf.writeln('  ${dim('Run "${_fullName(this)} <command>" for more about a command.')}');
+    }
     if (argParser.options.isNotEmpty) {
       buf.writeln('');
       buf.writeln('  ${bold('OPTIONS')}');
-      buf.writeln('  ${argParser.usage.replaceAll('\n', '\n  ')}');
+      for (final opt in argParser.options.values) {
+        final flags = <String>[];
+        if (opt.abbr != null && opt.abbr!.isNotEmpty) flags.add('-${opt.abbr}');
+        flags.add('--${opt.name}');
+        final flagStr = flags.join(', ');
+        buf.writeln('    ${cyan(flagStr.padRight(22))}  ${dim(opt.help ?? '')}');
+      }
     }
     return buf.toString();
   }
