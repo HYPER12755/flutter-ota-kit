@@ -183,14 +183,14 @@ packages:
       path: "../../plugins/aws"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.1.1"
   flutter_ota_kit_cloudflare:
     dependency: "direct main"
     description:
       path: "../../plugins/cloudflare"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.1.1"
   flutter_ota_kit_core:
     dependency: "direct main"
     description:
@@ -204,21 +204,21 @@ packages:
       path: "../../plugins/plugin-core"
       relative: true
     source: path
-    version: "0.0.1"
+    version: "0.0.2"
   flutter_ota_kit_postgres:
     dependency: "direct main"
     description:
       path: "../../plugins/postgres"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.1.1"
   flutter_ota_kit_supabase:
     dependency: "direct main"
     description:
       path: "../../plugins/supabase"
       relative: true
     source: path
-    version: "0.1.0"
+    version: "0.1.2"
   frontend_server_client:
     dependency: transitive
     description:

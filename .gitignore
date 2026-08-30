@@ -53,3 +53,6 @@ example/.env
 
 # Monorepo package build dirs
 **/build/
+
+# CLI build artifact (OTA patch output)
+packages/cli-tools/dist/
