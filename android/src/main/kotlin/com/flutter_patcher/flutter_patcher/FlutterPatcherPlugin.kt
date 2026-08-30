@@ -1,7 +1,5 @@
 package com.flutter_patcher.flutter_patcher
 
-import android.app.AlarmManager
-import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.os.Build
@@ -189,21 +187,12 @@ class FlutterPatcherPlugin :
                 return
             }
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            // Schedule the relaunch on the system AlarmManager (outside our process),
-            // then hard-exit. A plain startActivity + killProcess kills the just-launched
-            // activity (same process), so the update never reloaded. The pending Alarm
-            // fires after the process is gone and re-launches it with the patched native lib.
-            val pending = PendingIntent.getActivity(
-                ctx,
-                0,
-                intent,
-                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-            )
-            val alarmManager = ctx.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-            @Suppress("DEPRECATION")
-            alarmManager.set(AlarmManager.RTC, System.currentTimeMillis() + 200, pending)
+            ctx.startActivity(intent)
             result.success(null)
-            System.exit(0)
+            Handler(Looper.getMainLooper()).postDelayed({
+                Process.killProcess(Process.myPid())
+                exitProcess(0)
+            }, 200)
         } catch (e: Exception) {
             Log.e(TAG, "restartApp error", e)
             result.error("RESTART_FAILED", e.message, null)

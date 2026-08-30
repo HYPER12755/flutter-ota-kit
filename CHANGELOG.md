@@ -1,5 +1,18 @@
 > Chinese version: [CHANGELOG-zh.md](CHANGELOG-zh.md)
 
+## 0.1.6
+
+### Fixed
+
+- **Forced-update restart now works reliably on modern Android.** The previous
+  `AlarmManager`-based relaunch is deferred or dropped in Doze / battery-saver
+  modes, so the app stayed closed. It now uses `startActivity` with
+  `FLAG_ACTIVITY_NEW_TASK | FLAG_ACTIVITY_CLEAR_TASK` followed by a
+  `Handler.postDelayed(200ms)` + `Process.killProcess`, which is the same
+  mechanism used by `restart_app` (`RestartMode.process`) and is not affected
+  by Doze. The developer does not need to change any Dart code — forced updates
+  restart automatically during `checkAndApplyUpdates` / `init`.
+
 ## 0.1.5
 
 ### Fixed

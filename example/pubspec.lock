@@ -172,7 +172,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.1.6"
   flutter_ota_kit_aws:
     dependency: transitive
     description:
