@@ -18,6 +18,9 @@ Future<void> main() async {
   // init) and/or `--dart-define`/`.env` (environment wins). The bundled
   // asset-patch demo works even without a backend configured.
   await setupFlutterOta();
+  // `FlutterOtaApp` hosts the SDK's forced-update progress overlay (no UI code
+  // needed here); `autoApplyUpdates: true` in setupFlutterOta() applies + shows
+  // it automatically for `shouldForceUpdate` bundles.
   runApp(const FlutterOtaApp(child: MyApp()));
 }
 
