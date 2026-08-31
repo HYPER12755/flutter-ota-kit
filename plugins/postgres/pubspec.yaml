@@ -8,15 +8,19 @@ documentation: https://github.com/HYPER12755/flutter_ota_kit#readme
 license: MIT
 
 environment:
-  sdk: ">=3.3.0 <4.0.0"
+  sdk: ">=3.13.2 <4.0.0"
 
 dependencies:
-  flutter_ota_kit_core:
-    path: ../../packages/core
-  flutter_ota_kit_plugin_core:
-    path: ../plugin-core
+  flutter_ota_kit_core: ^0.1.0
+  flutter_ota_kit_plugin_core: ^0.0.2
   postgres: ^3.4.0
 
 dev_dependencies:
   test: ^1.25.0
   lints: ^4.0.0
+
+dependency_overrides:
+  flutter_ota_kit_core:
+    path: ../../packages/core
+  flutter_ota_kit_plugin_core:
+    path: ../plugin-core

@@ -1,5 +1,44 @@
 > Chinese version: [CHANGELOG-zh.md](CHANGELOG-zh.md)
 
+## 0.1.11
+
+### Added
+
+- **Built-in forced-update progress UI (zero app code required).** A forced
+  update (`ServerUpdateResult.shouldForceUpdate`) now shows an automatic overlay
+  with a terminal-style dot spinner, a determinate progress bar (when the server
+  reports `Content-Length`), the live phase label + percentage, and the server
+  OTA `message` rendered underneath. The consuming app writes no UI.
+  - Wrap the app once: `runApp(FlutterOtaApp(child: MyApp()))`.
+  - Disable it app-wide with `FlutterPatcher.showUpdateUi = false`, or
+    `FlutterOtaApp(showUpdateUi: false)`, or by setting
+    `MaterialApp.navigatorKey = FlutterPatcher.navigatorKey` (fallback host).
+  - Only forced updates show the overlay; non-forced updates still stage
+    silently and take effect on the next cold start.
+
+### Changed
+
+- **Forced-update restart now uses `package:restart_app` (`RestartMode.process`)**
+  instead of the hand-rolled native restart. `RestartMode.process` performs a
+  true cold restart on Android (`exit(0)` after relaunching the launch activity),
+  which is required so the patched `libapp.so` / assets reload. The old native
+  `restartApp` MethodChannel handler was removed.
+- **Monorepo dependency hygiene.** All intra-monorepo `path:` dependencies were
+  converted to hosted version constraints, with `dependency_overrides` pointing
+  back at the local paths. This keeps `dependencies` publishable (no
+  `invalid_dependency` analyzer warnings) while local development still resolves
+  in-repo copies — no need to publish untested packages.
+- **SDK alignment to the latest stable.** Dart floor raised to `>=3.13.2` and
+  the plugin's Flutter floor to `>=3.47.2` across the root and every
+  sub-package.
+
+### Fixed
+
+- `FlutterOtaApp` now roots the app in an `Overlay` so its `OverlayState` is
+  actually discoverable by the SDK (the previous `Overlay.of` lookup ran from an
+  ancestor context and silently returned `null`, so the overlay never appeared
+  in the zero-code path).
+
 ## 0.1.9
 
 ### Changed

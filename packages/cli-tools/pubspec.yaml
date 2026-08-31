@@ -7,7 +7,7 @@ version: 0.1.0
 publish_to: none
 
 environment:
-  sdk: '>=3.3.0 <4.0.0'
+  sdk: '>=3.13.2 <4.0.0'
 
 dependencies:
   args: '>=2.4.0 <3.0.0'
@@ -17,6 +17,18 @@ dependencies:
   collection: ^1.18.0
   cryptography: ^2.7.0
   postgres: ^3.4.0
+  flutter_ota_kit_core: ^0.1.0
+  flutter_ota_kit_plugin_core: ^0.0.2
+  flutter_ota_kit_supabase: ^0.1.2
+  flutter_ota_kit_postgres: ^0.1.1
+  flutter_ota_kit_cloudflare: ^0.1.1
+  flutter_ota_kit_aws: ^0.1.1
+  http: ^1.2.0
+
+dev_dependencies:
+  test: ^1.25.0
+
+dependency_overrides:
   flutter_ota_kit_core:
     path: ../core
   flutter_ota_kit_plugin_core:
@@ -29,7 +41,3 @@ dependencies:
     path: ../../plugins/cloudflare
   flutter_ota_kit_aws:
     path: ../../plugins/aws
-  http: ^1.2.0
-
-dev_dependencies:
-  test: ^1.25.0

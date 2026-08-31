@@ -203,8 +203,9 @@ PackResult _writePatchPackage({
     }
   }
 
-  // archive 3.x returns List<int>?, 4.x returns List<int>; coerce to bytes.
-  // ignore: unnecessary_nullable_for_final_variable_declarations, dead_null_aware_expression
+  // archive 3.x returns List<int>?, 4.x returns List<int>; the `??` keeps this
+  // safe if a 3.x archive is ever resolved (dead under 4.x, hence the ignore).
+  // ignore: dead_code, dead_null_aware_expression
   final List<int> packageBytes = ZipEncoder().encode(package) ?? const <int>[];
   final outZip = File('${outDir.path}/patch.zip');
   outZip.writeAsBytesSync(packageBytes);

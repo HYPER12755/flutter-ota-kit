@@ -10,6 +10,8 @@ import 'src/boot_diagnostic.dart';
 import 'src/io_stub.dart' if (dart.library.io) 'src/io.dart' as platform_io;
 import 'src/patch_info.dart';
 import 'src/patcher_channel.dart';
+import 'src/ota_progress_overlay.dart' show OtaOverlayManager;
+import 'src/flutter_ota_app.dart' show FlutterPatcherShowUpdateUiBinding;
 import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
 import 'src/supabase_update_source.dart'
@@ -32,6 +34,9 @@ export 'src/postgres_update_source.dart'
 export 'src/cloudflare_update_source.dart'
     show CloudflareUpdateConfig, CloudflareUpdateSource;
 export 'src/aws_update_source.dart' show AwsUpdateConfig, AwsUpdateSource;
+export 'src/flutter_ota_app.dart' show FlutterOtaApp;
+export 'src/ota_progress_overlay.dart'
+    show OtaOverlayManager, OtaOverlayState, OtaProgressOverlay, OtaOverlayHandle;
 export 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart';
 export 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show Platform, UpdateStrategy;
@@ -78,6 +83,28 @@ class FlutterPatcher {
   /// flag keeps Dart-side blank-screen detection alive for [init]'s
   /// `verifyAfter` window.
   static bool _dartHookActive = true;
+
+  /// When `true` (default), a forced update shows the built-in progress overlay
+  /// (terminal-style dot spinner + determinate bar + server OTA message). Set to
+  /// `false` to disable it (forced updates still apply, just without UI). Can
+  /// also be toggled via [FlutterOtaApp.showUpdateUi] or [navigatorKey].
+  static bool showUpdateUi = true;
+
+  /// Optional navigator key. When set on your [MaterialApp.navigatorKey], the
+  /// forced-update overlay can be shown even without wrapping the app in
+  /// [FlutterOtaApp]. The [FlutterOtaApp] wrapper is the zero-code path.
+  static final navigatorKey = GlobalKey<NavigatorState>();
+
+  // Wire the widget-level flag to [showUpdateUi] so [FlutterOtaApp] can toggle it,
+  // and let the overlay manager fall back to the consumer-provided navigator key.
+  static void _wireOverlay() {
+    FlutterPatcherShowUpdateUiBinding.applyShowUpdateUi =
+        (value) => showUpdateUi = value;
+    OtaOverlayManager.instance.setResolver(
+      () => navigatorKey.currentState?.overlay,
+    );
+  }
+
 
   static bool _notAndroidGuard(String method) {
     if (platform_io.isAndroid) return false;
@@ -149,6 +176,7 @@ class FlutterPatcher {
     if (_inited) return;
     _inited = true;
     _verifyAfter = verifyAfter;
+    _wireOverlay();
 
     try {
       await PatcherChannel.markBooting();
@@ -570,6 +598,15 @@ class FlutterPatcher {
   /// [ServerUpdateResult.shouldForceUpdate] is true. Non-forced updates are
   /// staged and take effect on the next normal cold start (no restart).
   ///
+  /// When [showUpdateUi] is on (default) and the update is forced, a built-in
+  /// progress overlay (dot spinner + determinate bar + the server OTA message)
+  /// is shown automatically during the download/verify/install — the consuming
+  /// app writes no UI. Disable it with [showUpdateUi] = `false` or by wrapping
+  /// the app in [FlutterOtaApp(showUpdateUi: false)].
+  ///
+  /// A developer-supplied [onProgress] callback, if provided, is still invoked
+  /// alongside the overlay.
+  ///
   /// Returns the [PatchApplyResult] from [applyPatch]. When there is nothing to
   /// apply (`result.patch == null`) it returns a no-op failure result.
   static Future<PatchApplyResult> applyUpdate(
@@ -583,9 +620,25 @@ class FlutterPatcher {
         'no update available',
       );
     }
-    final applied = await applyPatch(result.patch!, onProgress: onProgress);
+
+    final showOverlay = showUpdateUi && result.shouldForceUpdate;
+    final handle = showOverlay
+        ? OtaOverlayManager.instance.begin(message: result.message)
+        : null;
+
+    final applied = await applyPatch(
+      result.patch!,
+      onProgress: (p) {
+        handle?.update(p);
+        onProgress?.call(p);
+      },
+    );
+
     if (applied.ok && result.shouldForceUpdate) {
+      handle?.end();
       await restart();
+    } else {
+      handle?.end(hasError: !applied.ok, errorText: applied.message);
     }
     return applied;
   }

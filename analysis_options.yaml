@@ -11,3 +11,11 @@ analyzer:
     - plugins/**
     - example/**
     - node_modules/**
+    - npm/**
+    - build/**
+    - android/**
+    - ios/**
+    - web/**
+    - windows/**
+    - macos/**
+    - linux/**

@@ -1,11 +1,9 @@
 package com.flutter_patcher.flutter_patcher
 
 import android.content.Context
-import android.content.Intent
 import android.os.Build
 import android.os.Handler
 import android.os.Looper
-import android.os.Process
 import android.util.Log
 import io.flutter.embedding.engine.plugins.FlutterPlugin
 import io.flutter.plugin.common.EventChannel
@@ -13,7 +11,6 @@ import io.flutter.plugin.common.MethodCall
 import io.flutter.plugin.common.MethodChannel
 import io.flutter.plugin.common.MethodChannel.MethodCallHandler
 import io.flutter.plugin.common.MethodChannel.Result
-import kotlin.system.exitProcess
 
 /**
  * Dart ↔ Android 的 MethodChannel 处理器。
@@ -37,7 +34,6 @@ import kotlin.system.exitProcess
  * - deviceAbi() -> String — 当前设备首选 ABI，用于服务端按 ABI 分发补丁
  * - blacklist() -> List<Map> — 已知"装上就出事"的补丁本地黑名单
  * - clearBlacklist() — 清空黑名单（仅调试 / 显式恢复用）
- * - restartApp() — 立即重启整个 App 进程（用于强制更新生效）
  */
 class FlutterPatcherPlugin :
     FlutterPlugin, MethodCallHandler, EventChannel.StreamHandler {
@@ -108,7 +104,6 @@ class FlutterPatcherPlugin :
                 BlacklistStore.clear(appContext)
                 result.success(null)
             }
-            "restartApp" -> handleRestartApp(result)
             else -> result.notImplemented()
         }
     }
@@ -172,33 +167,6 @@ class FlutterPatcherPlugin :
     private fun handleLastBootDiagnostic(result: Result) {
         // null 表示从未 record 过（首次安装 / pm clear 后第一次启动且尚未到首帧）
         result.success(BootDiagnosticStore.read(appContext))
-    }
-
-    /**
-     * 立即重启整个 App 进程：
-     * 1) 用 NEW_TASK|CLEAR_TASK 启动 launch activity（清空旧任务栈）；
-     * 2) 延时 200ms 后 kill 当前进程 —— ActivityManager 会为挂起的 launch
-     *    intent 重新拉起进程，从而重新加载（补丁后的）native 库，使强制更新生效。
-     */
-    private fun handleRestartApp(result: Result) {
-        try {
-            val ctx = appContext
-            val intent = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
-            if (intent == null) {
-                result.error("NO_LAUNCH_INTENT", "launch intent not found", null)
-                return
-            }
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TASK)
-            ctx.startActivity(intent)
-            result.success(null)
-            Handler(Looper.getMainLooper()).postDelayed({
-                Process.killProcess(Process.myPid())
-                exitProcess(0)
-            }, 200)
-        } catch (e: Exception) {
-            Log.e(TAG, "restartApp error", e)
-            result.error("RESTART_FAILED", e.message, null)
-        }
     }
 
     /**

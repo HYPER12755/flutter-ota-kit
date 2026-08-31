@@ -118,6 +118,24 @@ void main() async {
 }
 ```
 
+For **zero-click forced updates with a built-in progress UI**, enable auto
+apply and wrap the app in `FlutterOtaApp` (this lets the SDK show a download
+spinner + progress bar + the server's OTA message during a forced update, with
+no UI code from you):
+
+```dart
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await setupFlutterOta();              // configure backend (or pass --dart-define)
+  await FlutterPatcher.init(autoApplyUpdates: true);
+  runApp(const FlutterOtaApp(child: MyApp()));
+}
+```
+
+Disable the overlay app-wide via `FlutterPatcher.showUpdateUi = false` (or
+`FlutterOtaApp(showUpdateUi: false)`), or host it yourself by setting
+`MaterialApp.navigatorKey = FlutterPatcher.navigatorKey`.
+
 ### 3. Build a patch
 
 Rebuild the release APK, then run `pack`:

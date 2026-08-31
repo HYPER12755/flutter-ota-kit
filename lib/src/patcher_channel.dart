@@ -1,4 +1,5 @@
 import 'package:flutter/services.dart';
+import 'package:restart_app/restart_app.dart';
 
 /// MethodChannel constants and thin wrappers for talking to the Android native layer.
 class PatcherChannel {
@@ -112,11 +113,14 @@ class PatcherChannel {
 
   /// Immediately restarts the whole App process (so a forced update takes effect).
   ///
-  /// The native side starts the launch activity (NEW_TASK|CLEAR_TASK) and kills the
-  /// current process; ActivityManager relaunches the process for the pending intent —
-  /// reloading the patched native library. On failure it throws `PlatformException`;
-  /// the caller should fall back (e.g. prompt the user to restart manually).
+  /// Uses the `restart_app` package with [RestartMode.process], which on Android
+  /// starts a fresh launch activity and then terminates the current process
+  /// (`exit(0)`). This true cold restart is required so the patched `libapp.so`
+  /// and assets are reloaded on the next launch. Without the process kill, only
+  /// the Flutter engine would be recreated with the old, already-mapped library.
+  ///
+  /// On non-Android this is a no-op handled upstream by `FlutterPatcher.restart`.
   static Future<void> restartApp() async {
-    await channel.invokeMethod<void>('restartApp');
+    await Restart.restartApp(mode: RestartMode.process);
   }
 }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' show rootBundle;
-import 'package:flutter_ota_kit/flutter_ota_kit.dart';
+import 'package:flutter_ota_kit/flutter_ota_kit.dart'
+    show FlutterOtaApp, FlutterPatcher;
 
 import 'flutter_ota_kit_setup.dart';
 import 'diag_card.dart';
@@ -17,7 +18,7 @@ Future<void> main() async {
   // init) and/or `--dart-define`/`.env` (environment wins). The bundled
   // asset-patch demo works even without a backend configured.
   await setupFlutterOta();
-  runApp(const MyApp());
+  runApp(const FlutterOtaApp(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {

@@ -92,10 +92,9 @@ packages:
   flutter_ota_kit_core:
     dependency: "direct main"
     description:
-      name: flutter_ota_kit_core
-      sha256: "1d310e9da464de728f369f04ee96b95a3821caf225abfb794d98e826283106b6"
-      url: "https://pub.dev"
-    source: hosted
+      path: "../../packages/core"
+      relative: true
+    source: path
     version: "0.1.0"
   frontend_server_client:
     dependency: transitive
