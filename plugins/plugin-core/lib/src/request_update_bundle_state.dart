@@ -37,8 +37,7 @@ List<Bundle> getRequestUpdateBundleSeeds(Map<String, Object?>? context) {
 RequestUpdateBundleResolver createRequestUpdateBundleResolver(
   Map<String, Object?>? context,
 ) {
-  final unitOfWork =
-      getRequestBundleUnitOfWork(context) ?? BundleUnitOfWork();
+  final unitOfWork = getRequestBundleUnitOfWork(context) ?? BundleUnitOfWork();
   return _RequestUpdateBundleResolverImpl(unitOfWork);
 }
 
@@ -57,6 +56,5 @@ class _RequestUpdateBundleResolverImpl implements RequestUpdateBundleResolver {
   Future<Bundle?> getById(
     String bundleId,
     Future<Bundle?> Function() loadBundleById,
-  ) =>
-      _unitOfWork.getById(bundleId, loadBundleById);
+  ) => _unitOfWork.getById(bundleId, loadBundleById);
 }

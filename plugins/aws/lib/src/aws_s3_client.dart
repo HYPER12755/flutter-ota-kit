@@ -84,11 +84,7 @@ class AwsS3Client implements AwsS3ClientLike {
   }
 
   @override
-  Future<void> putObject(
-    String key,
-    List<int> body,
-    String contentType,
-  ) async {
+  Future<void> putObject(String key, List<int> body, String contentType) async {
     final response = await _send(
       'PUT',
       _objectUri(key),
@@ -104,8 +100,8 @@ class AwsS3Client implements AwsS3ClientLike {
   @override
   Future<bool> headObject(String key) async {
     final uri = _objectUri(key);
-    final request =
-        Request('HEAD', uri)..headers.addAll(_authHeaders('HEAD', uri, null));
+    final request = Request('HEAD', uri)
+      ..headers.addAll(_authHeaders('HEAD', uri, null));
     final response = await _http.send(request);
     if (response.statusCode == 404) return false;
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -148,10 +144,11 @@ class AwsS3Client implements AwsS3ClientLike {
 
       ...tokenParam,
     };
-    final canonicalQuery = params.entries
-        .map((e) => '${_uriEncode(e.key)}=${_uriEncode(e.value)}')
-        .toList()
-      ..sort();
+    final canonicalQuery =
+        params.entries
+            .map((e) => '${_uriEncode(e.key)}=${_uriEncode(e.value)}')
+            .toList()
+          ..sort();
     final queryString = canonicalQuery.join('&');
 
     const payloadHash = 'UNSIGNED-PAYLOAD';
@@ -188,7 +185,8 @@ class AwsS3Client implements AwsS3ClientLike {
     final scope = '$dateStamp/${config.region}/$_service/aws4_request';
     final payloadHash = body == null ? _hashHex(const []) : _hashHex(body);
 
-    final canonicalHeaders = 'host:${uri.host}\n'
+    final canonicalHeaders =
+        'host:${uri.host}\n'
         'x-amz-content-sha256:$payloadHash\n'
         'x-amz-date:$amzDate\n'
         '${config.sessionToken != null ? 'x-amz-security-token:${config.sessionToken}\n' : ''}';
@@ -196,7 +194,8 @@ class AwsS3Client implements AwsS3ClientLike {
         ? 'host;x-amz-content-sha256;x-amz-date;x-amz-security-token'
         : 'host;x-amz-content-sha256;x-amz-date';
 
-    final canonicalRequest = '$method\n${uri.path}\n'
+    final canonicalRequest =
+        '$method\n${uri.path}\n'
         '\n$canonicalHeaders$signedHeaders\n$payloadHash';
     final stringToSign = _stringToSign(amzDate, scope, canonicalRequest);
     final signingKey = _signingKey(dateStamp, config.region);
@@ -231,8 +230,10 @@ class AwsS3Client implements AwsS3ClientLike {
 
   List<StorageObject> _parseListObjects(String xml) {
     final objects = <StorageObject>[];
-    final contents =
-        _allMatches(xml, RegExp(r'<Contents>([\s\S]*?)</Contents>'));
+    final contents = _allMatches(
+      xml,
+      RegExp(r'<Contents>([\s\S]*?)</Contents>'),
+    );
     for (final block in contents) {
       final key = _tag(block, 'Key');
       final size = int.tryParse(_tag(block, 'Size') ?? '');
@@ -273,8 +274,11 @@ class AwsS3Client implements AwsS3ClientLike {
 
   static String _uriEncode(String value) => Uri.encodeQueryComponent(value);
 
-  static String _xmlEscape(String value) =>
-      value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;').replaceAll('"', '&quot;');
+  static String _xmlEscape(String value) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;')
+      .replaceAll('"', '&quot;');
 
   static Uint8List _hmac(List<int> key, String data) =>
       Hmac(sha256, key).convert(utf8.encode(data)).bytes as Uint8List;
@@ -302,7 +306,8 @@ class AwsS3Client implements AwsS3ClientLike {
 }
 
 /// Read a local file's bytes (node profile helper).
-Future<List<int>> readFileBytes(String filePath) => File(filePath).readAsBytes();
+Future<List<int>> readFileBytes(String filePath) =>
+    File(filePath).readAsBytes();
 
 /// Write bytes to a local file, creating parent directories.
 Future<void> writeFileBytes(String filePath, List<int> bytes) async {

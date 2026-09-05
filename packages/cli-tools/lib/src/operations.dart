@@ -65,7 +65,9 @@ Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
   // Otherwise, if the source directory contains a `patch.zip`, use that. As a
   // fallback, zip the source directory (for pre-built bundle layouts).
   final sourceFile = File(opts.source);
-  final bool sourceIsFile = sourceFile.existsSync() && sourceFile.statSync().type == FileSystemEntityType.file;
+  final bool sourceIsFile =
+      sourceFile.existsSync() &&
+      sourceFile.statSync().type == FileSystemEntityType.file;
   final String zipPath;
   final bool shouldDelete;
   if (sourceIsFile && opts.source.endsWith('.zip')) {
@@ -113,7 +115,8 @@ Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
       targetAppVersion: opts.targetAppVersion,
       fingerprintHash: opts.fingerprintHash,
       metadata:
-          opts.metadata ?? (signature != null ? BundleMetadata(signature: signature) : null),
+          opts.metadata ??
+          (signature != null ? BundleMetadata(signature: signature) : null),
       rolloutCohortCount: defaultRolloutCohortCount,
     );
 
@@ -140,7 +143,9 @@ Future<Paginated<List<Bundle>>> listBundles(
     DatabaseBundleQueryOptions(
       where: DatabaseBundleQueryWhere(
         channel: opts.channel,
-        platform: opts.platform != null ? Platform.fromValue(opts.platform!) : null,
+        platform: opts.platform != null
+            ? Platform.fromValue(opts.platform!)
+            : null,
         enabled: opts.enabled,
       ),
       limit: opts.limit,
@@ -160,11 +165,7 @@ Future<void> deleteBundle(Backend backend, String id) async {
 }
 
 /// Promote a bundle to a channel (enable + assign channel).
-Future<void> promoteBundle(
-  Backend backend,
-  String id,
-  String channel,
-) async {
+Future<void> promoteBundle(Backend backend, String id, String channel) async {
   final existing = await backend.db.getBundleById(id);
   if (existing == null) {
     throw StateError('Bundle "$id" not found.');

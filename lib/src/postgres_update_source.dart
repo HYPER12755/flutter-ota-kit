@@ -3,7 +3,12 @@ import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
 import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
 import 'package:flutter_ota_kit_postgres/flutter_ota_kit_postgres.dart'
-    show postgresDatabase, postgresStorage, PostgresConfig, PostgresStorageConfig;
+    show
+        postgresDatabase,
+        postgresStorage,
+        PostgresConfig,
+        PostgresStorageConfig;
+
 import 'shared_update_check.dart';
 
 /// Configuration for a **Postgres** update source.

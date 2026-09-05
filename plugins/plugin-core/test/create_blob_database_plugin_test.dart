@@ -14,7 +14,8 @@ const _defaultBundleFields = <String, Object?>{
   'message': null,
   'enabled': true,
   'shouldForceUpdate': false,
-  'storageUri': 'storage://my-app/00000000-0000-0000-0000-000000000000/bundle.zip',
+  'storageUri':
+      'storage://my-app/00000000-0000-0000-0000-000000000000/bundle.zip',
   'fingerprintHash': null,
 };
 
@@ -127,8 +128,7 @@ void _seedUpdateManifests(_FakeBlobStore store, List<Bundle> bundles) {
   }
 
   for (final entry in bundlesByKey.entries) {
-    final sorted = entry.value
-      ..sort((a, b) => b.id.compareTo(a.id));
+    final sorted = entry.value..sort((a, b) => b.id.compareTo(a.id));
     store.data[entry.key] = jsonEncode(sorted.map((b) => b.toJson()).toList());
   }
 
@@ -159,10 +159,18 @@ void main() {
 
   group('update checks', () {
     test('uses direct app-version manifests for update checks', () async {
-      final latest = createBundle('production', 'ios', '*',
-          '00000000-0000-0000-0000-000000000002');
-      final previous = createBundle('production', 'ios', '*',
-          '00000000-0000-0000-0000-000000000001');
+      final latest = createBundle(
+        'production',
+        'ios',
+        '*',
+        '00000000-0000-0000-0000-000000000002',
+      );
+      final previous = createBundle(
+        'production',
+        'ios',
+        '*',
+        '00000000-0000-0000-0000-000000000001',
+      );
 
       _seedUpdateManifests(store, [previous, latest]);
 
@@ -217,13 +225,20 @@ void main() {
 
     test('respects cohort eligibility', () async {
       final gatedBundle = Bundle.fromJson({
-        ...createBundle('production', 'ios', '*',
-                '00000000-0000-0000-0000-000000000021')
-            .toJson(),
+        ...createBundle(
+          'production',
+          'ios',
+          '*',
+          '00000000-0000-0000-0000-000000000021',
+        ).toJson(),
         'targetCohorts': ['beta'],
       });
-      final fallback = createBundle('production', 'ios', '*',
-          '00000000-0000-0000-0000-000000000020');
+      final fallback = createBundle(
+        'production',
+        'ios',
+        '*',
+        '00000000-0000-0000-0000-000000000020',
+      );
       final fallbackWithCohort = Bundle.fromJson({
         ...fallback.toJson(),
         'targetCohorts': ['stable'],
@@ -260,8 +275,12 @@ void main() {
 
   group('append and commit', () {
     test('appends a new bundle and commits to blob store', () async {
-      final bundle = createBundle('production', 'ios', '1.0.0',
-          '00000000-0000-0000-0000-000000000001');
+      final bundle = createBundle(
+        'production',
+        'ios',
+        '1.0.0',
+        '00000000-0000-0000-0000-000000000001',
+      );
 
       await plugin.appendBundle(bundle);
       await plugin.commitBundle();
@@ -273,14 +292,19 @@ void main() {
       expect(stored.length, equals(1));
 
       final fetched = await plugin.getBundleById(
-          '00000000-0000-0000-0000-000000000001');
+        '00000000-0000-0000-0000-000000000001',
+      );
       expect(fetched, isNotNull);
       expect(fetched!.id, equals(bundle.id));
     });
 
     test('does not write to store until commitBundle', () async {
-      final bundle = createBundle('production', 'ios', '1.0.0',
-          '00000000-0000-0000-0000-000000000010');
+      final bundle = createBundle(
+        'production',
+        'ios',
+        '1.0.0',
+        '00000000-0000-0000-0000-000000000010',
+      );
 
       expect(store.data, isEmpty);
 
@@ -288,35 +312,46 @@ void main() {
       expect(store.data, isEmpty);
 
       await plugin.commitBundle();
-      expect(store.data.containsKey('production/ios/1.0.0/update.json'), isTrue);
+      expect(
+        store.data.containsKey('production/ios/1.0.0/update.json'),
+        isTrue,
+      );
     });
 
     test('appends multiple bundles to correct keys', () async {
       final b1 = createBundle('production', 'ios', '1.0.0', 'multi-1');
-      final b2 =
-          createBundle('production', 'android', '2.0.0', 'multi-2');
+      final b2 = createBundle('production', 'android', '2.0.0', 'multi-2');
 
       await plugin.appendBundle(b1);
       await plugin.appendBundle(b2);
       await plugin.commitBundle();
 
-      expect(store.data.containsKey('production/ios/1.0.0/update.json'), isTrue);
-      expect(store.data.containsKey('production/android/2.0.0/update.json'),
-          isTrue);
+      expect(
+        store.data.containsKey('production/ios/1.0.0/update.json'),
+        isTrue,
+      );
+      expect(
+        store.data.containsKey('production/android/2.0.0/update.json'),
+        isTrue,
+      );
     });
   });
 
   group('update and delete', () {
     test('updates an existing bundle', () async {
-      final bundle = createBundle('production', 'android', '2.0.0',
-          '00000000-0000-0000-0000-000000000002');
+      final bundle = createBundle(
+        'production',
+        'android',
+        '2.0.0',
+        '00000000-0000-0000-0000-000000000002',
+      );
       final bundleKey = 'production/android/2.0.0/update.json';
       store.data[bundleKey] = jsonEncode([bundle.toJson()]);
 
-      await plugin.getBundles(
-          const DatabaseBundleQueryOptions(limit: 20));
-      await plugin.updateBundle(
-          '00000000-0000-0000-0000-000000000002', {'enabled': false});
+      await plugin.getBundles(const DatabaseBundleQueryOptions(limit: 20));
+      await plugin.updateBundle('00000000-0000-0000-0000-000000000002', {
+        'enabled': false,
+      });
       await plugin.commitBundle();
 
       final updated = jsonDecode(store.data[bundleKey]!) as List;
@@ -332,10 +367,8 @@ void main() {
     });
 
     test('deletes a bundle successfully', () async {
-      final b1 = createBundle(
-          'production', 'ios', '1.1.1', 'bundleX');
-      final b2 = createBundle(
-          'production', 'android', '1.1.1', 'bundleY');
+      final b1 = createBundle('production', 'ios', '1.1.1', 'bundleX');
+      final b2 = createBundle('production', 'android', '1.1.1', 'bundleY');
 
       await plugin.appendBundle(b1);
       await plugin.appendBundle(b2);
@@ -351,14 +384,14 @@ void main() {
     });
 
     test('deletes entire update.json when no bundles remain', () async {
-      final b1 = createBundle(
-          'production', 'ios', '1.1.1', 'bundleX');
+      final b1 = createBundle('production', 'ios', '1.1.1', 'bundleX');
 
       await plugin.appendBundle(b1);
       await plugin.commitBundle();
 
-      final updateJsonKeys =
-          store.data.keys.where((k) => k.contains('update.json')).toList();
+      final updateJsonKeys = store.data.keys
+          .where((k) => k.contains('update.json'))
+          .toList();
       expect(updateJsonKeys, isNotEmpty);
 
       await plugin.deleteBundle(b1);
@@ -368,10 +401,20 @@ void main() {
     });
 
     test('keeps update.json when other bundles remain', () async {
-      final b1 = {..._defaultBundleFields, 'id': 'bundleA', 'channel': 'production',
-        'platform': 'ios', 'targetAppVersion': '1.1.1'};
-      final b2 = {..._defaultBundleFields, 'id': 'bundleB', 'channel': 'production',
-        'platform': 'ios', 'targetAppVersion': '1.1.1'};
+      final b1 = {
+        ..._defaultBundleFields,
+        'id': 'bundleA',
+        'channel': 'production',
+        'platform': 'ios',
+        'targetAppVersion': '1.1.1',
+      };
+      final b2 = {
+        ..._defaultBundleFields,
+        'id': 'bundleB',
+        'channel': 'production',
+        'platform': 'ios',
+        'targetAppVersion': '1.1.1',
+      };
 
       final bundle1 = Bundle.fromJson(b1);
       final bundle2 = Bundle.fromJson(b2);
@@ -394,25 +437,51 @@ void main() {
       final keyNew = 'production/ios/1.0.2/update.json';
 
       final oldBundles = [
-        createBundle('production', 'ios', '1.x.x',
-            '00000000-0000-0000-0000-000000000003'),
-        createBundle('production', 'ios', '1.x.x',
-            '00000000-0000-0000-0000-000000000002'),
-        createBundle('production', 'ios', '1.x.x',
-            '00000000-0000-0000-0000-000000000001'),
+        createBundle(
+          'production',
+          'ios',
+          '1.x.x',
+          '00000000-0000-0000-0000-000000000003',
+        ),
+        createBundle(
+          'production',
+          'ios',
+          '1.x.x',
+          '00000000-0000-0000-0000-000000000002',
+        ),
+        createBundle(
+          'production',
+          'ios',
+          '1.x.x',
+          '00000000-0000-0000-0000-000000000001',
+        ),
       ];
 
       final newBundles = [
-        createBundle('production', 'ios', '1.0.2',
-            '00000000-0000-0000-0000-000000000005'),
-        createBundle('production', 'ios', '1.0.2',
-            '00000000-0000-0000-0000-000000000004'),
+        createBundle(
+          'production',
+          'ios',
+          '1.0.2',
+          '00000000-0000-0000-0000-000000000005',
+        ),
+        createBundle(
+          'production',
+          'ios',
+          '1.0.2',
+          '00000000-0000-0000-0000-000000000004',
+        ),
       ];
 
-      store.data[keyOld] = jsonEncode(oldBundles.map((b) => b.toJson()).toList());
-      store.data[keyNew] = jsonEncode(newBundles.map((b) => b.toJson()).toList());
-      store.data['production/ios/target-app-versions.json'] =
-          jsonEncode(['1.x.x', '1.0.2']);
+      store.data[keyOld] = jsonEncode(
+        oldBundles.map((b) => b.toJson()).toList(),
+      );
+      store.data[keyNew] = jsonEncode(
+        newBundles.map((b) => b.toJson()).toList(),
+      );
+      store.data['production/ios/target-app-versions.json'] = jsonEncode([
+        '1.x.x',
+        '1.0.2',
+      ]);
 
       await plugin.getBundles(const DatabaseBundleQueryOptions(limit: 20));
 
@@ -445,8 +514,9 @@ void main() {
 
   group('getBundles', () {
     test('returns empty for no data', () async {
-      final result =
-          await plugin.getBundles(const DatabaseBundleQueryOptions(limit: 20));
+      final result = await plugin.getBundles(
+        const DatabaseBundleQueryOptions(limit: 20),
+      );
       expect(result.data, isEmpty);
       expect(result.pagination.total, equals(0));
     });
@@ -456,13 +526,17 @@ void main() {
       final bB = createBundle('production', 'ios', '1.0.0', 'B');
       final bC = createBundle('production', 'ios', '2.0.0', 'C');
 
-      store.data['production/ios/1.0.0/update.json'] =
-          jsonEncode([bB.toJson(), bA.toJson()]);
-      store.data['production/ios/2.0.0/update.json'] =
-          jsonEncode([bC.toJson()]);
+      store.data['production/ios/1.0.0/update.json'] = jsonEncode([
+        bB.toJson(),
+        bA.toJson(),
+      ]);
+      store.data['production/ios/2.0.0/update.json'] = jsonEncode([
+        bC.toJson(),
+      ]);
 
-      final result =
-          await plugin.getBundles(const DatabaseBundleQueryOptions(limit: 20));
+      final result = await plugin.getBundles(
+        const DatabaseBundleQueryOptions(limit: 20),
+      );
       expect(result.data.length, equals(3));
       expect(result.data[0].id, 'C');
       expect(result.data[1].id, 'B');
@@ -471,21 +545,29 @@ void main() {
 
     test('filters by channel and platform', () async {
       final ios = createBundle('production', 'ios', '1.0.0', 'ios-1');
-      final android =
-          createBundle('production', 'android', '1.0.0', 'android-1');
+      final android = createBundle(
+        'production',
+        'android',
+        '1.0.0',
+        'android-1',
+      );
 
-      store.data['production/ios/1.0.0/update.json'] =
-          jsonEncode([ios.toJson()]);
-      store.data['production/android/1.0.0/update.json'] =
-          jsonEncode([android.toJson()]);
+      store.data['production/ios/1.0.0/update.json'] = jsonEncode([
+        ios.toJson(),
+      ]);
+      store.data['production/android/1.0.0/update.json'] = jsonEncode([
+        android.toJson(),
+      ]);
 
-      final result = await plugin.getBundles(DatabaseBundleQueryOptions(
-        limit: 20,
-        where: const DatabaseBundleQueryWhere(
-          channel: 'production',
-          platform: Platform.ios,
+      final result = await plugin.getBundles(
+        DatabaseBundleQueryOptions(
+          limit: 20,
+          where: const DatabaseBundleQueryWhere(
+            channel: 'production',
+            platform: Platform.ios,
+          ),
         ),
-      ));
+      );
       expect(result.data.length, equals(1));
       expect(result.data[0].id, 'ios-1');
     });
@@ -493,16 +575,21 @@ void main() {
 
   group('CloudFront invalidation', () {
     test('invalidates correct paths on new bundle', () async {
-      final bundle = createBundle('production', 'ios', '1.0.0',
-          'cloudfront-new-test');
+      final bundle = createBundle(
+        'production',
+        'ios',
+        '1.0.0',
+        'cloudfront-new-test',
+      );
 
       await plugin.appendBundle(bundle);
       await plugin.commitBundle();
 
       expect(store.invalidationCalls, isNotEmpty);
       expect(
-        store.invalidationCalls
-            .any((p) => p.contains('app-version') && p.contains('1.0.0')),
+        store.invalidationCalls.any(
+          (p) => p.contains('app-version') && p.contains('1.0.0'),
+        ),
         isTrue,
       );
       expect(
@@ -512,16 +599,21 @@ void main() {
     });
 
     test('invalidates semver pattern path', () async {
-      final bundle = createBundle('production', 'ios', '3.0.x',
-          'cloudfront-semver');
+      final bundle = createBundle(
+        'production',
+        'ios',
+        '3.0.x',
+        'cloudfront-semver',
+      );
 
       store.invalidationCalls.clear();
       await plugin.appendBundle(bundle);
       await plugin.commitBundle();
 
       expect(
-        store.invalidationCalls
-            .any((p) => p == '/api/check-update/app-version/ios/*'),
+        store.invalidationCalls.any(
+          (p) => p == '/api/check-update/app-version/ios/*',
+        ),
         isTrue,
       );
     });
@@ -535,26 +627,37 @@ void main() {
 
   group('targetAppVersion with spaces', () {
     test('normalizes space-containing targetAppVersion', () async {
-      final bundle = createBundle('production', 'ios', '>= 10.7.0',
-          'space-normalization-test');
-
-      await plugin.appendBundle(bundle);
-      await plugin.commitBundle();
-
-      expect(store.data.containsKey('production/ios/>=10.7.0/update.json'),
-          isTrue);
-    });
-
-    test('normalizes multiple spaces', () async {
-      final bundle = createBundle('production', 'android', '>  1.0.0   <   2.0.0',
-          'multi-space-test');
+      final bundle = createBundle(
+        'production',
+        'ios',
+        '>= 10.7.0',
+        'space-normalization-test',
+      );
 
       await plugin.appendBundle(bundle);
       await plugin.commitBundle();
 
       expect(
-          store.data.containsKey('production/android/>1.0.0 <2.0.0/update.json'),
-          isTrue);
+        store.data.containsKey('production/ios/>=10.7.0/update.json'),
+        isTrue,
+      );
+    });
+
+    test('normalizes multiple spaces', () async {
+      final bundle = createBundle(
+        'production',
+        'android',
+        '>  1.0.0   <   2.0.0',
+        'multi-space-test',
+      );
+
+      await plugin.appendBundle(bundle);
+      await plugin.commitBundle();
+
+      expect(
+        store.data.containsKey('production/android/>1.0.0 <2.0.0/update.json'),
+        isTrue,
+      );
     });
 
     test('handles various semver range formats', () async {
@@ -585,30 +688,38 @@ void main() {
     });
 
     test('normalizes target-app-versions.json', () async {
-      final bundle = createBundle('production', 'ios', '>= 10.7.0',
-          'target-versions-test');
+      final bundle = createBundle(
+        'production',
+        'ios',
+        '>= 10.7.0',
+        'target-versions-test',
+      );
 
       await plugin.appendBundle(bundle);
       await plugin.commitBundle();
 
       final versions = jsonDecode(
-          store.data['production/ios/target-app-versions.json']!) as List;
+        store.data['production/ios/target-app-versions.json']!,
+      ) as List;
       expect(versions, contains('>=10.7.0'));
     });
   });
 
   group('semver normalization', () {
     test('invalidates all paths for 1.0.0', () async {
-      final bundle = createBundle('production', 'ios', '1.0.0',
-          'semver-normalization-test');
+      final bundle = createBundle(
+        'production',
+        'ios',
+        '1.0.0',
+        'semver-normalization-test',
+      );
 
       store.invalidationCalls.clear();
       await plugin.appendBundle(bundle);
       await plugin.commitBundle();
 
       expect(
-        store.invalidationCalls
-            .any((p) => p.contains('app-version/ios/1.0.0')),
+        store.invalidationCalls.any((p) => p.contains('app-version/ios/1.0.0')),
         isTrue,
       );
       expect(
@@ -622,32 +733,44 @@ void main() {
     });
 
     test('only normalizes 2.x when patch=0', () async {
-      final bundle = createBundle('production', 'android', '2.1.0',
-          'semver-norm-test-2');
+      final bundle = createBundle(
+        'production',
+        'android',
+        '2.1.0',
+        'semver-norm-test-2',
+      );
 
       store.invalidationCalls.clear();
       await plugin.appendBundle(bundle);
       await plugin.commitBundle();
 
       expect(
-        store.invalidationCalls
-            .any((p) => p.contains('app-version/android/2.1.0')),
+        store.invalidationCalls.any(
+          (p) => p.contains('app-version/android/2.1.0'),
+        ),
         isTrue,
       );
       expect(
-        store.invalidationCalls.any((p) => p.contains('app-version/android/2.1')),
+        store.invalidationCalls.any(
+          (p) => p.contains('app-version/android/2.1'),
+        ),
         isTrue,
       );
       expect(
-        store.invalidationCalls
-            .any((p) => RegExp(r'app-version/android/2/').hasMatch(p)),
+        store.invalidationCalls.any(
+          (p) => RegExp(r'app-version/android/2/').hasMatch(p),
+        ),
         isFalse,
       );
     });
 
     test('no extra normalization for 1.2.3', () async {
-      final bundle = createBundle('production', 'ios', '1.2.3',
-          'no-normalization-test');
+      final bundle = createBundle(
+        'production',
+        'ios',
+        '1.2.3',
+        'no-normalization-test',
+      );
 
       store.invalidationCalls.clear();
       await plugin.appendBundle(bundle);
@@ -655,17 +778,20 @@ void main() {
 
       expect(
         store.invalidationCalls.any(
-            (p) => p == '/api/check-update/app-version/ios/1.2.3/production/*'),
+          (p) => p == '/api/check-update/app-version/ios/1.2.3/production/*',
+        ),
         isTrue,
       );
       expect(
         store.invalidationCalls.any(
-            (p) => p == '/api/check-update/app-version/ios/1.2/production/*'),
+          (p) => p == '/api/check-update/app-version/ios/1.2/production/*',
+        ),
         isFalse,
       );
       expect(
         store.invalidationCalls.any(
-            (p) => p == '/api/check-update/app-version/ios/1/production/*'),
+          (p) => p == '/api/check-update/app-version/ios/1/production/*',
+        ),
         isFalse,
       );
     });
@@ -673,8 +799,12 @@ void main() {
 
   group('issue #745 promotion scenario', () {
     test('updates target-app-versions when promoting channel', () async {
-      final bundle = createBundle('test', 'android', '8.1.3',
-          'issue-745-promote-bundle');
+      final bundle = createBundle(
+        'test',
+        'android',
+        '8.1.3',
+        'issue-745-promote-bundle',
+      );
 
       await plugin.appendBundle(bundle);
       await plugin.commitBundle();
@@ -687,24 +817,26 @@ void main() {
       await plugin.commitBundle();
 
       expect(
-        store.invalidationCalls
-            .any((p) => p.contains('app-version/android/8.1.3/test')),
+        store.invalidationCalls.any(
+          (p) => p.contains('app-version/android/8.1.3/test'),
+        ),
         isTrue,
       );
       expect(
-        store.invalidationCalls
-            .any((p) => p.contains('app-version/android/8.1.3/prod')),
+        store.invalidationCalls.any(
+          (p) => p.contains('app-version/android/8.1.3/prod'),
+        ),
         isTrue,
       );
 
       final prodVersions = jsonDecode(
-              store.data['prod/android/target-app-versions.json'] ?? '[]')
-          as List;
+        store.data['prod/android/target-app-versions.json'] ?? '[]',
+      ) as List;
       expect(prodVersions, contains('8.1.3'));
 
       final testVersions = jsonDecode(
-              store.data['test/android/target-app-versions.json'] ?? '[]')
-          as List;
+        store.data['test/android/target-app-versions.json'] ?? '[]',
+      ) as List;
       expect(testVersions, isNot(contains('8.1.3')));
     });
   });

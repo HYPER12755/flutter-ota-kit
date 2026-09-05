@@ -4,6 +4,7 @@ import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
 import 'package:flutter_ota_kit_aws/flutter_ota_kit_aws.dart'
     show s3Database, s3Storage, S3DatabaseConfig, AwsS3StorageConfig;
+
 import 'shared_update_check.dart';
 
 /// Configuration for an **AWS S3** update source.

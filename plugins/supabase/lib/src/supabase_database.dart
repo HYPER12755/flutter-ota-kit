@@ -57,13 +57,15 @@ Object createSupabaseError(Object error) {
 }
 
 UpdateInfo mapUpdateInfoRow(_SupabaseUpdateInfoRow row) => UpdateInfo(
-      id: row.id,
-      shouldForceUpdate: row.shouldForceUpdate,
-      message: row.message,
-      status: row.status == 'ROLLBACK' ? UpdateStatus.rollback : UpdateStatus.update,
-      storageUri: row.storageUri,
-      fileHash: row.fileHash,
-    );
+  id: row.id,
+  shouldForceUpdate: row.shouldForceUpdate,
+  message: row.message,
+  status: row.status == 'ROLLBACK'
+      ? UpdateStatus.rollback
+      : UpdateStatus.update,
+  storageUri: row.storageUri,
+  fileHash: row.fileHash,
+);
 
 /// Supabase-backed [DatabasePlugin] factory.
 ///
@@ -73,15 +75,13 @@ UpdateInfo mapUpdateInfoRow(_SupabaseUpdateInfoRow row) => UpdateInfo(
 DatabasePlugin Function() Function(
   SupabaseDatabaseConfig config, [
   DatabasePluginHooks? hooks,
-]) supabaseDatabase = createDatabasePlugin<SupabaseDatabaseConfig>(
+])
+supabaseDatabase = createDatabasePlugin<SupabaseDatabaseConfig>(
   name: 'supabaseDatabase',
   factory: (config) {
     final supabase = (config.clientFactory != null
         ? config.clientFactory!(config.supabaseUrl, config.resolveKey())
-        : createSupabaseHttpClient(
-            config.supabaseUrl,
-            config.resolveKey(),
-          ));
+        : createSupabaseHttpClient(config.supabaseUrl, config.resolveKey()));
 
     Future<Map<String, List<SupabaseBundlePatchRow>>> fetchPatchMap(
       List<String> bundleIds,
@@ -123,7 +123,8 @@ class _SupabaseDatabasePlugin implements AbstractDatabasePlugin {
   final SupabaseClientLike supabase;
   final Future<Map<String, List<SupabaseBundlePatchRow>>> Function(
     List<String> bundleIds,
-  ) fetchPatchMap;
+  )
+  fetchPatchMap;
 
   _SupabaseDatabasePlugin({
     required this.supabase,
@@ -152,8 +153,11 @@ class _SupabaseDatabasePlugin implements AbstractDatabasePlugin {
       }
       final targetAppVersionList = filterCompatibleAppVersions(
         ((targetRes.data as List?) ?? [])
-            .map((row) =>
-                _SupabaseTargetAppVersionRow((row as Map)['target_app_version']))
+            .map(
+              (row) => _SupabaseTargetAppVersionRow(
+                (row as Map)['target_app_version'],
+              ),
+            )
             .where((row) => row.targetAppVersion != null)
             .map((row) => row.targetAppVersion!)
             .toList(),
@@ -229,9 +233,11 @@ class _SupabaseDatabasePlugin implements AbstractDatabasePlugin {
     final row = SupabaseBundleRow.fromJson(
       (res.data as Map).cast<String, dynamic>(),
     );
-    final patches = (results[1] as Map<String, List<SupabaseBundlePatchRow>>)[bundleId] ?? [];
+    final patches =
+        (results[1] as Map<String, List<SupabaseBundlePatchRow>>)[bundleId] ??
+        [];
     return mapRowToBundle(row, patches);
-        }
+  }
 
   @override
   Future<Paginated<List<Bundle>>> getBundles(
@@ -239,9 +245,10 @@ class _SupabaseDatabasePlugin implements AbstractDatabasePlugin {
   ) async {
     final where = options.where;
     final limit = options.limit;
-    final orderBy = options.orderBy ??
-        const DatabaseBundleQueryOrder(direction: 'desc');
-    final offset = options.offset ??
+    final orderBy =
+        options.orderBy ?? const DatabaseBundleQueryOrder(direction: 'desc');
+    final offset =
+        options.offset ??
         (options.page != null ? (options.page! - 1) * limit : 0);
 
     if ((where?.targetAppVersionIn != null &&
@@ -279,7 +286,9 @@ class _SupabaseDatabasePlugin implements AbstractDatabasePlugin {
       data.map((b) => (b as Map)['id'] as String).toList(),
     );
     final bundles = data.map((b) {
-      final row = SupabaseBundleRow.fromJson((b as Map).cast<String, dynamic>());
+      final row = SupabaseBundleRow.fromJson(
+        (b as Map).cast<String, dynamic>(),
+      );
       return mapRowToBundle(row, patchMap[row.id] ?? []);
     }).toList();
 
@@ -339,15 +348,11 @@ class _SupabaseDatabasePlugin implements AbstractDatabasePlugin {
       throw createSupabaseError(res.error!);
     }
     final data = (res.data as List?) ?? [];
-    return data
-        .map((row) => (row as Map)['channel'] as String)
-        .toList();
+    return data.map((row) => (row as Map)['channel'] as String).toList();
   }
 
   @override
-  Future<void> commitBundle({
-    required List<BundleChange> changedSets,
-  }) async {
+  Future<void> commitBundle({required List<BundleChange> changedSets}) async {
     if (changedSets.isEmpty) return;
 
     for (final op in changedSets) {
@@ -405,9 +410,12 @@ class _SupabaseDatabasePlugin implements AbstractDatabasePlugin {
         if (patchRows.isNotEmpty) {
           final patchUpsert = await supabase
               .from('bundle_patches')
-              .upsert(patchRows.map((p) => p.toJson()).toList(),
-                  onConflict: 'id');
-          if (patchUpsert is SupabaseResponseLike && patchUpsert.error != null) {
+              .upsert(
+                patchRows.map((p) => p.toJson()).toList(),
+                onConflict: 'id',
+              );
+          if (patchUpsert is SupabaseResponseLike &&
+              patchUpsert.error != null) {
             throw createSupabaseError(patchUpsert.error!);
           } else if (patchUpsert is Map && patchUpsert['error'] != null) {
             throw createSupabaseError(patchUpsert['error']!);

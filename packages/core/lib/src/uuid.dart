@@ -28,8 +28,7 @@ String uuidV7({DateTime? now}) {
   final rand = List.generate(10, (_) => _random.nextInt(256));
   final tsHex = _hex(ts, 12);
   final g3 = '${_hex(rand[0] & 0x0F, 1)}${_hex(rand[1], 2)}';
-  final g4 =
-      '${_hex((rand[2] & 0x3F) | 0x80, 2)}${_hex(rand[3], 2)}';
+  final g4 = '${_hex((rand[2] & 0x3F) | 0x80, 2)}${_hex(rand[3], 2)}';
   final g5 = StringBuffer();
   for (var i = 4; i < 10; i++) {
     g5.write(_hex(rand[i], 2));

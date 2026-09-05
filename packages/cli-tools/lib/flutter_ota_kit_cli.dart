@@ -57,24 +57,25 @@ import 'src/commands/storage.dart';
 
 /// Entry point: build the command runner and dispatch [args].
 Future<int> run(List<String> args) async {
-  final runner = FlutterPatcherRunner(
-    'flutter_ota_kit',
-    'flutter_ota_kit CLI — OTA code push for Flutter (hot-updater compatible).',
-  )
-    ..addCommand(InitCommand())
-    ..addCommand(ConfigCommand())
-    ..addCommand(KeysCommand())
-    ..addCommand(DoctorCommand())
-    ..addCommand(FingerprintCommand())
-    ..addCommand(DeployCommand())
-    ..addCommand(BuildCommand())
-    ..addCommand(BundleCommand())
-    ..addCommand(RollbackCommand())
-    ..addCommand(ChannelCommand())
-    ..addCommand(StorageCommand())
-    ..addCommand(MigrateCommand())
-    ..addCommand(ConsoleCommand())
-    ..addCommand(PocketBaseCommand());
+  final runner =
+      FlutterPatcherRunner(
+          'flutter_ota_kit',
+          'flutter_ota_kit CLI — OTA code push for Flutter (hot-updater compatible).',
+        )
+        ..addCommand(InitCommand())
+        ..addCommand(ConfigCommand())
+        ..addCommand(KeysCommand())
+        ..addCommand(DoctorCommand())
+        ..addCommand(FingerprintCommand())
+        ..addCommand(DeployCommand())
+        ..addCommand(BuildCommand())
+        ..addCommand(BundleCommand())
+        ..addCommand(RollbackCommand())
+        ..addCommand(ChannelCommand())
+        ..addCommand(StorageCommand())
+        ..addCommand(MigrateCommand())
+        ..addCommand(ConsoleCommand())
+        ..addCommand(PocketBaseCommand());
 
   try {
     final result = await runner.run(args);

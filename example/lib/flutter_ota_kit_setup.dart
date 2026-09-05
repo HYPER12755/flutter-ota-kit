@@ -12,19 +12,35 @@ import 'package:flutter_ota_kit/flutter_ota_kit.dart';
 // supabase update source and enables zero-click forced updates (the process
 // restarts automatically when a forced bundle is available).
 Future<void> setupFlutterOta() async {
-  FlutterPatcher.configureSupabase(SupabaseUpdateConfig(
-    supabaseUrl: const String.fromEnvironment('SUPABASE_URL',
-        defaultValue: 'https://your-project.supabase.co'),
-    anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
-    bucket:
-        const String.fromEnvironment('SUPABASE_BUCKET', defaultValue: 'bundles'),
-    channel: const String.fromEnvironment('CHANNEL', defaultValue: 'production'),
-    platform: Platform.android,
-    updateStrategy: UpdateStrategy.appVersion,
-    appVersion:
-        const String.fromEnvironment('APP_VERSION', defaultValue: '1.0.0'),
-    sdkVersion:
-        const String.fromEnvironment('SDK_VERSION', defaultValue: '1.0.0'),
-  ));
+  FlutterPatcher.configureSupabase(
+    SupabaseUpdateConfig(
+      supabaseUrl: const String.fromEnvironment(
+        'SUPABASE_URL',
+        defaultValue: 'https://your-project.supabase.co',
+      ),
+      anonKey: const String.fromEnvironment(
+        'SUPABASE_ANON_KEY',
+        defaultValue: '',
+      ),
+      bucket: const String.fromEnvironment(
+        'SUPABASE_BUCKET',
+        defaultValue: 'bundles',
+      ),
+      channel: const String.fromEnvironment(
+        'CHANNEL',
+        defaultValue: 'production',
+      ),
+      platform: Platform.android,
+      updateStrategy: UpdateStrategy.appVersion,
+      appVersion: const String.fromEnvironment(
+        'APP_VERSION',
+        defaultValue: '1.0.0',
+      ),
+      sdkVersion: const String.fromEnvironment(
+        'SDK_VERSION',
+        defaultValue: '1.0.0',
+      ),
+    ),
+  );
   await FlutterPatcher.init(autoApplyUpdates: true);
 }

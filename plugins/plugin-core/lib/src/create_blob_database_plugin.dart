@@ -12,8 +12,9 @@ import 'resolve_update_info_from_bundles.dart';
 import 'types.dart';
 
 /// Capture-group variant of [updateJsonKeyRegex] — extracts the channel.
-final RegExp _updateJsonChannelRegex =
-    RegExp(r'^([^/]+)/(?:ios|android)/[^/]+/update\.json$');
+final RegExp _updateJsonChannelRegex = RegExp(
+  r'^([^/]+)/(?:ios|android)/[^/]+/update\.json$',
+);
 
 // ---------------------------------------------------------------------------
 // Internal types
@@ -27,10 +28,7 @@ class _BundleWithKey {
 }
 
 class _TargetVersionMutation {
-  _TargetVersionMutation({
-    required this.channel,
-    required this.platform,
-  });
+  _TargetVersionMutation({required this.channel, required this.platform});
 
   final String channel;
   final String platform;
@@ -166,15 +164,16 @@ List<String> _getManagementListPrefixes(DatabaseBundleQueryWhere? where) {
   if (where?.channel != null &&
       where?.platform != null &&
       where?.targetAppVersion is String) {
-    final normalized =
-        normalizeTargetAppVersion(where!.targetAppVersion as String);
+    final normalized = normalizeTargetAppVersion(
+      where!.targetAppVersion as String,
+    );
     if (normalized != null) {
       return ['${where.channel}/${where.platform?.value}/$normalized/'];
     }
   }
 
   if (where?.channel != null && where?.platform != null) {
-      return ['${where!.channel}/${where.platform?.value}/'];
+    return ['${where!.channel}/${where.platform?.value}/'];
   }
 
   if (where?.channel != null) {
@@ -189,8 +188,10 @@ String? _getChannelFromUpdateJsonKey(String key) {
   return match?.group(1);
 }
 
-const _defaultDescOrder =
-    DatabaseBundleQueryOrder(field: 'id', direction: 'desc');
+const _defaultDescOrder = DatabaseBundleQueryOrder(
+  field: 'id',
+  direction: 'desc',
+);
 
 List<Bundle> _sortManagedBundles(
   List<Bundle> bundles,
@@ -233,7 +234,7 @@ abstract class BlobOperations {
 // ---------------------------------------------------------------------------
 
 DatabasePlugin Function() Function(TConfig, [DatabasePluginHooks? hooks])
-    createBlobDatabasePlugin<TConfig>({
+createBlobDatabasePlugin<TConfig>({
   required String name,
   required BlobOperations Function(TConfig config) blobFactory,
 }) {
@@ -301,7 +302,8 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
   }
 
   Future<List<Bundle>> loadBundleObject(String key) async {
-    final bundles = (await loadOptionalObject<List>(key))
+    final bundles =
+        (await loadOptionalObject<List>(key))
             ?.map((e) => Bundle.fromJson((e as Map).cast<String, dynamic>()))
             .toList() ??
         <Bundle>[];
@@ -316,14 +318,15 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
     pendingBundlesMap.clear();
     locallyDeletedBundleIds.clear();
 
-    final updateJsonKeys = (await _mapWithConcurrency(
-      prefixes,
-      _storageOperationConcurrency,
-      (prefix, _) => ops.listObjects(prefix),
-    ))
-        .expand((keys) => keys)
-        .where((key) => updateJsonKeyRegex.hasMatch(key))
-        .toList();
+    final updateJsonKeys =
+        (await _mapWithConcurrency(
+              prefixes,
+              _storageOperationConcurrency,
+              (prefix, _) => ops.listObjects(prefix),
+            ))
+            .expand((keys) => keys)
+            .where((key) => updateJsonKeyRegex.hasMatch(key))
+            .toList();
 
     final allBundles = (await _mapWithConcurrency(
       updateJsonKeys,
@@ -334,9 +337,7 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
             .map((b) => _BundleWithKey(b, updateJsonKey: key))
             .toList();
       },
-    ))
-        .expand((b) => b)
-        .toList();
+    )).expand((b) => b).toList();
 
     for (final entry in allBundles) {
       bundlesMap[entry.bundle.id] = entry;
@@ -406,13 +407,15 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
             '${mutation.channel}/${mutation.platform}/target-app-versions.json';
         final oldTargetVersions =
             (await loadOptionalObject<List>(targetKey))
-                    ?.map((e) => e.toString())
-                    .toList() ??
-                <String>[];
+                ?.map((e) => e.toString())
+                .toList() ??
+            <String>[];
         final newTargetVersions = oldTargetVersions
-            .where((v) =>
-                !mutation.removals.contains(v) ||
-                mutation.additions.contains(v))
+            .where(
+              (v) =>
+                  !mutation.removals.contains(v) ||
+                  mutation.additions.contains(v),
+            )
             .toList();
         for (final version in mutation.additions) {
           if (!newTargetVersions.contains(version)) {
@@ -439,8 +442,9 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
       return;
     }
     for (final v in _getSemverNormalizedVersions(targetAppVersion)) {
-      pathsToInvalidate
-          .add('${ops.apiBasePath}/app-version/$platform/$v/$channel/*');
+      pathsToInvalidate.add(
+        '${ops.apiBasePath}/app-version/$platform/$v/$channel/*',
+      );
     }
   }
 
@@ -476,14 +480,17 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
     final channel = args.channel;
     final platform = args.platform;
 
-    final targetVersionsKey = '$channel/${platform.value}/target-app-versions.json';
+    final targetVersionsKey =
+        '$channel/${platform.value}/target-app-versions.json';
     final targetAppVersions =
         (await loadOptionalObject<List>(targetVersionsKey))
-                ?.map((e) => e.toString())
-                .toList() ??
-            <String>[];
-    final matchingVersions =
-        filterCompatibleAppVersions(targetAppVersions, args.appVersion);
+            ?.map((e) => e.toString())
+            .toList() ??
+        <String>[];
+    final matchingVersions = filterCompatibleAppVersions(
+      targetAppVersions,
+      args.appVersion,
+    );
 
     final bundles = (await _mapWithConcurrency(
       matchingVersions,
@@ -493,9 +500,7 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
             normalizeTargetAppVersion(targetAppVersion) ?? targetAppVersion;
         return loadBundleObject('$channel/${platform.value}/$nv/update.json');
       },
-    ))
-        .expand((b) => b)
-        .toList();
+    )).expand((b) => b).toList();
 
     return resolveUpdateInfoFromBundles(
       ResolveUpdateInfoFromBundlesOptions(
@@ -573,8 +578,7 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
   Future<Paginated<List<Bundle>>> getBundles(
     DatabaseBundleQueryOptions options,
   ) async {
-    var allBundles =
-        await loadAllBundlesForManagementFallback(options.where);
+    var allBundles = await loadAllBundlesForManagementFallback(options.where);
     if (options.where != null) {
       allBundles = allBundles
           .where((b) => bundleMatchesQueryWhere(b, options.where))
@@ -583,7 +587,8 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
     return paginateBundles(
       bundles: allBundles,
       limit: options.limit,
-      offset: options.offset ??
+      offset:
+          options.offset ??
           (options.page != null ? (options.page! - 1) * options.limit : null),
       cursor: options.cursor,
       orderBy: options.orderBy,
@@ -592,19 +597,18 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
 
   @override
   Future<List<String>> getChannels() async {
-    final channels = (await ops.listObjects(''))
-        .map(_getChannelFromUpdateJsonKey)
-        .whereType<String>()
-        .toSet()
-        .toList()
-      ..sort();
+    final channels =
+        (await ops.listObjects(''))
+            .map(_getChannelFromUpdateJsonKey)
+            .whereType<String>()
+            .toSet()
+            .toList()
+          ..sort();
     return channels;
   }
 
   @override
-  Future<void> commitBundle({
-    required List<BundleChange> changedSets,
-  }) async {
+  Future<void> commitBundle({required List<BundleChange> changedSets}) async {
     if (changedSets.isEmpty) return;
 
     for (final change in changedSets) {
@@ -688,10 +692,7 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
       if (change.operation == BundleChangeOperation.update) {
         final merged = _mergeBundleUpdate(bk.bundle, data.toJson());
         final newKey =
-            '${merged.channel}/${merged.platform.value}/${_resolveStorageTarget(
-          targetAppVersion: merged.targetAppVersion,
-          fingerprintHash: merged.fingerprintHash,
-        )}/update.json';
+            '${merged.channel}/${merged.platform.value}/${_resolveStorageTarget(targetAppVersion: merged.targetAppVersion, fingerprintHash: merged.fingerprintHash)}/update.json';
 
         if (newKey != bk.updateJsonKey) {
           // Key changed — remove from old, add to new.
@@ -793,13 +794,15 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
       (oldKey, _) async {
         final currentBundles =
             (await loadOptionalObject<List>(oldKey))
-                    ?.map((e) =>
-                        Bundle.fromJson((e as Map).cast<String, dynamic>()))
-                    .toList() ??
-                <Bundle>[];
+                ?.map(
+                  (e) => Bundle.fromJson((e as Map).cast<String, dynamic>()),
+                )
+                .toList() ??
+            <Bundle>[];
         final removalIds = removalsByKey[oldKey]!;
-        final updatedBundles =
-            currentBundles.where((b) => !removalIds.contains(b.id)).toList();
+        final updatedBundles = currentBundles
+            .where((b) => !removalIds.contains(b.id))
+            .toList();
         updatedBundles.sort((a, b) => b.id.compareTo(a.id));
 
         if (updatedBundles.isEmpty) {
@@ -820,13 +823,15 @@ class _BlobDatabasePlugin implements AbstractDatabasePlugin {
       (key, _) async {
         final currentBundles =
             (await loadOptionalObject<List>(key))
-                    ?.map((e) =>
-                        Bundle.fromJson((e as Map).cast<String, dynamic>()))
-                    .toList() ??
-                <Bundle>[];
+                ?.map(
+                  (e) => Bundle.fromJson((e as Map).cast<String, dynamic>()),
+                )
+                .toList() ??
+            <Bundle>[];
         for (final changedBundle in changedBundlesByKey[key]!) {
-          final idx =
-              currentBundles.indexWhere((b) => b.id == changedBundle.id);
+          final idx = currentBundles.indexWhere(
+            (b) => b.id == changedBundle.id,
+          );
           if (idx >= 0) {
             currentBundles[idx] = changedBundle;
           } else {

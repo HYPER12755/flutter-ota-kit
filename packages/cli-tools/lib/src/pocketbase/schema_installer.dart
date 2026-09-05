@@ -147,7 +147,9 @@ class _RawAdminClient {
       },
       body: schemaJson,
     );
-    if (res.statusCode != 200 && res.statusCode != 201 && res.statusCode != 400) {
+    if (res.statusCode != 200 &&
+        res.statusCode != 201 &&
+        res.statusCode != 400) {
       throw StateError(
         'Failed to create collection (HTTP ${res.statusCode} ${res.body})',
       );
@@ -199,10 +201,7 @@ class PocketBaseSchemaInstaller {
       await client.createCollection(spec.schema);
       created.add(spec.name);
     }
-    return PocketBaseSchemaInstallResult(
-      created: created,
-      skipped: skipped,
-    );
+    return PocketBaseSchemaInstallResult(created: created, skipped: skipped);
   }
 
   List<_CollectionSpec> _schema() {

@@ -18,10 +18,7 @@ class _MockPocketBase {
 
   static Future<_MockPocketBase> start() async {
     final server = await HttpServer.bind(InternetAddress.loopbackIPv4, 0);
-    final mock = _MockPocketBase._(
-      server,
-      'http://127.0.0.1:${server.port}',
-    );
+    final mock = _MockPocketBase._(server, 'http://127.0.0.1:${server.port}');
     server.listen(mock._handle);
     return mock;
   }
@@ -43,11 +40,13 @@ class _MockPocketBase {
     }
     if (path == '/api/collections' && req.method == 'GET') {
       req.response.headers.contentType = ContentType.json;
-      req.response.write(jsonEncode({
-        'items': [
-          for (final n in existingCollections) {'name': n},
-        ],
-      }));
+      req.response.write(
+        jsonEncode({
+          'items': [
+            for (final n in existingCollections) {'name': n},
+          ],
+        }),
+      );
       await req.response.close();
       return;
     }
@@ -73,22 +72,25 @@ void main() {
     await mock.stop();
   });
 
-  test('schema installer creates the three collections on a fresh PB',
-      () async {
-    final installer = PocketBaseSchemaInstaller(
-      url: mock.baseUrl,
-      adminEmail: 'admin@x.com',
-      adminPassword: 'secret',
-    );
-    final result = await installer.install();
-    expect(mock.authCalled, isTrue);
-    expect(mock.lastAuthEmail, 'admin@x.com');
-    expect(result.created,
-        containsAll(['bundles', 'channels', 'audit_log']));
-    expect(result.skipped, isEmpty);
-    expect(mock.createdCollections,
-        containsAll(['bundles', 'channels', 'audit_log']));
-  });
+  test(
+    'schema installer creates the three collections on a fresh PB',
+    () async {
+      final installer = PocketBaseSchemaInstaller(
+        url: mock.baseUrl,
+        adminEmail: 'admin@x.com',
+        adminPassword: 'secret',
+      );
+      final result = await installer.install();
+      expect(mock.authCalled, isTrue);
+      expect(mock.lastAuthEmail, 'admin@x.com');
+      expect(result.created, containsAll(['bundles', 'channels', 'audit_log']));
+      expect(result.skipped, isEmpty);
+      expect(
+        mock.createdCollections,
+        containsAll(['bundles', 'channels', 'audit_log']),
+      );
+    },
+  );
 
   test('schema installer skips collections that already exist', () async {
     mock.existingCollections = ['bundles', 'channels', 'audit_log'];
@@ -98,8 +100,7 @@ void main() {
       adminPassword: 'secret',
     );
     final result = await installer.install();
-    expect(result.skipped,
-        containsAll(['bundles', 'channels', 'audit_log']));
+    expect(result.skipped, containsAll(['bundles', 'channels', 'audit_log']));
     expect(result.created, isEmpty);
     expect(mock.createdCollections, isEmpty);
   });

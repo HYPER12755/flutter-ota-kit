@@ -50,7 +50,8 @@ void main() {
     shouldForceUpdate: false,
     fileHash: '7c4a8d09ca3762af61e59520943dc26494f8941b',
     platform: Platform.android,
-    storageUri: 'postgres-blob://flutter-ota-bundles/'
+    storageUri:
+        'postgres-blob://flutter-ota-bundles/'
         '01a059a6/patch.zip',
     targetAppVersion: '1.0.0',
     rolloutCohortCount: 100,

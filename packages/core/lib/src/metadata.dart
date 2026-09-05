@@ -13,18 +13,20 @@ class BundleMetadata {
   const BundleMetadata({this.appVersion, this.signature});
 
   factory BundleMetadata.fromJson(Map<String, dynamic> j) => BundleMetadata(
-        appVersion: j['app_version'] as String?,
-        signature: j['signature'] as String?,
-      );
+    appVersion: j['app_version'] as String?,
+    signature: j['signature'] as String?,
+  );
 
   Map<String, dynamic> toJson() => {
-        'app_version': appVersion,
-        if (signature != null) 'signature': signature,
-      };
+    'app_version': appVersion,
+    if (signature != null) 'signature': signature,
+  };
 
   @override
   bool operator ==(Object o) =>
-      o is BundleMetadata && o.appVersion == appVersion && o.signature == signature;
+      o is BundleMetadata &&
+      o.appVersion == appVersion &&
+      o.signature == signature;
 
   @override
   int get hashCode => Object.hash(appVersion, signature);

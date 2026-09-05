@@ -91,8 +91,9 @@ PackResult _writePatchPackage({
 }) {
   // When an ABI is requested, restrict the patch to only that ABI instead of
   // shipping every architecture found in the APK.
-  final effectiveLibs =
-      abi == null ? libs : libs.where((e) => e.$1 == abi).toList();
+  final effectiveLibs = abi == null
+      ? libs
+      : libs.where((e) => e.$1 == abi).toList();
   final patchFiles = <String, _PatchAssetFile>{};
   final operations = <Map<String, dynamic>>[];
   var baseManifestSize = 0;
@@ -115,17 +116,12 @@ PackResult _writePatchPackage({
     for (final key in requestedAssets) {
       final variantsRaw = assetManifest[key];
       if (variantsRaw is! List) {
-        throw PackException(
-            'asset key not found in AssetManifest.bin: $key');
+        throw PackException('asset key not found in AssetManifest.bin: $key');
       }
       final variants = variantsRaw
           .map((variant) => Map<String, dynamic>.from(variant as Map))
           .toList(growable: false);
-      operations.add({
-        'op': 'upsert',
-        'key': key,
-        'variants': variants,
-      });
+      operations.add({'op': 'upsert', 'key': key, 'variants': variants});
       for (final variant in variants) {
         final assetPath = variant['asset'];
         if (assetPath is! String || assetPath.isEmpty) {
@@ -150,10 +146,11 @@ PackResult _writePatchPackage({
   }
 
   final libManifest = <String, dynamic>{
-    for (final (currentAbi, soBytes) in effectiveLibs) currentAbi: {
-      'path': 'lib/$currentAbi/libapp.so',
-      'md5': md5.convert(soBytes).toString(),
-    },
+    for (final (currentAbi, soBytes) in effectiveLibs)
+      currentAbi: {
+        'path': 'lib/$currentAbi/libapp.so',
+        'md5': md5.convert(soBytes).toString(),
+      },
   };
 
   final zipManifest = <String, dynamic>{
@@ -167,11 +164,13 @@ PackResult _writePatchPackage({
         'manifestPatch': 'manifest_patch.json',
         'prefix': 'assets/',
         'files': patchFiles.values
-            .map((file) => {
-                  'path': file.path,
-                  'md5': file.md5Hex,
-                  'size': file.bytes.length,
-                })
+            .map(
+              (file) => {
+                'path': file.path,
+                'md5': file.md5Hex,
+                'size': file.bytes.length,
+              },
+            )
             .toList(),
       },
   };
@@ -183,7 +182,8 @@ PackResult _writePatchPackage({
   var progressDone = 0;
   for (final (currentAbi, soBytes) in effectiveLibs) {
     package.addFile(
-        ArchiveFile('lib/$currentAbi/libapp.so', soBytes.length, soBytes));
+      ArchiveFile('lib/$currentAbi/libapp.so', soBytes.length, soBytes),
+    );
     progressDone++;
     onProgress?.call(progressDone, progressTotal, 'lib/$currentAbi/libapp.so');
   }
@@ -232,8 +232,9 @@ PackResult _writePatchPackage({
 }
 
 ArchiveFile _jsonArchiveFile(String name, Map<String, dynamic> json) {
-  final bytes =
-      utf8.encode('${const JsonEncoder.withIndent('  ').convert(json)}\n');
+  final bytes = utf8.encode(
+    '${const JsonEncoder.withIndent('  ').convert(json)}\n',
+  );
   return ArchiveFile(name, bytes.length, bytes);
 }
 
@@ -270,7 +271,8 @@ ArchiveFile? _findFile(Archive archive, String name) {
 
 void _writeJson(File file, Map<String, dynamic> json) {
   file.writeAsStringSync(
-      '${const JsonEncoder.withIndent('  ').convert(json)}\n');
+    '${const JsonEncoder.withIndent('  ').convert(json)}\n',
+  );
 }
 
 void _validateArchiveRelativePath(String path, String label) {

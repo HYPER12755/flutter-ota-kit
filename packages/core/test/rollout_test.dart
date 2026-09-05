@@ -37,8 +37,10 @@ void main() {
       for (final c in cohorts) {
         expect(isCohortEligibleForUpdate('x-bundle', '$c', 137, null), isTrue);
       }
-      final excluded = List.generate(1000, (i) => i + 1)
-          .firstWhere((c) => !cohorts.contains(c));
+      final excluded = List.generate(
+        1000,
+        (i) => i + 1,
+      ).firstWhere((c) => !cohorts.contains(c));
       expect(
         isCohortEligibleForUpdate('x-bundle', '$excluded', 137, null),
         isFalse,
@@ -64,8 +66,9 @@ void main() {
       const bundleId = 'd-bundle';
       final cohorts = getRolledOutNumericCohorts(bundleId, 137);
       expect(
-        isCohortEligibleForUpdate(
-            bundleId, '${cohorts.first}', 137, ['qa-group']),
+        isCohortEligibleForUpdate(bundleId, '${cohorts.first}', 137, [
+          'qa-group',
+        ]),
         isTrue,
       );
     });
@@ -80,8 +83,10 @@ void main() {
     test('targeted numeric cohort wins even when excluded by rollout', () {
       const bundleId = 'f-bundle';
       final rolledOut = getRolledOutNumericCohorts(bundleId, 10).toSet();
-      final excluded = List.generate(1000, (i) => i + 1)
-          .firstWhere((c) => !rolledOut.contains(c));
+      final excluded = List.generate(
+        1000,
+        (i) => i + 1,
+      ).firstWhere((c) => !rolledOut.contains(c));
       expect(
         isCohortEligibleForUpdate(bundleId, '$excluded', 10, ['$excluded']),
         isTrue,
@@ -95,8 +100,10 @@ void main() {
     });
 
     test('custom cohorts never match percentage rollouts', () {
-      expect(isCohortEligibleForUpdate('h-bundle', 'qa-team', 999, null),
-          isFalse);
+      expect(
+        isCohortEligibleForUpdate('h-bundle', 'qa-team', 999, null),
+        isFalse,
+      );
       expect(
         isCohortEligibleForUpdate('h-bundle', 'qa-team', 999, ['qa-team']),
         isTrue,

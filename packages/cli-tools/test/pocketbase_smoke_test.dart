@@ -25,26 +25,19 @@ void main() {
     client.adminCredentials('admin@x.com', 'pw');
 
     // Create a record.
-    await client.createRecord<dynamic>(
-      'bundles',
-      {
-        'id': 'abc',
-        'channel': 'pending',
-        'platform': 'android',
-        'enabled': false,
-      },
-      (j) => j,
-    );
+    await client.createRecord<dynamic>('bundles', {
+      'id': 'abc',
+      'channel': 'pending',
+      'platform': 'android',
+      'enabled': false,
+    }, (j) => j);
 
     // Upload a file to it.
-    await client.uploadFile<dynamic>(
-      'bundles',
-      'abc',
-      'artifact',
-      'test.zip',
-      [1, 2, 3],
-      fromJson: (j) => j,
-    );
+    await client.uploadFile<dynamic>('bundles', 'abc', 'artifact', 'test.zip', [
+      1,
+      2,
+      3,
+    ], fromJson: (j) => j);
 
     // Check exists.
     expect(await client.recordExists('bundles', 'abc'), isTrue);
@@ -52,11 +45,10 @@ void main() {
 
     // Duplicate create should fail (real PB would return 409).
     expect(
-      () => client.createRecord<dynamic>(
-        'bundles',
-        {'id': 'abc', 'channel': 'production'},
-        (j) => j,
-      ),
+      () => client.createRecord<dynamic>('bundles', {
+        'id': 'abc',
+        'channel': 'production',
+      }, (j) => j),
       throwsA(isA<PocketBaseException>()),
     );
 

@@ -30,7 +30,8 @@ class BuildCommand extends FlutterPatcherCommand {
       )
       ..addOption(
         'abi',
-        help: 'Restrict the patch to a single ABI (e.g. arm64-v8a). '
+        help:
+            'Restrict the patch to a single ABI (e.g. arm64-v8a). '
             'Default: all ABIs found in the APK are included.',
       )
       ..addOption(
@@ -50,48 +51,48 @@ class BuildCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        final results = argResults!;
-        final apk = results['apk'] as String?;
-        if (apk == null || apk.isEmpty) {
-          throw PackException('missing required --apk <path>', 64);
-        }
-        final version = results['version'] as String?;
-        if (version == null || version.isEmpty) {
-          throw PackException('missing required --version <string>', 64);
-        }
-        final targetVersionCodeRaw = results['target-version-code'] as String?;
-        if (targetVersionCodeRaw == null || targetVersionCodeRaw.isEmpty) {
-          throw PackException('missing required --target-version-code <int>', 64);
-        }
-        final targetVersionCode = int.tryParse(targetVersionCodeRaw);
-        if (targetVersionCode == null) {
-          throw PackException('--target-version-code must be an integer', 64);
-        }
+    final results = argResults!;
+    final apk = results['apk'] as String?;
+    if (apk == null || apk.isEmpty) {
+      throw PackException('missing required --apk <path>', 64);
+    }
+    final version = results['version'] as String?;
+    if (version == null || version.isEmpty) {
+      throw PackException('missing required --version <string>', 64);
+    }
+    final targetVersionCodeRaw = results['target-version-code'] as String?;
+    if (targetVersionCodeRaw == null || targetVersionCodeRaw.isEmpty) {
+      throw PackException('missing required --target-version-code <int>', 64);
+    }
+    final targetVersionCode = int.tryParse(targetVersionCodeRaw);
+    if (targetVersionCode == null) {
+      throw PackException('--target-version-code must be an integer', 64);
+    }
 
-        banner('build');
-        final bar = ProgressBar(1, 'pack');
-        final result = await packPatch(
-          apkPath: apk,
-          version: version,
-          targetVersionCode: targetVersionCode,
-          abi: results['abi'] as String?,
-          requestedAssets: results['assets'] as List<String>,
-          out: results['out'] as String,
-          onProgress: (done, total, label) {
-            bar.total = total;
-            bar.update(done, label);
-          },
-        );
+    banner('build');
+    final bar = ProgressBar(1, 'pack');
+    final result = await packPatch(
+      apkPath: apk,
+      version: version,
+      targetVersionCode: targetVersionCode,
+      abi: results['abi'] as String?,
+      requestedAssets: results['assets'] as List<String>,
+      out: results['out'] as String,
+      onProgress: (done, total, label) {
+        bar.total = total;
+        bar.update(done, label);
+      },
+    );
 
-        box('patch.zip', [
-          kv('version', result.version),
-          kv('target code', result.targetVersionCode.toString()),
-          kv('abis', cyan(result.abis.join('  ·  '))),
-          kv('bundle md5', gray(result.md5)),
-          kv('overlay assets', result.assetCount.toString()),
-          kv('payload', result.payloadPath),
-          kv('manifest', result.manifestPath),
-        ]);
-        step('Build complete — ready to deploy.');
-      });
+    box('patch.zip', [
+      kv('version', result.version),
+      kv('target code', result.targetVersionCode.toString()),
+      kv('abis', cyan(result.abis.join('  ·  '))),
+      kv('bundle md5', gray(result.md5)),
+      kv('overlay assets', result.assetCount.toString()),
+      kv('payload', result.payloadPath),
+      kv('manifest', result.manifestPath),
+    ]);
+    step('Build complete — ready to deploy.');
+  });
 }

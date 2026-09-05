@@ -14,10 +14,10 @@ import 'r2_storage_profile.dart'
 /// ported here.
 final StoragePlugin Function(R2S3StorageConfig config) r2Storage =
     createUniversalStoragePlugin<R2S3StorageConfig>(
-  name: 'r2Storage',
-  supportedProtocol: 'r2',
-  factory: (config) => (
-    node: createS3StorageProfile(config),
-    runtime: createS3RuntimeStorageProfile(config),
-  ),
-);
+      name: 'r2Storage',
+      supportedProtocol: 'r2',
+      factory: (config) => (
+        node: createS3StorageProfile(config),
+        runtime: createS3RuntimeStorageProfile(config),
+      ),
+    );

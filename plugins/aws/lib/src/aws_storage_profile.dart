@@ -36,9 +36,10 @@ class _S3NodeProfile implements NodeStorageProfile {
 
   String _getListPrefix(String prefix) {
     final normalizedPrefix = prefix.replaceAll(RegExp(r'^/+|/+$'), '');
-    final value = [_config.basePath ?? '', normalizedPrefix]
-        .where((s) => s.isNotEmpty)
-        .join('/');
+    final value = [
+      _config.basePath ?? '',
+      normalizedPrefix,
+    ].where((s) => s.isNotEmpty).join('/');
     return value.isNotEmpty ? '$value/' : '';
   }
 

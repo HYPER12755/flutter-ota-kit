@@ -5,11 +5,17 @@ import 'package:test/test.dart';
 
 void main() {
   group('paginateBundles', () {
-    List<Bundle> makeBundles(int count) =>
-        List.generate(count, (i) => _testBundle(id: 'b-${i.toString().padLeft(3, '0')}'));
+    List<Bundle> makeBundles(int count) => List.generate(
+      count,
+      (i) => _testBundle(id: 'b-${i.toString().padLeft(3, '0')}'),
+    );
 
     test('offset-based first page', () {
-      final result = paginateBundles(bundles: makeBundles(25), limit: 10, offset: 0);
+      final result = paginateBundles(
+        bundles: makeBundles(25),
+        limit: 10,
+        offset: 0,
+      );
       expect(result.data.length, 10);
       expect(result.pagination.total, 25);
       expect(result.pagination.hasNextPage, isTrue);
@@ -20,7 +26,11 @@ void main() {
     });
 
     test('offset-based last page', () {
-      final result = paginateBundles(bundles: makeBundles(25), limit: 10, offset: 20);
+      final result = paginateBundles(
+        bundles: makeBundles(25),
+        limit: 10,
+        offset: 20,
+      );
       expect(result.data.length, 5);
       expect(result.pagination.hasNextPage, isFalse);
       expect(result.pagination.hasPreviousPage, isTrue);
@@ -66,18 +76,20 @@ void main() {
 
   group('filterCompatibleAppVersions', () {
     test('filters and sorts descending', () {
-      final result = filterCompatibleAppVersions(
-        ['^1.0.0', '^2.0.0', '^0.5.0'],
-        '1.3.0',
-      );
+      final result = filterCompatibleAppVersions([
+        '^1.0.0',
+        '^2.0.0',
+        '^0.5.0',
+      ], '1.3.0');
       expect(result, ['^1.0.0']);
     });
 
     test('multiple compatible versions sorted desc', () {
-      final result = filterCompatibleAppVersions(
-        ['>=1.0.0', '>=1.2.0', '>=2.0.0'],
-        '1.5.0',
-      );
+      final result = filterCompatibleAppVersions([
+        '>=1.0.0',
+        '>=1.2.0',
+        '>=2.0.0',
+      ], '1.5.0');
       expect(result, ['>=1.2.0', '>=1.0.0']);
     });
   });
@@ -143,19 +155,31 @@ void main() {
 
   group('compressionFormat', () {
     test('detects zip', () {
-      expect(detectCompressionFormat('bundle.zip').format, CompressionFormat.zip);
+      expect(
+        detectCompressionFormat('bundle.zip').format,
+        CompressionFormat.zip,
+      );
     });
 
     test('detects tar.br', () {
-      expect(detectCompressionFormat('bundle.tar.br').format, CompressionFormat.tarBr);
+      expect(
+        detectCompressionFormat('bundle.tar.br').format,
+        CompressionFormat.tarBr,
+      );
     });
 
     test('detects tar.gz', () {
-      expect(detectCompressionFormat('bundle.tar.gz').format, CompressionFormat.tarGz);
+      expect(
+        detectCompressionFormat('bundle.tar.gz').format,
+        CompressionFormat.tarGz,
+      );
     });
 
     test('defaults to zip', () {
-      expect(detectCompressionFormat('bundle.xyz').format, CompressionFormat.zip);
+      expect(
+        detectCompressionFormat('bundle.xyz').format,
+        CompressionFormat.zip,
+      );
     });
 
     test('getContentType returns mime type for zip', () {
@@ -217,8 +241,8 @@ Bundle _testBundle({String id = 'test-bundle-id'}) {
 
 class _DummyStoragePlugin extends StoragePlugin {
   _DummyStoragePlugin({required bool node, required bool runtime})
-      : _node = node,
-        _runtime = runtime;
+    : _node = node,
+      _runtime = runtime;
 
   final bool _node;
   final bool _runtime;
@@ -231,9 +255,9 @@ class _DummyStoragePlugin extends StoragePlugin {
 
   @override
   StoragePluginProfiles get profiles => StoragePluginProfiles(
-        node: _node ? _DummyNodeStorageProfile() : null,
-        runtime: _runtime ? _DummyRuntimeStorageProfile() : null,
-      );
+    node: _node ? _DummyNodeStorageProfile() : null,
+    runtime: _runtime ? _DummyRuntimeStorageProfile() : null,
+  );
 }
 
 class _DummyNodeStorageProfile extends NodeStorageProfile {

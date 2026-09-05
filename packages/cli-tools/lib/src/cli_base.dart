@@ -53,7 +53,8 @@ FlutterPatcherConfig? effectiveConfig(
 ) {
   final backend = argResults['backend'] as String?;
   if (backend == null) return cfg;
-  final base = cfg ??
+  final base =
+      cfg ??
       FlutterPatcherConfig(
         provider: backend,
         supabase: const SupabaseConfigJson(),

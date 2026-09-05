@@ -46,11 +46,11 @@ void main() {
       expect(names, contains('lib/armeabi-v7a/libapp.so'));
       expect(names, contains('lib/x86_64/libapp.so'));
 
-      final manifestFile =
-          patch.files.firstWhere((f) => f.name == 'manifest.json');
+      final manifestFile = patch.files.firstWhere(
+        (f) => f.name == 'manifest.json',
+      );
       final manifest = Map<String, dynamic>.from(
-        jsonDecode(utf8.decode(manifestFile.content as List<int>))
-            as Map,
+        jsonDecode(utf8.decode(manifestFile.content as List<int>)) as Map,
       );
       expect(manifest['schemaVersion'], 2);
       expect(manifest['version'], '1.2.3');

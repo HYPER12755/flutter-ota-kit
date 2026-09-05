@@ -33,12 +33,14 @@ Bundle mapRowToBundle(
     });
 
   final patchArtifacts = patches
-      .map((p) => BundlePatchArtifact(
-            baseBundleId: p.baseBundleId,
-            baseFileHash: p.baseFileHash,
-            patchFileHash: p.patchFileHash,
-            patchStorageUri: p.patchStorageUri,
-          ))
+      .map(
+        (p) => BundlePatchArtifact(
+          baseBundleId: p.baseBundleId,
+          baseFileHash: p.baseFileHash,
+          patchFileHash: p.patchFileHash,
+          patchStorageUri: p.patchStorageUri,
+        ),
+      )
       .toList();
 
   final primaryPatch = patchArtifacts.isNotEmpty ? patchArtifacts.first : null;
@@ -55,8 +57,7 @@ Bundle mapRowToBundle(
     targetAppVersion: data.targetAppVersion,
     fingerprintHash: data.fingerprintHash,
     storageUri: data.storageUri,
-    metadata:
-        rawMetadata != null ? BundleMetadata.fromJson(rawMetadata) : null,
+    metadata: rawMetadata != null ? BundleMetadata.fromJson(rawMetadata) : null,
     manifestStorageUri: data.manifestStorageUri,
     manifestFileHash: data.manifestFileHash,
     assetBaseStorageUri: data.assetBaseStorageUri,
@@ -72,24 +73,24 @@ Bundle mapRowToBundle(
 
 /// Map a [Bundle] to a `bundles` row for insert/update (snake_case columns).
 Map<String, dynamic> bundleToRowValues(Bundle bundle) => {
-      'id': bundle.id,
-      'enabled': bundle.enabled,
-      'should_force_update': bundle.shouldForceUpdate,
-      'file_hash': bundle.fileHash,
-      'git_commit_hash': bundle.gitCommitHash,
-      'message': bundle.message,
-      'platform': bundle.platform.value,
-      'target_app_version': bundle.targetAppVersion,
-      'channel': bundle.channel,
-      'storage_uri': bundle.storageUri,
-      'fingerprint_hash': bundle.fingerprintHash,
-      'metadata': stripBundleArtifactMetadata(bundle.metadata?.toJson()) ?? {},
-      'manifest_storage_uri': getManifestStorageUri(bundle),
-      'manifest_file_hash': getManifestFileHash(bundle),
-      'asset_base_storage_uri': getAssetBaseStorageUri(bundle),
-      'rollout_cohort_count': bundle.rolloutCohortCount,
-      'target_cohorts': bundle.targetCohorts,
-    };
+  'id': bundle.id,
+  'enabled': bundle.enabled,
+  'should_force_update': bundle.shouldForceUpdate,
+  'file_hash': bundle.fileHash,
+  'git_commit_hash': bundle.gitCommitHash,
+  'message': bundle.message,
+  'platform': bundle.platform.value,
+  'target_app_version': bundle.targetAppVersion,
+  'channel': bundle.channel,
+  'storage_uri': bundle.storageUri,
+  'fingerprint_hash': bundle.fingerprintHash,
+  'metadata': stripBundleArtifactMetadata(bundle.metadata?.toJson()) ?? {},
+  'manifest_storage_uri': getManifestStorageUri(bundle),
+  'manifest_file_hash': getManifestFileHash(bundle),
+  'asset_base_storage_uri': getAssetBaseStorageUri(bundle),
+  'rollout_cohort_count': bundle.rolloutCohortCount,
+  'target_cohorts': bundle.targetCohorts,
+};
 
 /// Map a [Bundle] to its `bundle_patches` rows for insert.
 List<Map<String, dynamic>> bundleToPatchRows(Bundle bundle) {

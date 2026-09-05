@@ -4,8 +4,10 @@ import 'calculate_pagination.dart';
 import 'types.dart';
 
 const List<String> _replaceOnUpdateKeys = ['patches', 'targetCohorts'];
-const DatabaseBundleQueryOrder _defaultDescOrder =
-    DatabaseBundleQueryOrder(field: 'id', direction: 'desc');
+const DatabaseBundleQueryOrder _defaultDescOrder = DatabaseBundleQueryOrder(
+  field: 'id',
+  direction: 'desc',
+);
 
 int? _normalizePage(int? value) {
   if (value == null || value < 1) return null;
@@ -134,11 +136,17 @@ Paginated<List<Bundle>> _createPaginatedResult(
   int startIndex,
   List<Bundle> data,
 ) {
-  final pagination = calculatePagination(total, limit: limit, offset: startIndex);
-  final nextCursor =
-      data.isNotEmpty && startIndex + data.length < total ? data.last.id : null;
-  final previousCursor =
-      data.isNotEmpty && startIndex > 0 ? data.first.id : null;
+  final pagination = calculatePagination(
+    total,
+    limit: limit,
+    offset: startIndex,
+  );
+  final nextCursor = data.isNotEmpty && startIndex + data.length < total
+      ? data.last.id
+      : null;
+  final previousCursor = data.isNotEmpty && startIndex > 0
+      ? data.first.id
+      : null;
 
   return Paginated(
     data: data,
@@ -204,9 +212,7 @@ abstract class AbstractDatabasePlugin {
 
   Future<List<String>> getChannels();
 
-  Future<void> commitBundle({
-    required List<BundleChange> changedSets,
-  });
+  Future<void> commitBundle({required List<BundleChange> changedSets});
 
   Future<void> onUnmount();
 }
@@ -237,7 +243,7 @@ class CreateDatabasePluginOptions<TConfig> {
 /// final db = createDb();
 /// ```
 DatabasePlugin Function() Function(TConfig config, [DatabasePluginHooks? hooks])
-    createDatabasePlugin<TConfig>({
+createDatabasePlugin<TConfig>({
   required String name,
   required AbstractDatabasePlugin Function(TConfig config) factory,
 }) {
@@ -251,14 +257,12 @@ DatabasePlugin Function() Function(TConfig config, [DatabasePluginHooks? hooks])
     return () {
       final instanceUnitOfWork = BundleUnitOfWork();
 
-      BundleUnitOfWork getMutationUnitOfWork(
-              Map<String, Object?>? context) =>
+      BundleUnitOfWork getMutationUnitOfWork(Map<String, Object?>? context) =>
           getRequestBundleUnitOfWork(context) ?? instanceUnitOfWork;
 
       Future<Paginated<List<Bundle>>> runGetBundles(
         DatabaseBundleQueryOptions options,
-      ) =>
-          getMethods().getBundles(options);
+      ) => getMethods().getBundles(options);
 
       Future<Paginated<List<Bundle>>> getBundlesWithLegacyCursorFallback(
         DatabaseBundleQueryOptions options,
@@ -285,7 +289,12 @@ DatabasePlugin Function() Function(TConfig config, [DatabasePluginHooks? hooks])
               orderBy: orderBy,
             ),
           );
-          return _createPaginatedResult(total, options.limit, 0, firstPage.data);
+          return _createPaginatedResult(
+            total,
+            options.limit,
+            0,
+            firstPage.data,
+          );
         }
 
         final cursorQuery = _buildCursorPageQuery(
@@ -370,9 +379,9 @@ class _DatabasePluginImpl implements DatabasePlugin {
   final BundleUnitOfWork Function(Map<String, Object?>?) getMutationUnitOfWork;
   final BundleUnitOfWork instanceUnitOfWork;
   final Future<Paginated<List<Bundle>>> Function(DatabaseBundleQueryOptions)
-      runGetBundles;
+  runGetBundles;
   final Future<Paginated<List<Bundle>>> Function(DatabaseBundleQueryOptions)
-      getBundlesWithLegacyCursorFallback;
+  getBundlesWithLegacyCursorFallback;
   final DatabasePluginHooks? hooks;
 
   @override
@@ -383,11 +392,14 @@ class _DatabasePluginImpl implements DatabasePlugin {
 
   @override
   Future<Bundle?> getBundleById(String bundleId) async {
-    final requestUoW =
-        getRequestBundleUnitOfWork(null); // context not passed through here
+    final requestUoW = getRequestBundleUnitOfWork(
+      null,
+    ); // context not passed through here
     if (requestUoW != null) {
-      return requestUoW.getById(bundleId, () =>
-          getMethods().getBundleById(bundleId));
+      return requestUoW.getById(
+        bundleId,
+        () => getMethods().getBundleById(bundleId),
+      );
     }
     final pending = instanceUnitOfWork.peekChanged(bundleId);
     if (pending is TrackedBundleFound) return pending.value;
@@ -434,7 +446,10 @@ class _DatabasePluginImpl implements DatabasePlugin {
     if (normalizedOptions.page != null) {
       final page = normalizedOptions.page!;
       final requestedOffset = (page - 1) * normalizedOptions.limit;
-      final fetchOptions = _expandLimitForUnitOfWork(normalizedOptions, unitOfWork);
+      final fetchOptions = _expandLimitForUnitOfWork(
+        normalizedOptions,
+        unitOfWork,
+      );
       var pageResult = await runGetBundles(
         DatabaseBundleQueryOptions(
           where: fetchOptions.where,
@@ -445,12 +460,15 @@ class _DatabasePluginImpl implements DatabasePlugin {
       );
 
       final total = pageResult.pagination.total;
-      final totalPages =
-          total == 0 ? 0 : (total / normalizedOptions.limit).ceil();
-      final maxOffset =
-          totalPages == 0 ? 0 : (totalPages - 1) * normalizedOptions.limit;
-      final resolvedOffset =
-          requestedOffset < maxOffset ? requestedOffset : maxOffset;
+      final totalPages = total == 0
+          ? 0
+          : (total / normalizedOptions.limit).ceil();
+      final maxOffset = totalPages == 0
+          ? 0
+          : (totalPages - 1) * normalizedOptions.limit;
+      final resolvedOffset = requestedOffset < maxOffset
+          ? requestedOffset
+          : maxOffset;
 
       if (resolvedOffset != requestedOffset) {
         pageResult = await runGetBundles(
@@ -473,7 +491,10 @@ class _DatabasePluginImpl implements DatabasePlugin {
     }
 
     if (methods.supportsCursorPagination) {
-      final fetchOptions = _expandLimitForUnitOfWork(normalizedOptions, unitOfWork);
+      final fetchOptions = _expandLimitForUnitOfWork(
+        normalizedOptions,
+        unitOfWork,
+      );
       final result = await runGetBundles(fetchOptions);
       return shouldOverlay ? overlayResult(result) : result;
     }
@@ -490,9 +511,7 @@ class _DatabasePluginImpl implements DatabasePlugin {
   Future<void> commitBundle() async {
     final methods = getMethods();
     final unitOfWork = getMutationUnitOfWork(null);
-    await methods.commitBundle(
-      changedSets: unitOfWork.changedSets(),
-    );
+    await methods.commitBundle(changedSets: unitOfWork.changedSets());
     unitOfWork.clear();
     final cb = hooks?.onDatabaseUpdated;
     if (cb != null) await cb();
@@ -504,8 +523,10 @@ class _DatabasePluginImpl implements DatabasePlugin {
     Map<String, Object?> newBundle,
   ) async {
     final unitOfWork = getMutationUnitOfWork(null);
-    final current = await unitOfWork.getById(targetBundleId, () =>
-        getMethods().getBundleById(targetBundleId));
+    final current = await unitOfWork.getById(
+      targetBundleId,
+      () => getMethods().getBundleById(targetBundleId),
+    );
     if (current == null) {
       throw StateError('targetBundleId not found');
     }

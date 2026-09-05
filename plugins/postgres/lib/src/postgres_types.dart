@@ -1,5 +1,4 @@
-import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
-    show Platform;
+import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart' show Platform;
 
 /// Database row for the `bundles` table (snake_case columns).
 ///
@@ -66,24 +65,24 @@ class PostgresBundleRow {
   final List<String>? targetCohorts;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'channel': channel,
-        'enabled': enabled,
-        'should_force_update': shouldForceUpdate,
-        'file_hash': fileHash,
-        'git_commit_hash': gitCommitHash,
-        'message': message,
-        'platform': platform.name,
-        'target_app_version': targetAppVersion,
-        'storage_uri': storageUri,
-        'fingerprint_hash': fingerprintHash,
-        'metadata': metadata ?? const {},
-        'manifest_storage_uri': manifestStorageUri,
-        'manifest_file_hash': manifestFileHash,
-        'asset_base_storage_uri': assetBaseStorageUri,
-        'rollout_cohort_count': rolloutCohortCount,
-        'target_cohorts': targetCohorts,
-      };
+    'id': id,
+    'channel': channel,
+    'enabled': enabled,
+    'should_force_update': shouldForceUpdate,
+    'file_hash': fileHash,
+    'git_commit_hash': gitCommitHash,
+    'message': message,
+    'platform': platform.name,
+    'target_app_version': targetAppVersion,
+    'storage_uri': storageUri,
+    'fingerprint_hash': fingerprintHash,
+    'metadata': metadata ?? const {},
+    'manifest_storage_uri': manifestStorageUri,
+    'manifest_file_hash': manifestFileHash,
+    'asset_base_storage_uri': assetBaseStorageUri,
+    'rollout_cohort_count': rolloutCohortCount,
+    'target_cohorts': targetCohorts,
+  };
 }
 
 /// Database row for the `bundle_patches` table (snake_case columns).
@@ -121,12 +120,12 @@ class PostgresBundlePatchRow {
   final int orderIndex;
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'bundle_id': bundleId,
-        'base_bundle_id': baseBundleId,
-        'base_file_hash': baseFileHash,
-        'patch_file_hash': patchFileHash,
-        'patch_storage_uri': patchStorageUri,
-        'order_index': orderIndex,
-      };
+    'id': id,
+    'bundle_id': bundleId,
+    'base_bundle_id': baseBundleId,
+    'base_file_hash': baseFileHash,
+    'patch_file_hash': patchFileHash,
+    'patch_storage_uri': patchStorageUri,
+    'order_index': orderIndex,
+  };
 }

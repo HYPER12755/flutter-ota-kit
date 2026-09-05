@@ -1,9 +1,5 @@
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
-    show
-        AppVersionGetBundlesArgs,
-        Bundle,
-        Platform,
-        nilUuid;
+    show AppVersionGetBundlesArgs, Bundle, Platform, nilUuid;
 import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
     show DatabaseBundleQueryOptions, DatabasePlugin;
 import 'package:flutter_ota_kit_aws/flutter_ota_kit_aws.dart'
@@ -33,20 +29,19 @@ Bundle _makeBundle({
   String channel = 'production',
   String? targetAppVersion,
   String? fingerprintHash,
-}) =>
-    Bundle(
-      id: id,
-      channel: channel,
-      enabled: true,
-      shouldForceUpdate: false,
-      fileHash: 'h-$id',
-      platform: Platform.android,
-      targetAppVersion: targetAppVersion,
-      storageUri: 's3://test-bucket/$id',
-      fingerprintHash: fingerprintHash,
-      message: 'msg-$id',
-      patches: null,
-    );
+}) => Bundle(
+  id: id,
+  channel: channel,
+  enabled: true,
+  shouldForceUpdate: false,
+  fileHash: 'h-$id',
+  platform: Platform.android,
+  targetAppVersion: targetAppVersion,
+  storageUri: 's3://test-bucket/$id',
+  fingerprintHash: fingerprintHash,
+  message: 'msg-$id',
+  patches: null,
+);
 
 void main() {
   group('aws s3Database', () {
@@ -57,46 +52,46 @@ void main() {
     S3DatabaseConfig config({
       required AwsS3ClientLike Function(S3DatabaseConfig) clientFactory,
       String? cloudfrontDistributionId,
-    }) =>
-        S3DatabaseConfig(
-          bucketName: 'test-bucket',
-          region: 'us-east-1',
-          accessKeyId: 'ak',
-          secretAccessKey: 'sk',
-          clientFactory: clientFactory,
-          cloudfrontDistributionId: cloudfrontDistributionId,
-          cloudfrontClientFactory: (_) => cf,
-        );
+    }) => S3DatabaseConfig(
+      bucketName: 'test-bucket',
+      region: 'us-east-1',
+      accessKeyId: 'ak',
+      secretAccessKey: 'sk',
+      clientFactory: clientFactory,
+      cloudfrontDistributionId: cloudfrontDistributionId,
+      cloudfrontClientFactory: (_) => cf,
+    );
 
     setUp(() {
       store = Store();
       cf = MockCloudFrontClient();
-      plugin = s3Database(config(
-        clientFactory: (_) => MockAwsS3Client(store),
-        cloudfrontDistributionId: 'DIST123',
-      ))();
+      plugin = s3Database(
+        config(
+          clientFactory: (_) => MockAwsS3Client(store),
+          cloudfrontDistributionId: 'DIST123',
+        ),
+      )();
     });
 
     test('plugin metadata', () {
       expect(plugin.name, 's3Database');
     });
 
-    test('commitBundle writes update.json and invalidates CloudFront',
-        () async {
-      await plugin.appendBundle(
-        _makeBundle(id: 'b1', targetAppVersion: '1.0.0'),
-      );
-      await plugin.commitBundle();
+    test(
+      'commitBundle writes update.json and invalidates CloudFront',
+      () async {
+        await plugin.appendBundle(
+          _makeBundle(id: 'b1', targetAppVersion: '1.0.0'),
+        );
+        await plugin.commitBundle();
 
-      final keys = store.objects.keys.toList();
-      expect(
-        keys,
-        contains('production/android/1.0.0/update.json'),
-      );
+        final keys = store.objects.keys.toList();
+        expect(keys, contains('production/android/1.0.0/update.json'));
 
-      expect(cf.invalidations, isNotEmpty);
-      expect(cf.invalidations.first.$1, 'DIST123');
-    });
+        expect(cf.invalidations, isNotEmpty);
+        expect(cf.invalidations.first.$1, 'DIST123');
+      },
+    );
 
     test('getUpdateInfo (appVersion) resolves committed bundle', () async {
       await plugin.appendBundle(
@@ -135,14 +130,15 @@ void main() {
         _makeBundle(id: 'b1', targetAppVersion: '1.0.0'),
       );
       await plugin.commitBundle();
-      expect(store.objects.keys, contains('production/android/1.0.0/update.json'));
+      expect(
+        store.objects.keys,
+        contains('production/android/1.0.0/update.json'),
+      );
 
       cf.invalidations.clear();
       final bundle = (await plugin.getBundles(
         const DatabaseBundleQueryOptions(limit: 100, offset: 0),
-      ))
-          .data
-          .first;
+      )).data.first;
       await plugin.deleteBundle(bundle);
       await plugin.commitBundle();
 
@@ -154,12 +150,10 @@ void main() {
     });
 
     test('no CloudFront invalidation when distribution id omitted', () async {
-      final noCf = s3Database(config(
-        clientFactory: (_) => MockAwsS3Client(store),
-      ))();
-      await noCf.appendBundle(
-        _makeBundle(id: 'b1', targetAppVersion: '1.0.0'),
-      );
+      final noCf = s3Database(
+        config(clientFactory: (_) => MockAwsS3Client(store)),
+      )();
+      await noCf.appendBundle(_makeBundle(id: 'b1', targetAppVersion: '1.0.0'));
       await noCf.commitBundle();
       expect(cf.invalidations, isEmpty);
     });

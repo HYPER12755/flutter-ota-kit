@@ -38,17 +38,22 @@ class MockR2Client implements R2S3ClientLike {
     final p = prefix ?? '';
     return store.objects.keys
         .where((k) => k.startsWith(p))
-        .map((k) => StorageObject(
-              key: k,
-              storageUri: 'r2://$k',
-              size: store.objects[k]!.length,
-            ))
+        .map(
+          (k) => StorageObject(
+            key: k,
+            storageUri: 'r2://$k',
+            size: store.objects[k]!.length,
+          ),
+        )
         .toList();
   }
 
   @override
-  Future<void> putObject(String key, List<int> body, String contentType) async =>
-      store.objects[key] = body;
+  Future<void> putObject(
+    String key,
+    List<int> body,
+    String contentType,
+  ) async => store.objects[key] = body;
 }
 
 // --- CloudFront (aws db invalidation) mock ----------------------------------
@@ -73,32 +78,32 @@ Directory makeSource() {
 }
 
 FlutterPatcherConfig cfgFor(String provider) => FlutterPatcherConfig(
-      provider: provider,
-      supabase: const SupabaseConfigJson(url: 'https://x.supabase.co'),
-      postgres: const PostgresConfigJson(host: 'mock', database: 'mock'),
-      cloudflare: const CloudflareConfigJson(
-        accountId: 'acct',
-        d1DatabaseId: 'dbid',
-        apiToken: 'token',
-        r2Bucket: 'bundles',
-        r2AccessKeyId: 'rk',
-        r2SecretAccessKey: 'rs',
-      ),
-      aws: const AwsConfigJson(
-        bucket: 'b',
-        region: 'us-east-1',
-        accessKeyId: 'k',
-        secretAccessKey: 's',
-      ),
-      pocketbase: const PocketBaseConfigJson(
-        url: 'http://mock',
-        adminEmail: 'admin@example.com',
-        adminPassword: 'secret',
-      ),
-      channel: 'production',
-      platform: 'android',
-      source: './dist',
-    );
+  provider: provider,
+  supabase: const SupabaseConfigJson(url: 'https://x.supabase.co'),
+  postgres: const PostgresConfigJson(host: 'mock', database: 'mock'),
+  cloudflare: const CloudflareConfigJson(
+    accountId: 'acct',
+    d1DatabaseId: 'dbid',
+    apiToken: 'token',
+    r2Bucket: 'bundles',
+    r2AccessKeyId: 'rk',
+    r2SecretAccessKey: 'rs',
+  ),
+  aws: const AwsConfigJson(
+    bucket: 'b',
+    region: 'us-east-1',
+    accessKeyId: 'k',
+    secretAccessKey: 's',
+  ),
+  pocketbase: const PocketBaseConfigJson(
+    url: 'http://mock',
+    adminEmail: 'admin@example.com',
+    adminPassword: 'secret',
+  ),
+  channel: 'production',
+  platform: 'android',
+  source: './dist',
+);
 
 Future<void> runBackendLifecycle(String name, Backend backend) async {
   final source = makeSource();
@@ -117,14 +122,20 @@ Future<void> runBackendLifecycle(String name, Backend backend) async {
     expect(bundle.storageUri, isNotEmpty, reason: '$name: storageUri set');
 
     // The artifact bytes were actually uploaded to storage.
-    expect(await backend.storage.exists(bundle.storageUri), isTrue,
-        reason: '$name: storage has bundle');
+    expect(
+      await backend.storage.exists(bundle.storageUri),
+      isTrue,
+      reason: '$name: storage has bundle',
+    );
 
     // Node profile can download the bytes back.
     final dl = File('${Directory.systemTemp.path}/fp-dl-${bundle.id}.zip');
     await backend.storage.downloadFile(bundle.storageUri, dl.path);
-    expect(dl.existsSync() && await dl.length() > 0, isTrue,
-        reason: '$name: download succeeds');
+    expect(
+      dl.existsSync() && await dl.length() > 0,
+      isTrue,
+      reason: '$name: download succeeds',
+    );
     await dl.delete();
 
     // listBundles round-trips.
@@ -203,15 +214,18 @@ void main() {
       await runBackendLifecycle('aws', backend);
     });
 
-    test('pocketbase backend (pocketbaseDatabase + pocketbaseStorage)', () async {
-      final store = pb.PocketBaseStore();
-      final backend = resolveBackend(
-        cfgFor('pocketbase'),
-        pocketbaseClientFactory: (url, email, password) =>
-            pb.MockPocketBaseClient(store),
-      );
-      await runBackendLifecycle('pocketbase', backend);
-    });
+    test(
+      'pocketbase backend (pocketbaseDatabase + pocketbaseStorage)',
+      () async {
+        final store = pb.PocketBaseStore();
+        final backend = resolveBackend(
+          cfgFor('pocketbase'),
+          pocketbaseClientFactory: (url, email, password) =>
+              pb.MockPocketBaseClient(store),
+        );
+        await runBackendLifecycle('pocketbase', backend);
+      },
+    );
 
     test('resolveBackend rejects unknown provider', () {
       expect(

@@ -80,7 +80,16 @@ const Object _unset = Object();
 
 /// Terminal-style rotating dot spinner ([⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]).
 const List<String> _brailleSpinner = [
-  '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏',
+  '⠋',
+  '⠙',
+  '⠹',
+  '⠸',
+  '⠼',
+  '⠴',
+  '⠦',
+  '⠧',
+  '⠇',
+  '⠏',
 ];
 
 /// Default retry hint shown when an error occurs and no override is given.
@@ -379,11 +388,13 @@ class _DotSpinnerState extends State<_DotSpinner>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: Duration(milliseconds: 80 * _brailleSpinner.length),
-    )..addListener(_tick)
-     ..repeat();
+    _controller =
+        AnimationController(
+            vsync: this,
+            duration: Duration(milliseconds: 80 * _brailleSpinner.length),
+          )
+          ..addListener(_tick)
+          ..repeat();
   }
 
   void _tick() {
@@ -399,15 +410,15 @@ class _DotSpinnerState extends State<_DotSpinner>
 
   @override
   Widget build(BuildContext context) => Text(
-        _brailleSpinner[_index],
-        style: TextStyle(
-          fontSize: 26,
-          height: 1,
-          fontWeight: FontWeight.bold,
-          color: widget.color,
-          fontFamily: 'monospace',
-        ),
-      );
+    _brailleSpinner[_index],
+    style: TextStyle(
+      fontSize: 26,
+      height: 1,
+      fontWeight: FontWeight.bold,
+      color: widget.color,
+      fontFamily: 'monospace',
+    ),
+  );
 }
 
 /// Error block: red message on top, retry hint on bottom.
@@ -439,15 +450,9 @@ class _ErrorBlock extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (errorText != null && errorText!.isNotEmpty)
-            Text(
-              errorText!,
-              style: bodyStyle?.copyWith(color: errorColor),
-            ),
+            Text(errorText!, style: bodyStyle?.copyWith(color: errorColor)),
           const SizedBox(height: 4),
-          Text(
-            hint,
-            style: bodyStyle?.copyWith(color: hintColor),
-          ),
+          Text(hint, style: bodyStyle?.copyWith(color: hintColor)),
         ],
       ),
     );
@@ -468,8 +473,9 @@ class OtaOverlayManager {
   static final OtaOverlayManager instance = OtaOverlayManager._();
 
   OverlayState? _overlayState;
-  final ValueNotifier<OtaOverlayState> _state =
-      ValueNotifier(const OtaOverlayState());
+  final ValueNotifier<OtaOverlayState> _state = ValueNotifier(
+    const OtaOverlayState(),
+  );
   OverlayEntry? _entry;
   bool _disposed = false;
 
@@ -511,9 +517,7 @@ class OtaOverlayManager {
       currentVersion: currentVersion,
       errorHint: errorHint,
     );
-    _entry = OverlayEntry(
-      builder: (_) => OtaProgressOverlay(state: _state),
-    );
+    _entry = OverlayEntry(builder: (_) => OtaProgressOverlay(state: _state));
     overlay.insert(_entry!);
     return OtaOverlayHandle._(this);
   }

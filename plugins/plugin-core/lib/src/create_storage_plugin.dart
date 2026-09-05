@@ -2,7 +2,7 @@ import 'types.dart';
 
 /// Create a deploy/CLI/console storage plugin (node profile only).
 StoragePlugin Function(TConfig config, [StoragePluginHooks? hooks])
-    createNodeStoragePlugin<TConfig>({
+createNodeStoragePlugin<TConfig>({
   required String name,
   required String supportedProtocol,
   required NodeStorageProfile Function(TConfig config) factory,
@@ -24,7 +24,7 @@ StoragePlugin Function(TConfig config, [StoragePluginHooks? hooks])
 
 /// Create an update-check runtime storage plugin.
 StoragePlugin Function(TConfig config, [StoragePluginHooks? hooks])
-    createRuntimeStoragePlugin<TConfig>({
+createRuntimeStoragePlugin<TConfig>({
   required String name,
   required String supportedProtocol,
   required RuntimeStorageProfile Function(TConfig config) factory,
@@ -46,13 +46,13 @@ StoragePlugin Function(TConfig config, [StoragePluginHooks? hooks])
 
 /// Create a storage plugin supporting both node and runtime profiles.
 StoragePlugin Function(TConfig config, [StoragePluginHooks? hooks])
-    createUniversalStoragePlugin<TConfig>({
+createUniversalStoragePlugin<TConfig>({
   required String name,
   required String supportedProtocol,
-  required ({
-    NodeStorageProfile node,
-    RuntimeStorageProfile runtime,
-  }) Function(TConfig config) factory,
+  required ({NodeStorageProfile node, RuntimeStorageProfile runtime}) Function(
+    TConfig config,
+  )
+  factory,
 }) {
   return (TConfig config, [StoragePluginHooks? hooks]) {
     ({NodeStorageProfile node, RuntimeStorageProfile runtime})? cached;
@@ -102,8 +102,7 @@ class _WrappedNodeProfile implements NodeStorageProfile {
       _node.listObjects(prefix);
 
   @override
-  Future<void> deleteObjects(List<String> keys) =>
-      _node.deleteObjects(keys);
+  Future<void> deleteObjects(List<String> keys) => _node.deleteObjects(keys);
 }
 
 /// Storage plugin with lazy profile resolution.
@@ -123,8 +122,6 @@ class _ProfiledStoragePlugin implements StoragePlugin {
   final RuntimeStorageProfile Function()? runtimeProfile;
 
   @override
-  StoragePluginProfiles get profiles => StoragePluginProfiles(
-        node: nodeProfile,
-        runtime: runtimeProfile?.call(),
-      );
+  StoragePluginProfiles get profiles =>
+      StoragePluginProfiles(node: nodeProfile, runtime: runtimeProfile?.call());
 }

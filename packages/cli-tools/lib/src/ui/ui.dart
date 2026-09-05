@@ -21,9 +21,7 @@ const _kCyan = '\x1b[36m';
 const _kGray = '\x1b[90m';
 const _kBold = '\x1b[1m';
 
-const List<String> _frames = [
-  '⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏',
-];
+const List<String> _frames = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
 
 bool get _noColor {
   final v = Platform.environment['NO_COLOR'];
@@ -61,7 +59,9 @@ String kv(String k, String v) {
 
 void banner(String name) {
   _echo('');
-  _echo('  ${cyan('▶')} ${cyan(bold('flutter_ota_kit'))} ${dim('·')} ${bold(name)}');
+  _echo(
+    '  ${cyan('▶')} ${cyan(bold('flutter_ota_kit'))} ${dim('·')} ${bold(name)}',
+  );
   _echo('  ${dim('─' * math.min(_cols - 4, 60))}');
 }
 
@@ -69,8 +69,7 @@ void step(String msg) => _echo('  ${green('✓')} $msg');
 
 void warn(String msg) => _echo('  ${yellow('!')} ${yellow(msg)}');
 
-void err(String msg) =>
-    _echo('  ${red('✗')} ${red(msg)}');
+void err(String msg) => _echo('  ${red('✗')} ${red(msg)}');
 
 /// Run [task] while showing a live spinner; replaces the line with a
 /// `${green('✓')} done` summary when finished (or `✗` on error).
@@ -129,9 +128,7 @@ List<String> _wrap(String text, int inner) {
         line += ' $word';
       } else {
         result.add(line);
-        line = word.length <= inner
-            ? word
-            : _splitLong(word, inner, result);
+        line = word.length <= inner ? word : _splitLong(word, inner, result);
       }
     }
     result.add(line);
@@ -184,8 +181,7 @@ void box(String title, List<String> lines) {
   var dashes = math.max(2, width - 2 - tVisible);
   final left = math.max(1, dashes ~/ 2);
   final right = dashes - left;
-  final top =
-      '╭${'─' * left}$titleText${'─' * right}╮';
+  final top = '╭${'─' * left}$titleText${'─' * right}╮';
   _echo(top);
   for (final l in wrapped) {
     final pad = math.max(0, inner - _dispWidth(l));
@@ -223,8 +219,7 @@ class ProgressBar {
     const barW = 28;
     final pct = total > 0 ? (_current / total).clamp(0.0, 1.0) : 1.0;
     final filled = (barW * pct).round();
-    final bar =
-        '${green('█' * filled)}${gray('·' * (barW - filled))}';
+    final bar = '${green('█' * filled)}${gray('·' * (barW - filled))}';
     _spin = (_spin + 1) % _frames.length;
     final pctStr = '${(pct * 100).round()}%'.padLeft(4);
     stdout.write('\r\x1b[K  ${cyan(_frames[_spin])} $_label  [$bar] $pctStr');

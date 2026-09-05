@@ -72,8 +72,7 @@ class _R2NodeProfile implements NodeStorageProfile {
       _client.listObjects(prefix);
 
   @override
-  Future<void> deleteObjects(List<String> keys) =>
-      _client.deleteObjects(keys);
+  Future<void> deleteObjects(List<String> keys) => _client.deleteObjects(keys);
 }
 
 class _R2RuntimeProfile implements RuntimeStorageProfile {

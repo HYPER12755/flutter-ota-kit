@@ -19,3 +19,5 @@ export 'src/supabase_edge_function_database.dart'
     show supabaseEdgeFunctionDatabase, SupabaseEdgeFunctionDatabaseConfig;
 export 'src/supabase_edge_function_storage.dart'
     show supabaseEdgeFunctionStorage, SupabaseEdgeFunctionStorageConfig;
+export 'src/types.dart' show SupabaseBundleRow;
+export 'src/supabase_bundle_mapper.dart' show mapRowToBundle;

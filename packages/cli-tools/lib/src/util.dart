@@ -30,7 +30,9 @@ Future<String> zipDirectory(String directory) async {
   }
   final encoder = ZipEncoder();
   final out = encoder.encode(archive);
-  final tmp = File('${Directory.systemTemp.path}/fp_${Random().nextInt(1 << 30)}.zip');
+  final tmp = File(
+    '${Directory.systemTemp.path}/fp_${Random().nextInt(1 << 30)}.zip',
+  );
   await tmp.writeAsBytes(out);
   return tmp.path;
 }

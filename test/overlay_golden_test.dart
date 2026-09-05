@@ -27,8 +27,10 @@ Future<void> _pumpOverlay(
         body: Stack(
           children: [
             const Center(
-              child: Text('App screen behind overlay',
-                  style: TextStyle(color: Colors.black45)),
+              child: Text(
+                'App screen behind overlay',
+                style: TextStyle(color: Colors.black45),
+              ),
             ),
             OtaProgressOverlay(state: state),
           ],
@@ -52,12 +54,14 @@ void main() {
     });
 
     testWidgets('downloading 0% (no fraction yet)', (tester) async {
-      final state = ValueNotifier(const OtaOverlayState(
-        phase: PatchApplyPhase.downloading,
-        currentVersion: '1.0.0',
-        targetVersion: '1.0.1',
-        message: 'New onboarding flow',
-      ));
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          phase: PatchApplyPhase.downloading,
+          currentVersion: '1.0.0',
+          targetVersion: '1.0.1',
+          message: 'New onboarding flow',
+        ),
+      );
       await _pumpOverlay(tester, state: state);
       await expectLater(
         find.byType(OtaProgressOverlay),
@@ -66,13 +70,15 @@ void main() {
     });
 
     testWidgets('downloading 50% (fraction known)', (tester) async {
-      final state = ValueNotifier(const OtaOverlayState(
-        phase: PatchApplyPhase.downloading,
-        fraction: 0.50,
-        currentVersion: '1.0.0',
-        targetVersion: '1.0.1',
-        message: 'New onboarding flow',
-      ));
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          phase: PatchApplyPhase.downloading,
+          fraction: 0.50,
+          currentVersion: '1.0.0',
+          targetVersion: '1.0.1',
+          message: 'New onboarding flow',
+        ),
+      );
       await _pumpOverlay(tester, state: state);
       await expectLater(
         find.byType(OtaProgressOverlay),
@@ -81,13 +87,15 @@ void main() {
     });
 
     testWidgets('verifying 85%', (tester) async {
-      final state = ValueNotifier(const OtaOverlayState(
-        phase: PatchApplyPhase.verifying,
-        fraction: 0.85,
-        currentVersion: '1.0.0',
-        targetVersion: '1.0.1',
-        message: 'Critical security fix',
-      ));
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          phase: PatchApplyPhase.verifying,
+          fraction: 0.85,
+          currentVersion: '1.0.0',
+          targetVersion: '1.0.1',
+          message: 'Critical security fix',
+        ),
+      );
       await _pumpOverlay(tester, state: state);
       await expectLater(
         find.byType(OtaProgressOverlay),
@@ -96,13 +104,15 @@ void main() {
     });
 
     testWidgets('error state with hint', (tester) async {
-      final state = ValueNotifier(const OtaOverlayState(
-        hasError: true,
-        errorText: 'MD5 mismatch: expected 414243…',
-        errorHint: 'Close the app and reopen to retry.',
-        currentVersion: '1.0.0',
-        targetVersion: '1.0.1',
-      ));
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          hasError: true,
+          errorText: 'MD5 mismatch: expected 414243…',
+          errorHint: 'Close the app and reopen to retry.',
+          currentVersion: '1.0.0',
+          targetVersion: '1.0.1',
+        ),
+      );
       await _pumpOverlay(tester, state: state);
       await expectLater(
         find.byType(OtaProgressOverlay),
@@ -111,13 +121,15 @@ void main() {
     });
 
     testWidgets('downloading 50% on dark theme', (tester) async {
-      final state = ValueNotifier(const OtaOverlayState(
-        phase: PatchApplyPhase.downloading,
-        fraction: 0.50,
-        currentVersion: '1.0.0',
-        targetVersion: '1.0.1',
-        message: 'New onboarding flow',
-      ));
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          phase: PatchApplyPhase.downloading,
+          fraction: 0.50,
+          currentVersion: '1.0.0',
+          targetVersion: '1.0.1',
+          message: 'New onboarding flow',
+        ),
+      );
       await _pumpOverlay(
         tester,
         state: state,

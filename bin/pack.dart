@@ -12,7 +12,8 @@ Future<int> main(List<String> argv) async {
     )
     ..addMultiOption(
       'assets',
-      help: 'Flutter asset key(s) from pubspec.yaml to include in patch.zip. '
+      help:
+          'Flutter asset key(s) from pubspec.yaml to include in patch.zip. '
           'Can be repeated or comma-separated. '
           'Use --assets @path/to/list.txt to read keys from a UTF-8 file '
           '(one per line, # starts comments). Inline keys and @file can be mixed: '
@@ -112,9 +113,7 @@ Future<int> main(List<String> argv) async {
   }
 }
 
-List<String> _readRequestedAssets({
-  Iterable<String> assetsArgs = const [],
-}) {
+List<String> _readRequestedAssets({Iterable<String> assetsArgs = const []}) {
   final result = <String>[];
   final seen = <String>{};
 

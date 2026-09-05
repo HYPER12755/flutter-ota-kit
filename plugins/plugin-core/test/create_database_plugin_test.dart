@@ -85,9 +85,8 @@ void main() {
     test('returns a factory function', () {
       final factory = createDatabasePlugin<String>(
         name: 'testDb',
-        factory: (config) => _MockDatabasePlugin(
-          id: config, bundles: [_bundle('b1')],
-        ),
+        factory: (config) =>
+            _MockDatabasePlugin(id: config, bundles: [_bundle('b1')]),
       );
       final createDb = factory('test');
       expect(createDb, isA<Function>());
@@ -96,9 +95,8 @@ void main() {
     test('factory creates a DatabasePlugin', () {
       final factory = createDatabasePlugin<String>(
         name: 'testDb',
-        factory: (config) => _MockDatabasePlugin(
-          id: config, bundles: [_bundle('b1')],
-        ),
+        factory: (config) =>
+            _MockDatabasePlugin(id: config, bundles: [_bundle('b1')]),
       );
       final db = factory('test')();
       expect(db, isA<DatabasePlugin>());
@@ -109,7 +107,8 @@ void main() {
       final factory = createDatabasePlugin<String>(
         name: 'testDb',
         factory: (config) => _MockDatabasePlugin(
-          id: config, bundles: [_bundle('b1'), _bundle('b2')],
+          id: config,
+          bundles: [_bundle('b1'), _bundle('b2')],
         ),
       );
       final db = factory('test')();
@@ -121,9 +120,8 @@ void main() {
     test('getBundleById returns null for missing', () async {
       final factory = createDatabasePlugin<String>(
         name: 'testDb',
-        factory: (config) => _MockDatabasePlugin(
-          id: config, bundles: [_bundle('b1')],
-        ),
+        factory: (config) =>
+            _MockDatabasePlugin(id: config, bundles: [_bundle('b1')]),
       );
       final db = factory('test')();
       final result = await db.getBundleById('missing');
@@ -134,13 +132,12 @@ void main() {
       final factory = createDatabasePlugin<String>(
         name: 'testDb',
         factory: (config) => _MockDatabasePlugin(
-          id: config, bundles: [_bundle('b1'), _bundle('b2')],
+          id: config,
+          bundles: [_bundle('b1'), _bundle('b2')],
         ),
       );
       final db = factory('test')();
-      final result = await db.getBundles(
-        const DatabaseBundleQueryOptions(),
-      );
+      final result = await db.getBundles(const DatabaseBundleQueryOptions());
       expect(result.data.length, 2);
       expect(result.pagination.total, 2);
     });
@@ -148,9 +145,8 @@ void main() {
     test('getChannels delegates correctly', () async {
       final factory = createDatabasePlugin<String>(
         name: 'testDb',
-        factory: (config) => _MockDatabasePlugin(
-          id: config, bundles: [_bundle('b1')],
-        ),
+        factory: (config) =>
+            _MockDatabasePlugin(id: config, bundles: [_bundle('b1')]),
       );
       final db = factory('test')();
       final channels = await db.getChannels();
@@ -168,7 +164,10 @@ void main() {
       await db.commitBundle();
 
       expect(mockImpl.committedChanges.length, 1);
-      expect(mockImpl.committedChanges.first.operation, BundleChangeOperation.insert);
+      expect(
+        mockImpl.committedChanges.first.operation,
+        BundleChangeOperation.insert,
+      );
       expect(mockImpl.committedChanges.first.data.id, 'new');
     });
 
@@ -183,7 +182,10 @@ void main() {
       await db.commitBundle();
 
       expect(mockImpl.committedChanges.length, 1);
-      expect(mockImpl.committedChanges.first.operation, BundleChangeOperation.update);
+      expect(
+        mockImpl.committedChanges.first.operation,
+        BundleChangeOperation.update,
+      );
       expect(mockImpl.committedChanges.first.data.enabled, false);
     });
 
@@ -198,7 +200,10 @@ void main() {
       await db.commitBundle();
 
       expect(mockImpl.committedChanges.length, 1);
-      expect(mockImpl.committedChanges.first.operation, BundleChangeOperation.delete);
+      expect(
+        mockImpl.committedChanges.first.operation,
+        BundleChangeOperation.delete,
+      );
     });
 
     test('commitBundle with no changes sends empty', () async {
@@ -232,9 +237,14 @@ void main() {
         name: 'testDb',
         factory: (config) => mockImpl,
       );
-      final db = factory('test', DatabasePluginHooks(
-        onDatabaseUpdated: () async { hookCalled = true; },
-      ))();
+      final db = factory(
+        'test',
+        DatabasePluginHooks(
+          onDatabaseUpdated: () async {
+            hookCalled = true;
+          },
+        ),
+      )();
 
       await db.appendBundle(_bundle('x'));
       await db.commitBundle();
@@ -269,25 +279,19 @@ void main() {
 
     test('replaces patches', () {
       final base = _bundle('a');
-      final updated = mergeBundleUpdate(base, {
-        'patches': [],
-      });
+      final updated = mergeBundleUpdate(base, {'patches': []});
       expect(updated.patches, isEmpty);
     });
 
     test('updates scalar fields', () {
       final base = _bundle('a');
-      final updated = mergeBundleUpdate(base, {
-        'enabled': false,
-      });
+      final updated = mergeBundleUpdate(base, {'enabled': false});
       expect(updated.enabled, false);
     });
 
     test('preserves existing fields not in patch', () {
       final base = _bundle('a');
-      final updated = mergeBundleUpdate(base, {
-        'enabled': false,
-      });
+      final updated = mergeBundleUpdate(base, {'enabled': false});
       expect(updated.fileHash, 'hash_a');
     });
   });

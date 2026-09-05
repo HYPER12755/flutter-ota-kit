@@ -4,31 +4,29 @@ import 'package:flutter_ota_kit_supabase/src/types.dart';
 import 'package:test/test.dart';
 
 Bundle _makeBundle({List<BundlePatchArtifact> patches = const []}) => Bundle(
-      id: '018f0000-0000-7000-8000-000000000001',
-      platform: Platform.android,
-      shouldForceUpdate: false,
-      enabled: true,
-      fileHash: 'file-hash-1',
-      gitCommitHash: 'git-1',
-      message: 'hello',
-      channel: 'production',
-      storageUri: 'supabase-storage://updates/bundles/b1.zip',
-      targetAppVersion: '1.0.0',
-      fingerprintHash: 'fp-1',
-      metadata: const BundleMetadata(appVersion: '1.2.3'),
-      manifestStorageUri: 'supabase-storage://updates/manifests/m1.json',
-      manifestFileHash: 'mf-1',
-      assetBaseStorageUri: 'supabase-storage://updates/assets',
-      rolloutCohortCount: 500,
-      targetCohorts: ['team-a'],
-      patches: patches,
-      patchBaseBundleId: patches.isNotEmpty ? patches.first.baseBundleId : null,
-      patchBaseFileHash:
-          patches.isNotEmpty ? patches.first.baseFileHash : null,
-      patchFileHash: patches.isNotEmpty ? patches.first.patchFileHash : null,
-      patchStorageUri:
-          patches.isNotEmpty ? patches.first.patchStorageUri : null,
-    );
+  id: '018f0000-0000-7000-8000-000000000001',
+  platform: Platform.android,
+  shouldForceUpdate: false,
+  enabled: true,
+  fileHash: 'file-hash-1',
+  gitCommitHash: 'git-1',
+  message: 'hello',
+  channel: 'production',
+  storageUri: 'supabase-storage://updates/bundles/b1.zip',
+  targetAppVersion: '1.0.0',
+  fingerprintHash: 'fp-1',
+  metadata: const BundleMetadata(appVersion: '1.2.3'),
+  manifestStorageUri: 'supabase-storage://updates/manifests/m1.json',
+  manifestFileHash: 'mf-1',
+  assetBaseStorageUri: 'supabase-storage://updates/assets',
+  rolloutCohortCount: 500,
+  targetCohorts: ['team-a'],
+  patches: patches,
+  patchBaseBundleId: patches.isNotEmpty ? patches.first.baseBundleId : null,
+  patchBaseFileHash: patches.isNotEmpty ? patches.first.baseFileHash : null,
+  patchFileHash: patches.isNotEmpty ? patches.first.patchFileHash : null,
+  patchStorageUri: patches.isNotEmpty ? patches.first.patchStorageUri : null,
+);
 
 void main() {
   group('bundleToRow / mapRowToBundle round-trip', () {
@@ -78,7 +76,9 @@ void main() {
 
       final back = mapRowToBundle(
         SupabaseBundleRow.fromJson(row.toJson()),
-        patchRows.map((p) => SupabaseBundlePatchRow.fromJson(p.toJson())).toList(),
+        patchRows
+            .map((p) => SupabaseBundlePatchRow.fromJson(p.toJson()))
+            .toList(),
       );
 
       expect(back.id, bundle.id);
@@ -86,7 +86,10 @@ void main() {
       expect(back.patchBaseBundleId, baseBundleId);
       expect(back.patchBaseFileHash, 'base-hash');
       expect(back.patches!.first.patchFileHash, 'patch-hash');
-      expect(back.patchStorageUri, 'supabase-storage://updates/patches/p1.patch');
+      expect(
+        back.patchStorageUri,
+        'supabase-storage://updates/patches/p1.patch',
+      );
       expect(back.metadata?.appVersion, '1.2.3');
     });
 

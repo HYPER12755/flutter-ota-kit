@@ -16,13 +16,17 @@ class FingerprintCommand extends FlutterPatcherCommand {
 
   @override
   ArgParser get argParser => ArgParser()
-    ..addOption('source',
-        abbr: 's', defaultsTo: './dist', help: 'Directory to fingerprint.');
+    ..addOption(
+      'source',
+      abbr: 's',
+      defaultsTo: './dist',
+      help: 'Directory to fingerprint.',
+    );
 
   @override
   Future<int> run() => runGuarded(() async {
-        final source = argResults!['source'] as String;
-        final hash = generateFingerprint(source);
-        stdout.writeln(hash);
-      });
+    final source = argResults!['source'] as String;
+    final hash = generateFingerprint(source);
+    stdout.writeln(hash);
+  });
 }

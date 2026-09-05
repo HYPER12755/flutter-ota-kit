@@ -24,7 +24,18 @@ Future<bool> ed25519Verify(
 
 /// The 12-byte DER prefix of an Ed25519 X.509 SubjectPublicKeyInfo.
 const List<int> _ed25519SpkiPrefix = <int>[
-  0x30, 0x2a, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x03, 0x21, 0x00,
+  0x30,
+  0x2a,
+  0x30,
+  0x05,
+  0x06,
+  0x03,
+  0x2b,
+  0x65,
+  0x70,
+  0x03,
+  0x21,
+  0x00,
 ];
 
 bool _startsWith(List<int> bytes, List<int> prefix) {
@@ -44,10 +55,7 @@ Future<(String, String)> generateEd25519KeyPair() async {
   final keyPair = await Ed25519().newKeyPair();
   final private = await keyPair.extractPrivateKeyBytes();
   final rawPublic = (await keyPair.extractPublicKey()).bytes;
-  final spki = <int>[
-    ..._ed25519SpkiPrefix,
-    ...rawPublic,
-  ];
+  final spki = <int>[..._ed25519SpkiPrefix, ...rawPublic];
   return (base64Encode(private), base64Encode(spki));
 }
 

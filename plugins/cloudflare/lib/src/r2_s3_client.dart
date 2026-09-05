@@ -44,7 +44,8 @@ class R2S3Client implements R2S3ClientLike {
   static const String _service = 'r2';
 
   Uri _objectUri(String key) {
-    final host = config.endpoint ??
+    final host =
+        config.endpoint ??
         'https://${config.accountId}.r2.cloudflarestorage.com';
     return Uri.parse('$host/${config.bucketName}/$key');
   }
@@ -56,11 +57,7 @@ class R2S3Client implements R2S3ClientLike {
   }
 
   @override
-  Future<void> putObject(
-    String key,
-    List<int> body,
-    String contentType,
-  ) async {
+  Future<void> putObject(String key, List<int> body, String contentType) async {
     final uri = _objectUri(key);
     final response = await _send(
       'PUT',
@@ -77,7 +74,8 @@ class R2S3Client implements R2S3ClientLike {
   @override
   Future<bool> headObject(String key) async {
     final uri = _objectUri(key);
-    final request = Request('HEAD', uri)..headers.addAll(_authHeaders('HEAD', uri, null));
+    final request = Request('HEAD', uri)
+      ..headers.addAll(_authHeaders('HEAD', uri, null));
     final response = await _http.send(request);
     if (response.statusCode == 404) return false;
     if (response.statusCode < 200 || response.statusCode >= 300) {
@@ -114,21 +112,18 @@ class R2S3Client implements R2S3ClientLike {
       'X-Amz-Expires': '$expiresIn',
       'X-Amz-SignedHeaders': 'host',
     };
-    final canonicalQuery = params.entries
-        .map((e) => '${_uriEncode(e.key)}=${_uriEncode(e.value)}')
-        .toList()
-      ..sort();
+    final canonicalQuery =
+        params.entries
+            .map((e) => '${_uriEncode(e.key)}=${_uriEncode(e.value)}')
+            .toList()
+          ..sort();
     final queryString = canonicalQuery.join('&');
 
     const payloadHash = 'UNSIGNED-PAYLOAD';
     final canonicalHeaders = 'host:${uri.host}\n';
     final canonicalRequest =
         'GET\n${uri.path}\n$queryString\n$canonicalHeaders\nhost\n$payloadHash';
-    final stringToSign = _stringToSign(
-      amzDate,
-      scope,
-      canonicalRequest,
-    );
+    final stringToSign = _stringToSign(amzDate, scope, canonicalRequest);
     final signingKey = _signingKey(dateStamp, config.region);
     final signature = _toHex(_hmac(signingKey, stringToSign));
     return '${uri.scheme}://${uri.host}${uri.path}?$queryString'
@@ -158,23 +153,21 @@ class R2S3Client implements R2S3ClientLike {
 
   // --- signing helpers -------------------------------------------------------
 
-  Map<String, String> _authHeaders(
-    String method,
-    Uri uri,
-    List<int>? body,
-  ) {
+  Map<String, String> _authHeaders(String method, Uri uri, List<int>? body) {
     final now = DateTime.now().toUtc();
     final amzDate = _amzDate(now);
     final dateStamp = amzDate.substring(0, 8);
     final scope = '$dateStamp/${config.region}/$_service/aws4_request';
     final payloadHash = body == null ? _hashHex(const []) : _hashHex(body);
 
-    final canonicalHeaders = 'host:${uri.host}\n'
+    final canonicalHeaders =
+        'host:${uri.host}\n'
         'x-amz-content-sha256:$payloadHash\n'
         'x-amz-date:$amzDate\n';
     const signedHeaders = 'host;x-amz-content-sha256;x-amz-date';
 
-    final canonicalRequest = '$method\n${uri.path}\n'
+    final canonicalRequest =
+        '$method\n${uri.path}\n'
         '\n$canonicalHeaders$signedHeaders\n$payloadHash';
     final stringToSign = _stringToSign(amzDate, scope, canonicalRequest);
     final signingKey = _signingKey(dateStamp, config.region);
@@ -205,7 +198,10 @@ class R2S3Client implements R2S3ClientLike {
 
   List<StorageObject> _parseListObjects(String xml) {
     final objects = <StorageObject>[];
-    final contents = _allMatches(xml, RegExp(r'<Contents>([\s\S]*?)</Contents>'));
+    final contents = _allMatches(
+      xml,
+      RegExp(r'<Contents>([\s\S]*?)</Contents>'),
+    );
     for (final block in contents) {
       final key = _tag(block, 'Key');
       final size = int.tryParse(_tag(block, 'Size') ?? '');
@@ -262,11 +258,7 @@ class R2S3Client implements R2S3ClientLike {
     return m?.group(1);
   }
 
-  static void _assertStatus(
-    Response response,
-    List<int> ok,
-    String operation,
-  ) {
+  static void _assertStatus(Response response, List<int> ok, String operation) {
     if (!ok.contains(response.statusCode)) {
       throw Exception(
         'R2 $operation failed (${response.statusCode}): ${response.body}',

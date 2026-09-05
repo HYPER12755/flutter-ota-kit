@@ -16,7 +16,10 @@ import 'package:pointycastle/export.dart'
 const String _sha1DigestIdentifierHex = '3021300906052b0e03021a05000414';
 
 String _base64UrlNoPad(List<int> bytes) =>
-    base64Encode(bytes).replaceAll('+', '-').replaceAll('/', '_').replaceAll('=', '');
+    base64Encode(bytes)
+        .replaceAll('+', '-')
+        .replaceAll('/', '_')
+        .replaceAll('=', '');
 
 /// Parse a PEM-encoded RSA private key (PKCS#1 `RSA PRIVATE KEY` or PKCS#8
 /// `PRIVATE KEY`) into a [RSAPrivateKey].
@@ -84,7 +87,9 @@ String cloudfrontSignedUrl({
 
   final signer = RSASigner(SHA1Digest(), _sha1DigestIdentifierHex);
   signer.init(true, PrivateKeyParameter<RSAPrivateKey>(privateKey));
-  final signature = signer.generateSignature(Uint8List.fromList(policyBytes)).bytes;
+  final signature = signer
+      .generateSignature(Uint8List.fromList(policyBytes))
+      .bytes;
   final signatureB64 = _base64UrlNoPad(signature);
 
   return '$url?Policy=$policyB64&Signature=$signatureB64'

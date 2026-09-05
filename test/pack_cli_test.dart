@@ -21,7 +21,8 @@ void main() {
     final soBytes = utf8.encode('fake libapp.so bytes');
     final archive = Archive()
       ..addFile(
-          ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes));
+        ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes),
+      );
     await apk.writeAsBytes(ZipEncoder().encode(archive));
 
     final outDir = Directory('${temp.path}/dist');
@@ -37,8 +38,11 @@ void main() {
     ]);
 
     expect(exitCode, 0);
-    expect(File('${outDir.path}/libapp.so').existsSync(), isFalse,
-        reason: 'pack should no longer emit bare libapp.so');
+    expect(
+      File('${outDir.path}/libapp.so').existsSync(),
+      isFalse,
+      reason: 'pack should no longer emit bare libapp.so',
+    );
 
     final patchZipBytes = await File('${outDir.path}/patch.zip').readAsBytes();
     final outerManifest = jsonDecode(
@@ -54,23 +58,30 @@ void main() {
     final patchZip = ZipDecoder().decodeBytes(patchZipBytes);
     final entryNames = patchZip.files.map((f) => f.name).toSet();
     expect(
-        entryNames,
-        containsAll(<String>{
-          'manifest.json',
-          'lib/arm64-v8a/libapp.so',
-        }));
-    expect(entryNames.contains('manifest_patch.json'), isFalse,
-        reason: 'Dart-only patch.zip should not embed manifest_patch.json');
-    expect(entryNames.any((n) => n.startsWith('assets/')), isFalse,
-        reason: 'Dart-only patch.zip should not embed overlay assets');
+      entryNames,
+      containsAll(<String>{'manifest.json', 'lib/arm64-v8a/libapp.so'}),
+    );
+    expect(
+      entryNames.contains('manifest_patch.json'),
+      isFalse,
+      reason: 'Dart-only patch.zip should not embed manifest_patch.json',
+    );
+    expect(
+      entryNames.any((n) => n.startsWith('assets/')),
+      isFalse,
+      reason: 'Dart-only patch.zip should not embed overlay assets',
+    );
     expect(_entryBytes(patchZip, 'lib/arm64-v8a/libapp.so'), soBytes);
 
-    final innerManifest = jsonDecode(utf8.decode(
-      _entryBytes(patchZip, 'manifest.json'),
-    )) as Map<String, dynamic>;
+    final innerManifest = jsonDecode(
+      utf8.decode(_entryBytes(patchZip, 'manifest.json')),
+    ) as Map<String, dynamic>;
     expect(innerManifest['schemaVersion'], 2);
-    expect(innerManifest.containsKey('assets'), isFalse,
-        reason: 'Dart-only inner manifest should omit the assets block');
+    expect(
+      innerManifest.containsKey('assets'),
+      isFalse,
+      reason: 'Dart-only inner manifest should omit the assets block',
+    );
     final lib = innerManifest['lib'] as Map<String, dynamic>;
     final libEntry = lib['arm64-v8a'] as Map<String, dynamic>;
     expect(libEntry['path'], 'lib/arm64-v8a/libapp.so');
@@ -94,8 +105,9 @@ void main() {
         {'asset': 'config/app.json'},
       ],
     };
-    final encodedManifest =
-        StandardMessageCodec().encodeMessage(assetManifest)!;
+    final encodedManifest = StandardMessageCodec().encodeMessage(
+      assetManifest,
+    )!;
     final manifestBytes = encodedManifest.buffer.asUint8List(
       encodedManifest.offsetInBytes,
       encodedManifest.lengthInBytes,
@@ -106,21 +118,27 @@ void main() {
 
     final archive = Archive()
       ..addFile(ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes))
-      ..addFile(ArchiveFile(
-        'assets/flutter_assets/AssetManifest.bin',
-        manifestBytes.length,
-        manifestBytes,
-      ))
-      ..addFile(ArchiveFile(
-        'assets/flutter_assets/images/hero.png',
-        heroBytes.length,
-        heroBytes,
-      ))
-      ..addFile(ArchiveFile(
-        'assets/flutter_assets/images/2.0x/hero.png',
-        hero2Bytes.length,
-        hero2Bytes,
-      ));
+      ..addFile(
+        ArchiveFile(
+          'assets/flutter_assets/AssetManifest.bin',
+          manifestBytes.length,
+          manifestBytes,
+        ),
+      )
+      ..addFile(
+        ArchiveFile(
+          'assets/flutter_assets/images/hero.png',
+          heroBytes.length,
+          heroBytes,
+        ),
+      )
+      ..addFile(
+        ArchiveFile(
+          'assets/flutter_assets/images/2.0x/hero.png',
+          hero2Bytes.length,
+          hero2Bytes,
+        ),
+      );
     final apk = File('${temp.path}/app-release.apk');
     await apk.writeAsBytes(ZipEncoder().encode(archive));
 
@@ -146,12 +164,11 @@ void main() {
     ) as Map<String, dynamic>;
     expect(outerManifest['payload'], 'patch.zip');
     expect(
-        outerManifest['md5'],
-        md5
-            .convert(
-              await File('${outDir.path}/patch.zip').readAsBytes(),
-            )
-            .toString());
+      outerManifest['md5'],
+      md5
+          .convert(await File('${outDir.path}/patch.zip').readAsBytes())
+          .toString(),
+    );
 
     final patchZip = ZipDecoder().decodeBytes(
       await File('${outDir.path}/patch.zip').readAsBytes(),
@@ -160,15 +177,15 @@ void main() {
     expect(_entryBytes(patchZip, 'assets/images/hero.png'), heroBytes);
     expect(_entryBytes(patchZip, 'assets/images/2.0x/hero.png'), hero2Bytes);
 
-    final packageManifest = jsonDecode(utf8.decode(
-      _entryBytes(patchZip, 'manifest.json'),
-    )) as Map<String, dynamic>;
+    final packageManifest = jsonDecode(
+      utf8.decode(_entryBytes(patchZip, 'manifest.json')),
+    ) as Map<String, dynamic>;
     expect(packageManifest['schemaVersion'], 2);
     expect((packageManifest['assets'] as Map)['mode'], 'overlay');
 
-    final manifestPatch = jsonDecode(utf8.decode(
-      _entryBytes(patchZip, 'manifest_patch.json'),
-    )) as Map<String, dynamic>;
+    final manifestPatch = jsonDecode(
+      utf8.decode(_entryBytes(patchZip, 'manifest_patch.json')),
+    ) as Map<String, dynamic>;
     expect(manifestPatch['schemaVersion'], 1);
     final operations = manifestPatch['operations'] as List<dynamic>;
     expect(operations, hasLength(1));
@@ -194,11 +211,13 @@ void main() {
     final soBytes = utf8.encode('fake libapp.so bytes');
     final archive = Archive()
       ..addFile(ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes))
-      ..addFile(ArchiveFile(
-        'assets/flutter_assets/AssetManifest.bin',
-        manifestBytes.length,
-        manifestBytes,
-      ));
+      ..addFile(
+        ArchiveFile(
+          'assets/flutter_assets/AssetManifest.bin',
+          manifestBytes.length,
+          manifestBytes,
+        ),
+      );
     final apk = File('${temp.path}/app-release.apk');
     await apk.writeAsBytes(ZipEncoder().encode(archive));
 
@@ -218,99 +237,114 @@ void main() {
     expect(exitCode, 1);
   });
 
-  test('pack reads asset keys from @file with comments and mixed inline',
-      () async {
-    final temp = await Directory.systemTemp.createTemp('flutter_ota_kit_pack_');
-    addTearDown(() async {
-      if (await temp.exists()) {
-        await temp.delete(recursive: true);
-      }
-    });
+  test(
+    'pack reads asset keys from @file with comments and mixed inline',
+    () async {
+      final temp = await Directory.systemTemp.createTemp(
+        'flutter_ota_kit_pack_',
+      );
+      addTearDown(() async {
+        if (await temp.exists()) {
+          await temp.delete(recursive: true);
+        }
+      });
 
-    final assetManifest = <String, Object?>{
-      'images/hero.png': [
-        {'asset': 'images/hero.png'},
-      ],
-      'config/app.json': [
-        {'asset': 'config/app.json'},
-      ],
-      'strings/zh.json': [
-        {'asset': 'strings/zh.json'},
-      ],
-    };
-    final encodedManifest =
-        StandardMessageCodec().encodeMessage(assetManifest)!;
-    final manifestBytes = encodedManifest.buffer.asUint8List(
-      encodedManifest.offsetInBytes,
-      encodedManifest.lengthInBytes,
-    );
-    final soBytes = utf8.encode('fake libapp.so bytes');
+      final assetManifest = <String, Object?>{
+        'images/hero.png': [
+          {'asset': 'images/hero.png'},
+        ],
+        'config/app.json': [
+          {'asset': 'config/app.json'},
+        ],
+        'strings/zh.json': [
+          {'asset': 'strings/zh.json'},
+        ],
+      };
+      final encodedManifest = StandardMessageCodec().encodeMessage(
+        assetManifest,
+      )!;
+      final manifestBytes = encodedManifest.buffer.asUint8List(
+        encodedManifest.offsetInBytes,
+        encodedManifest.lengthInBytes,
+      );
+      final soBytes = utf8.encode('fake libapp.so bytes');
 
-    final archive = Archive()
-      ..addFile(ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes))
-      ..addFile(ArchiveFile(
-        'assets/flutter_assets/AssetManifest.bin',
-        manifestBytes.length,
-        manifestBytes,
-      ))
-      ..addFile(ArchiveFile(
-        'assets/flutter_assets/images/hero.png',
-        4,
-        utf8.encode('hero'),
-      ))
-      ..addFile(ArchiveFile(
-        'assets/flutter_assets/config/app.json',
-        4,
-        utf8.encode('cfg!'),
-      ))
-      ..addFile(ArchiveFile(
-        'assets/flutter_assets/strings/zh.json',
-        4,
-        utf8.encode('zh!!'),
-      ));
-    final apk = File('${temp.path}/app-release.apk');
-    await apk.writeAsBytes(ZipEncoder().encode(archive));
+      final archive = Archive()
+        ..addFile(
+          ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes),
+        )
+        ..addFile(
+          ArchiveFile(
+            'assets/flutter_assets/AssetManifest.bin',
+            manifestBytes.length,
+            manifestBytes,
+          ),
+        )
+        ..addFile(
+          ArchiveFile(
+            'assets/flutter_assets/images/hero.png',
+            4,
+            utf8.encode('hero'),
+          ),
+        )
+        ..addFile(
+          ArchiveFile(
+            'assets/flutter_assets/config/app.json',
+            4,
+            utf8.encode('cfg!'),
+          ),
+        )
+        ..addFile(
+          ArchiveFile(
+            'assets/flutter_assets/strings/zh.json',
+            4,
+            utf8.encode('zh!!'),
+          ),
+        );
+      final apk = File('${temp.path}/app-release.apk');
+      await apk.writeAsBytes(ZipEncoder().encode(archive));
 
-    final listFile = File('${temp.path}/patch-assets.txt');
-    await listFile.writeAsString(
-      [
-        '# core patch',
+      final listFile = File('${temp.path}/patch-assets.txt');
+      await listFile.writeAsString(
+        [
+          '# core patch',
+          'images/hero.png',
+          '',
+          '   config/app.json   ',
+          '# extras handled below',
+        ].join('\r\n'),
+      );
+
+      final outDir = Directory('${temp.path}/dist');
+      final exitCode = await pack.main([
+        '--apk',
+        apk.path,
+        '--version',
+        '1.0.0-h1',
+        '--target-version-code',
+        '100',
+        '--assets',
+        '@${listFile.path},strings/zh.json',
+        '--out',
+        outDir.path,
+      ]);
+
+      expect(exitCode, 0);
+
+      final patchZip = ZipDecoder().decodeBytes(
+        await File('${outDir.path}/patch.zip').readAsBytes(),
+      );
+      final manifestPatch = jsonDecode(
+        utf8.decode(_entryBytes(patchZip, 'manifest_patch.json')),
+      ) as Map<String, dynamic>;
+      final operations = manifestPatch['operations'] as List<dynamic>;
+      expect(operations.map((op) => (op as Map)['key']).toList(), <String>[
         'images/hero.png',
-        '',
-        '   config/app.json   ',
-        '# extras handled below',
-      ].join('\r\n'),
-    );
-
-    final outDir = Directory('${temp.path}/dist');
-    final exitCode = await pack.main([
-      '--apk',
-      apk.path,
-      '--version',
-      '1.0.0-h1',
-      '--target-version-code',
-      '100',
-      '--assets',
-      '@${listFile.path},strings/zh.json',
-      '--out',
-      outDir.path,
-    ]);
-
-    expect(exitCode, 0);
-
-    final patchZip = ZipDecoder().decodeBytes(
-      await File('${outDir.path}/patch.zip').readAsBytes(),
-    );
-    final manifestPatch = jsonDecode(utf8.decode(
-      _entryBytes(patchZip, 'manifest_patch.json'),
-    )) as Map<String, dynamic>;
-    final operations = manifestPatch['operations'] as List<dynamic>;
-    expect(operations.map((op) => (op as Map)['key']).toList(), <String>[
-      'images/hero.png',
-      'config/app.json',
-      'strings/zh.json',
-    ]);
-  });
+        'config/app.json',
+        'strings/zh.json',
+      ]);
+    },
+  );
 
   test('pack rejects @file path that does not exist', () async {
     final temp = await Directory.systemTemp.createTemp('flutter_ota_kit_pack_');
@@ -323,7 +357,8 @@ void main() {
     final soBytes = utf8.encode('fake libapp.so bytes');
     final archive = Archive()
       ..addFile(
-          ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes));
+        ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes),
+      );
     final apk = File('${temp.path}/app-release.apk');
     await apk.writeAsBytes(ZipEncoder().encode(archive));
 
@@ -354,7 +389,8 @@ void main() {
     final soBytes = utf8.encode('fake libapp.so bytes');
     final archive = Archive()
       ..addFile(
-          ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes));
+        ArchiveFile('lib/arm64-v8a/libapp.so', soBytes.length, soBytes),
+      );
     final apk = File('${temp.path}/app-release.apk');
     await apk.writeAsBytes(ZipEncoder().encode(archive));
 

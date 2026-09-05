@@ -44,11 +44,7 @@ ResolveSignedUrl createSupabaseSignedUrlBatcher({
   var pendingByBucket = <String, List<_PendingSignedUrl>>{};
   var flushScheduled = false;
 
-  Object createSignedUrlError(
-    String bucketName,
-    String key,
-    Object error,
-  ) =>
+  Object createSignedUrlError(String bucketName, String key, Object error) =>
       StateError(
         'Failed to generate download URL for '
         '"${formatObjectPath(bucketName, key)}": ${errorMessage(error)}',
@@ -100,7 +96,9 @@ ResolveSignedUrl createSupabaseSignedUrlBatcher({
           }
         } catch (error) {
           for (final request in pending) {
-            request.reject(createSignedUrlError(bucketName, request.key, error));
+            request.reject(
+              createSignedUrlError(bucketName, request.key, error),
+            );
           }
         }
       }),
@@ -109,8 +107,7 @@ ResolveSignedUrl createSupabaseSignedUrlBatcher({
 
   return (String bucketName, String key) {
     final completer = Completer<String>();
-    final pending =
-        pendingByBucket[bucketName] ?? <_PendingSignedUrl>[];
+    final pending = pendingByBucket[bucketName] ?? <_PendingSignedUrl>[];
     pending.add(
       _PendingSignedUrl(
         key: key,

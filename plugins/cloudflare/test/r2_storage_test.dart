@@ -35,10 +35,7 @@ void main() {
     test('node upload + exists + downloadFile + delete', () async {
       final node = plugin.profiles.node!;
       final res = await node.upload('v1', tmpFile);
-      expect(
-        res['storageUri'],
-        'r2://test-bucket/v1/${basename(tmpFile)}',
-      );
+      expect(res['storageUri'], 'r2://test-bucket/v1/${basename(tmpFile)}');
       expect(await node.exists(res['storageUri']!), isTrue);
 
       await node.downloadFile(res['storageUri']!, outFile);

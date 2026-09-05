@@ -49,7 +49,8 @@ void main() {
     id: '01a059a6-7d3c-4f3e-8a2c-9c2e3a4b5d6e',
     patch: const PatchInfo(
       version: '01a059a6-7d3c-4f3e-8a2c-9c2e3a4b5d6e',
-      patchUrl: 'https://your-bucket.supabase.co/storage/v1/object/'
+      patchUrl:
+          'https://your-bucket.supabase.co/storage/v1/object/'
           'sign/flutter-ota-bundles/01a059a6/patch.zip',
       md5: '7c4a8d09ca3762af61e59520943dc26494f8941b',
       signature: 'ed25519:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b',

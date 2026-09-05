@@ -2,7 +2,7 @@ const String contentAddressedAssetPrefix = 'assets';
 
 /// Build a content-addressed storage path for an asset.
 ///
-/// Format: `sha256/<hash[:2]>/<hash>.<ext>`
+/// Format: `sha256/{hash[:2]}/{hash}.{ext}`
 /// Preserves `.br` brotli extension from the original asset path.
 ///
 /// Faithful port of hot-updater `contentAddressedAssets.ts`.

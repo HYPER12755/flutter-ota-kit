@@ -46,12 +46,12 @@ class _Comparator {
 }
 
 String _opStr(_Op o) => switch (o) {
-      _Op.lt => '<',
-      _Op.lte => '<=',
-      _Op.gt => '>',
-      _Op.gte => '>=',
-      _Op.eq => '=',
-    };
+  _Op.lt => '<',
+  _Op.lte => '<=',
+  _Op.gt => '>',
+  _Op.gte => '>=',
+  _Op.eq => '=',
+};
 
 final RegExp _xRe = RegExp(r'^[xX*]$');
 
@@ -131,8 +131,7 @@ List<_Comparator> _parseToken(String raw) {
           _Comparator(_Op.lt, ver(majS, '${int.parse(minS) + 1}', '0')),
         ];
       }
-      final pre =
-          hasPre ? preRaw.split('.') : const <String>[];
+      final pre = hasPre ? preRaw.split('.') : const <String>[];
       return [_Comparator(_Op.eq, ver(majS, minS!, patS!, pre))];
 
     case '>':
@@ -141,7 +140,7 @@ List<_Comparator> _parseToken(String raw) {
       }
       if (!hasPatch) {
         return [
-          _Comparator(_Op.gte, ver(majS, '${int.parse(minS!) + 1}', '0'))
+          _Comparator(_Op.gte, ver(majS, '${int.parse(minS!) + 1}', '0')),
         ];
       }
       return [_Comparator(_Op.gt, ver(majS, minS!, patS!))];
@@ -154,8 +153,10 @@ List<_Comparator> _parseToken(String raw) {
         return [_Comparator(_Op.gte, ver(majS, minS!, '0'))];
       }
       return [
-        _Comparator(_Op.gte, ver(majS, minS!, patS!,
-            hasPre ? preRaw.split('.') : const []))
+        _Comparator(
+          _Op.gte,
+          ver(majS, minS!, patS!, hasPre ? preRaw.split('.') : const []),
+        ),
       ];
 
     case '<':
@@ -167,9 +168,9 @@ List<_Comparator> _parseToken(String raw) {
       }
       return [
         _Comparator(
-            _Op.lt,
-            ver(majS, minS!, patS!,
-                hasPre ? preRaw.split('.') : const []))
+          _Op.lt,
+          ver(majS, minS!, patS!, hasPre ? preRaw.split('.') : const []),
+        ),
       ];
 
     case '<=':
@@ -178,13 +179,13 @@ List<_Comparator> _parseToken(String raw) {
         return [_Comparator(_Op.lt, ver('${int.parse(majS) + 1}', '0', '0'))];
       }
       if (!hasPatch) {
-        return [
-          _Comparator(_Op.lt, ver(majS, '${int.parse(minS!) + 1}', '0'))
-        ];
+        return [_Comparator(_Op.lt, ver(majS, '${int.parse(minS!) + 1}', '0'))];
       }
       return [
-        _Comparator(_Op.lte, ver(majS, minS!, patS!,
-            hasPre ? preRaw.split('.') : const []))
+        _Comparator(
+          _Op.lte,
+          ver(majS, minS!, patS!, hasPre ? preRaw.split('.') : const []),
+        ),
       ];
 
     case '~':
@@ -202,9 +203,9 @@ List<_Comparator> _parseToken(String raw) {
       }
       return [
         _Comparator(
-            _Op.gte,
-            ver(majS, minS!, patS!,
-                hasPre ? preRaw.split('.') : const [])),
+          _Op.gte,
+          ver(majS, minS!, patS!, hasPre ? preRaw.split('.') : const []),
+        ),
         _Comparator(_Op.lt, ver(majS, '${int.parse(minS) + 1}', '0')),
       ];
 
@@ -234,8 +235,10 @@ List<_Comparator> _parseToken(String raw) {
           ? SemVer(maj + 1, 0, 0)
           : (min > 0 ? SemVer(0, min + 1, 0) : SemVer(0, 0, pat + 1));
       return [
-        _Comparator(_Op.gte,
-            ver(majS, minS, patS, hasPre ? preRaw.split('.') : const [])),
+        _Comparator(
+          _Op.gte,
+          ver(majS, minS, patS, hasPre ? preRaw.split('.') : const []),
+        ),
         _Comparator(_Op.lt, upper),
       ];
   }
@@ -263,12 +266,12 @@ List<List<_Comparator>> _parseRange(String range) {
   for (var set in sets.map((s) => s.trim()).toList()) {
     if (set.isEmpty) set = '*';
     // Hyphen ranges first.
-    final hyphenMatch = RegExp(
-            r'^\s*(\S+)\s+-\s+(\S+)\s*$')
-        .firstMatch(set);
+    final hyphenMatch = RegExp(r'^\s*(\S+)\s+-\s+(\S+)\s*$').firstMatch(set);
     if (hyphenMatch != null) {
-      final comps = _hyphenToComparators(hyphenMatch.group(1)!,
-          hyphenMatch.group(2)!);
+      final comps = _hyphenToComparators(
+        hyphenMatch.group(1)!,
+        hyphenMatch.group(2)!,
+      );
       result.add(comps);
       continue;
     }
@@ -299,11 +302,14 @@ List<_Comparator> _hyphenToComparators(String leftRaw, String rightRaw) {
     if (_isX(min)) {
       out.add(_Comparator(_Op.gte, SemVer(int.parse(maj), 0, 0)));
     } else if (_isX(pat)) {
-      out.add(
-          _Comparator(_Op.gte, SemVer(int.parse(maj), int.parse(min!), 0)));
+      out.add(_Comparator(_Op.gte, SemVer(int.parse(maj), int.parse(min!), 0)));
     } else {
-      out.add(_Comparator(_Op.gte,
-          SemVer(int.parse(maj), int.parse(min!), int.parse(pat!), pre)));
+      out.add(
+        _Comparator(
+          _Op.gte,
+          SemVer(int.parse(maj), int.parse(min!), int.parse(pat!), pre),
+        ),
+      );
     }
   }
 
@@ -318,11 +324,16 @@ List<_Comparator> _hyphenToComparators(String leftRaw, String rightRaw) {
     if (_isX(min)) {
       out.add(_Comparator(_Op.lt, SemVer(int.parse(maj) + 1, 0, 0)));
     } else if (_isX(pat)) {
-      out.add(_Comparator(
-          _Op.lt, SemVer(int.parse(maj), int.parse(min!) + 1, 0)));
+      out.add(
+        _Comparator(_Op.lt, SemVer(int.parse(maj), int.parse(min!) + 1, 0)),
+      );
     } else {
-      out.add(_Comparator(_Op.lte,
-          SemVer(int.parse(maj), int.parse(min!), int.parse(pat!), pre)));
+      out.add(
+        _Comparator(
+          _Op.lte,
+          SemVer(int.parse(maj), int.parse(min!), int.parse(pat!), pre),
+        ),
+      );
     }
   }
   return out;
@@ -348,8 +359,7 @@ bool satisfies(SemVer version, String range) {
     }
     if (!ok) continue;
     if (version.isPrerelease) {
-      final allowed =
-          set.any((c) => c.allowsPrereleaseOf(version));
+      final allowed = set.any((c) => c.allowsPrereleaseOf(version));
       if (!allowed) continue;
     }
     return true;

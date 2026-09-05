@@ -1,7 +1,12 @@
 import 'dart:convert' show jsonDecode;
 
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
-    show Bundle, BundleMetadata, BundlePatchArtifact, Platform, getBundlePatches;
+    show
+        Bundle,
+        BundleMetadata,
+        BundlePatchArtifact,
+        Platform,
+        getBundlePatches;
 
 import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
     show buildBundlePatchId, normalizeMetadata;
@@ -67,14 +72,15 @@ Bundle transformRowToBundle(
   final metadata = rawMetadata == null
       ? null
       : BundleMetadata.fromJson(rawMetadata.cast<String, dynamic>());
-  final patches = patchRows
-      .toList()
+  final patches = patchRows.toList()
     ..sort(
       (left, right) =>
-          (left['order_index'] as num? ?? 0)
-              .compareTo(right['order_index'] as num? ?? 0) +
-          (left['base_bundle_id'] as String? ?? '')
-              .compareTo(right['base_bundle_id'] as String? ?? ''),
+          (left['order_index'] as num? ?? 0).compareTo(
+            right['order_index'] as num? ?? 0,
+          ) +
+          (left['base_bundle_id'] as String? ?? '').compareTo(
+            right['base_bundle_id'] as String? ?? '',
+          ),
     );
 
   final bundlePatches = patches.map((patch) {

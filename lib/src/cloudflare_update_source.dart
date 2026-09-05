@@ -4,6 +4,7 @@ import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
 import 'package:flutter_ota_kit_cloudflare/flutter_ota_kit_cloudflare.dart'
     show d1Database, r2Storage, D1DatabaseConfig, R2S3StorageConfig;
+
 import 'shared_update_check.dart';
 
 /// Configuration for a **Cloudflare** update source.

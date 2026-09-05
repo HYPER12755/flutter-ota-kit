@@ -29,13 +29,13 @@ sealed class GetBundlesArgs {
   UpdateStrategy get updateStrategy => _updateStrategy;
 
   Map<String, dynamic> toJson() => {
-        '_updateStrategy': _updateStrategy.value,
-        'platform': platform.value,
-        'bundleId': bundleId,
-        if (minBundleId != nilUuid) 'minBundleId': minBundleId,
-        if (channel != 'production') 'channel': channel,
-        if (cohort != null) 'cohort': cohort,
-      };
+    '_updateStrategy': _updateStrategy.value,
+    'platform': platform.value,
+    'bundleId': bundleId,
+    if (minBundleId != nilUuid) 'minBundleId': minBundleId,
+    if (channel != 'production') 'channel': channel,
+    if (cohort != null) 'cohort': cohort,
+  };
 }
 
 class FingerprintGetBundlesArgs extends GetBundlesArgs {
@@ -52,9 +52,9 @@ class FingerprintGetBundlesArgs extends GetBundlesArgs {
 
   @override
   Map<String, dynamic> toJson() => {
-        ...super.toJson(),
-        'fingerprintHash': fingerprintHash,
-      };
+    ...super.toJson(),
+    'fingerprintHash': fingerprintHash,
+  };
 }
 
 class AppVersionGetBundlesArgs extends GetBundlesArgs {
@@ -72,7 +72,7 @@ class AppVersionGetBundlesArgs extends GetBundlesArgs {
 
   @override
   Map<String, dynamic> toJson() => {
-        ...super.toJson(),
-        'appVersion': appVersion,
-      };
+    ...super.toJson(),
+    'appVersion': appVersion,
+  };
 }

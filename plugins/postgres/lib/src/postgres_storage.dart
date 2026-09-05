@@ -29,7 +29,8 @@ class PostgresStorageConfig {
 
 /// Resolves the storage client for a config (test seam via [PostgresConfig.clientFactory]).
 PostgresClientLike resolvePostgresStorageClient(PostgresStorageConfig config) =>
-    config.db.clientFactory?.call(config.db) ?? PostgresClient.connect(config.db);
+    config.db.clientFactory?.call(config.db) ??
+    PostgresClient.connect(config.db);
 
 String _storageUri(String key, String? servingBaseUrl) {
   if (servingBaseUrl != null && servingBaseUrl.isNotEmpty) {
@@ -52,8 +53,9 @@ String _strip(String storageUri, String? servingBaseUrl) {
     return storageUri.substring('postgres://'.length);
   }
   if (servingBaseUrl != null && storageUri.startsWith(servingBaseUrl)) {
-    final base =
-        servingBaseUrl.endsWith('/') ? servingBaseUrl : '$servingBaseUrl/';
+    final base = servingBaseUrl.endsWith('/')
+        ? servingBaseUrl
+        : '$servingBaseUrl/';
     return storageUri.startsWith(base)
         ? storageUri.substring(base.length)
         : storageUri;
@@ -71,8 +73,7 @@ NodeStorageProfile createPostgresNodeProfile(
   PostgresClientLike client,
   String? basePath,
   String? servingBaseUrl,
-) =>
-    _PostgresNodeProfile(client, basePath, servingBaseUrl);
+) => _PostgresNodeProfile(client, basePath, servingBaseUrl);
 
 class _PostgresNodeProfile implements NodeStorageProfile {
   _PostgresNodeProfile(this._client, this._basePath, this._servingBaseUrl);
@@ -92,11 +93,7 @@ class _PostgresNodeProfile implements NodeStorageProfile {
       'INSERT INTO flutter_ota_kit_storage (key, data, content_type) '
       'VALUES (@key, @data, @ct) '
       'ON CONFLICT (key) DO UPDATE SET data = EXCLUDED.data, content_type = EXCLUDED.content_type',
-      {
-        '@key': fullKey,
-        '@data': bytes,
-        '@ct': _contentType(fullKey),
-      },
+      {'@key': fullKey, '@data': bytes, '@ct': _contentType(fullKey)},
     );
     return {'storageUri': _storageUri(fullKey, _servingBaseUrl)};
   }
@@ -164,8 +161,7 @@ class _PostgresNodeProfile implements NodeStorageProfile {
 RuntimeStorageProfile createPostgresRuntimeProfile(
   PostgresClientLike client,
   String? servingBaseUrl,
-) =>
-    _PostgresRuntimeProfile(client, servingBaseUrl);
+) => _PostgresRuntimeProfile(client, servingBaseUrl);
 
 class _PostgresRuntimeProfile implements RuntimeStorageProfile {
   _PostgresRuntimeProfile(this._client, this._servingBaseUrl);
@@ -182,7 +178,12 @@ class _PostgresRuntimeProfile implements RuntimeStorageProfile {
         'from the `flutter_ota_kit_storage` table.',
       );
     }
-    return {'fileUrl': _storageUri(_strip(storageUri, _servingBaseUrl), _servingBaseUrl)};
+    return {
+      'fileUrl': _storageUri(
+        _strip(storageUri, _servingBaseUrl),
+        _servingBaseUrl,
+      ),
+    };
   }
 
   @override
@@ -205,7 +206,11 @@ StoragePlugin Function(PostgresStorageConfig) postgresStorage =
       factory: (cfg) {
         final client = resolvePostgresStorageClient(cfg);
         return (
-          node: createPostgresNodeProfile(client, cfg.basePath, cfg.servingBaseUrl),
+          node: createPostgresNodeProfile(
+            client,
+            cfg.basePath,
+            cfg.servingBaseUrl,
+          ),
           runtime: createPostgresRuntimeProfile(client, cfg.servingBaseUrl),
         );
       },

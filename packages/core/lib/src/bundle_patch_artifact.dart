@@ -14,24 +14,23 @@ class BundlePatchArtifact {
     required this.patchStorageUri,
   });
 
-  factory BundlePatchArtifact.fromJson(Map<String, dynamic> j) =>
-      BundlePatchArtifact(
-        baseBundleId:
-            j['baseBundleId'] as String? ?? j['base_bundle_id'] as String,
-        baseFileHash:
-            j['baseFileHash'] as String? ?? j['base_file_hash'] as String,
-        patchFileHash:
-            j['patchFileHash'] as String? ?? j['patch_file_hash'] as String,
-        patchStorageUri: j['patchStorageUri'] as String? ??
-            j['patch_storage_uri'] as String,
-      );
+  factory BundlePatchArtifact.fromJson(
+    Map<String, dynamic> j,
+  ) => BundlePatchArtifact(
+    baseBundleId: j['baseBundleId'] as String? ?? j['base_bundle_id'] as String,
+    baseFileHash: j['baseFileHash'] as String? ?? j['base_file_hash'] as String,
+    patchFileHash:
+        j['patchFileHash'] as String? ?? j['patch_file_hash'] as String,
+    patchStorageUri:
+        j['patchStorageUri'] as String? ?? j['patch_storage_uri'] as String,
+  );
 
   Map<String, dynamic> toJson() => {
-        'baseBundleId': baseBundleId,
-        'baseFileHash': baseFileHash,
-        'patchFileHash': patchFileHash,
-        'patchStorageUri': patchStorageUri,
-      };
+    'baseBundleId': baseBundleId,
+    'baseFileHash': baseFileHash,
+    'patchFileHash': patchFileHash,
+    'patchStorageUri': patchStorageUri,
+  };
 
   @override
   bool operator ==(Object o) =>

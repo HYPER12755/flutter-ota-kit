@@ -31,13 +31,13 @@ class _UpdateInfoRow {
   });
 
   factory _UpdateInfoRow.fromJson(Map<String, dynamic> row) => _UpdateInfoRow(
-        id: row['id'] as String,
-        shouldForceUpdate: row['should_force_update'] as bool,
-        message: row['message'] as String?,
-        status: row['status'] as String,
-        storageUri: row['storage_uri'] as String?,
-        fileHash: row['file_hash'] as String?,
-      );
+    id: row['id'] as String,
+    shouldForceUpdate: row['should_force_update'] as bool,
+    message: row['message'] as String?,
+    status: row['status'] as String,
+    storageUri: row['storage_uri'] as String?,
+    fileHash: row['file_hash'] as String?,
+  );
 
   final String id;
   final bool shouldForceUpdate;
@@ -48,13 +48,15 @@ class _UpdateInfoRow {
 }
 
 UpdateInfo mapUpdateInfoRow(_UpdateInfoRow row) => UpdateInfo(
-      id: row.id,
-      shouldForceUpdate: row.shouldForceUpdate,
-      message: row.message,
-      status: row.status == 'ROLLBACK' ? UpdateStatus.rollback : UpdateStatus.update,
-      storageUri: row.storageUri,
-      fileHash: row.fileHash,
-    );
+  id: row.id,
+  shouldForceUpdate: row.shouldForceUpdate,
+  message: row.message,
+  status: row.status == 'ROLLBACK'
+      ? UpdateStatus.rollback
+      : UpdateStatus.update,
+  storageUri: row.storageUri,
+  fileHash: row.fileHash,
+);
 
 /// Resolve update info via the Postgres RPCs.
 Future<UpdateInfo?> getUpdateInfo(

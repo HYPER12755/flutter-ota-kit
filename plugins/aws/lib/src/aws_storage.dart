@@ -2,9 +2,8 @@ import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
     show createUniversalStoragePlugin;
 
 import 'aws_config.dart' show AwsS3StorageConfig;
-import 'aws_storage_profile.dart' show
-    createS3RuntimeStorageProfile,
-    createS3StorageProfile;
+import 'aws_storage_profile.dart'
+    show createS3RuntimeStorageProfile, createS3StorageProfile;
 
 /// AWS S3 storage plugin (faithful port of hot-updater `s3Storage.ts`).
 ///

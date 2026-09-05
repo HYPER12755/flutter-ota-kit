@@ -54,10 +54,7 @@ class MockPostgresClient implements PostgresClientLike {
   @override
   Future<void> close() async {}
 
-  List<Map<String, dynamic>> _handle(
-    String sql,
-    Map<String, dynamic> params,
-  ) {
+  List<Map<String, dynamic>> _handle(String sql, Map<String, dynamic> params) {
     if (sql.contains('get_target_app_version_list')) {
       return _targetAppVersionList(params);
     }
@@ -106,13 +103,17 @@ class MockPostgresClient implements PostgresClientLike {
       store.storageObjects[key] = data is List<int>
           ? data
           : data is Uint8List
-              ? data
-              : <int>[];
+          ? data
+          : <int>[];
       return [];
     }
     if (sql.contains('SELECT 1 FROM flutter_ota_kit_storage')) {
       final key = params['@key'] as String;
-      return store.storageObjects.containsKey(key) ? [{'1': 1}] : [];
+      return store.storageObjects.containsKey(key)
+          ? [
+              {'1': 1},
+            ]
+          : [];
     }
     if (sql.contains('DELETE FROM flutter_ota_kit_storage')) {
       final key = params['@key'] as String;
@@ -131,10 +132,7 @@ class MockPostgresClient implements PostgresClientLike {
       final prefix = (params['@prefix'] as String?) ?? '';
       return store.storageObjects.keys
           .where((k) => k.startsWith(prefix))
-          .map((k) => {
-                'key': k,
-                'size': store.storageObjects[k]!.length,
-              })
+          .map((k) => {'key': k, 'size': store.storageObjects[k]!.length})
           .toList();
     }
     return [];
@@ -176,7 +174,8 @@ class MockPostgresClient implements PostgresClientLike {
     var rows = _filterBundles(sql, params);
 
     if (sql.contains('ORDER BY id asc')) {
-      rows = rows.toList()..sort((a, b) => (a['id'] as String).compareTo(b['id'] as String));
+      rows = rows.toList()
+        ..sort((a, b) => (a['id'] as String).compareTo(b['id'] as String));
     } else {
       rows = rows.toList()
         ..sort((a, b) => (b['id'] as String).compareTo(a['id'] as String));
@@ -200,13 +199,18 @@ class MockPostgresClient implements PostgresClientLike {
   }
 
   List<Map<String, dynamic>> _channels() {
-    final channels = store.bundleRows.map((r) => r['channel'] as String).toSet().toList();
+    final channels = store.bundleRows
+        .map((r) => r['channel'] as String)
+        .toSet()
+        .toList();
     return channels.map((c) => {'channel': c}).toList();
   }
 
   List<Map<String, dynamic>> _patchesForIds(Map<String, dynamic> params) {
     final ids = (params['bundle_ids'] as List).cast<String>();
-    return store.bundlePatchRows.where((p) => ids.contains(p['bundle_id'])).toList();
+    return store.bundlePatchRows
+        .where((p) => ids.contains(p['bundle_id']))
+        .toList();
   }
 
   void _upsertBundle(Map<String, dynamic> params) {
@@ -223,7 +227,9 @@ class MockPostgresClient implements PostgresClientLike {
   void _upsertPatch(Map<String, dynamic> params) {
     final row = <String, dynamic>{};
     params.forEach((k, v) => row[k] = v);
-    final existing = store.bundlePatchRows.indexWhere((r) => r['id'] == row['id']);
+    final existing = store.bundlePatchRows.indexWhere(
+      (r) => r['id'] == row['id'],
+    );
     if (existing >= 0) {
       store.bundlePatchRows[existing] = row;
     } else {
@@ -248,14 +254,24 @@ class MockPostgresClient implements PostgresClientLike {
     final existed = store.bundleRows.any((r) => r['id'] == id);
     store.bundleRows.removeWhere((r) => r['id'] == id);
     store.bundlePatchRows.removeWhere((p) => p['bundle_id'] == id);
-    return existed ? [{'id': id}] : [];
+    return existed
+        ? [
+            {'id': id},
+          ]
+        : [];
   }
 
-  List<Map<String, dynamic>> _targetAppVersionList(Map<String, dynamic> params) {
+  List<Map<String, dynamic>> _targetAppVersionList(
+    Map<String, dynamic> params,
+  ) {
     final platform = params['app_platform'];
     final min = params['min_bundle_id'] as String? ?? '';
     final versions = store.bundleRows
-        .where((r) => r['platform'] == platform && (r['id'] as String).compareTo(min) >= 0)
+        .where(
+          (r) =>
+              r['platform'] == platform &&
+              (r['id'] as String).compareTo(min) >= 0,
+        )
         .map((r) => r['target_app_version'])
         .where((v) => v != null)
         .toSet()
@@ -272,44 +288,53 @@ class MockPostgresClient implements PostgresClientLike {
     return matches.isEmpty ? null : matches.first;
   }
 
-  List<Map<String, dynamic>> _updateInfoByAppVersion(Map<String, dynamic> params) {
+  List<Map<String, dynamic>> _updateInfoByAppVersion(
+    Map<String, dynamic> params,
+  ) {
     final platform = params['app_platform'];
     final channel = params['target_channel'];
     final min = params['min_bundle_id'] as String? ?? '';
-    final list = (params['target_app_version_list'] as List?)?.cast<String>() ?? [];
-    final row = _newestMatch((r) =>
-        r['platform'] == platform &&
-        r['enabled'] == true &&
-        r['channel'] == channel &&
-        (r['id'] as String).compareTo(min) >= 0 &&
-        list.contains(r['target_app_version']));
+    final list =
+        (params['target_app_version_list'] as List?)?.cast<String>() ?? [];
+    final row = _newestMatch(
+      (r) =>
+          r['platform'] == platform &&
+          r['enabled'] == true &&
+          r['channel'] == channel &&
+          (r['id'] as String).compareTo(min) >= 0 &&
+          list.contains(r['target_app_version']),
+    );
     if (row == null) return [];
     return [_infoRow(row)];
   }
 
-  List<Map<String, dynamic>> _updateInfoByFingerprint(Map<String, dynamic> params) {
+  List<Map<String, dynamic>> _updateInfoByFingerprint(
+    Map<String, dynamic> params,
+  ) {
     final platform = params['app_platform'];
     final channel = params['target_channel'];
     final min = params['min_bundle_id'] as String? ?? '';
     final fp = params['target_fingerprint_hash'];
-    final row = _newestMatch((r) =>
-        r['platform'] == platform &&
-        r['enabled'] == true &&
-        r['channel'] == channel &&
-        (r['id'] as String).compareTo(min) >= 0 &&
-        r['fingerprint_hash'] == fp);
+    final row = _newestMatch(
+      (r) =>
+          r['platform'] == platform &&
+          r['enabled'] == true &&
+          r['channel'] == channel &&
+          (r['id'] as String).compareTo(min) >= 0 &&
+          r['fingerprint_hash'] == fp,
+    );
     if (row == null) return [];
     return [_infoRow(row)];
   }
 
   Map<String, dynamic> _infoRow(Map<String, dynamic> row) => {
-        'id': row['id'],
-        'should_force_update': row['should_force_update'],
-        'message': row['message'],
-        'status': 'UPDATE',
-        'storage_uri': row['storage_uri'],
-        'file_hash': row['file_hash'],
-      };
+    'id': row['id'],
+    'should_force_update': row['should_force_update'],
+    'message': row['message'],
+    'status': 'UPDATE',
+    'storage_uri': row['storage_uri'],
+    'file_hash': row['file_hash'],
+  };
 }
 
 class _TxClient implements PostgresClientLike {
@@ -321,8 +346,7 @@ class _TxClient implements PostgresClientLike {
   Future<List<Map<String, dynamic>>> execute(
     String sql,
     Map<String, dynamic> parameters,
-  ) =>
-      _parent.execute(sql, parameters);
+  ) => _parent.execute(sql, parameters);
 
   @override
   Future<T> runTx<T>(Future<T> Function(PostgresClientLike tx) fn) =>
@@ -334,10 +358,10 @@ class _TxClient implements PostgresClientLike {
 
 /// Build a [PostgresConfig] wired to [MockPostgresClient].
 PostgresConfig mockPostgresConfig(Store store) => PostgresConfig(
-      host: 'mock',
-      database: 'mock',
-      clientFactory: (_) => MockPostgresClient(store),
-    );
+  host: 'mock',
+  database: 'mock',
+  clientFactory: (_) => MockPostgresClient(store),
+);
 
 /// Create a [DatabasePlugin] backed by the mock store.
 DatabasePlugin newPlugin({Store? store}) {

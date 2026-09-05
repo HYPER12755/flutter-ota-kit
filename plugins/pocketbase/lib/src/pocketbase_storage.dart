@@ -33,16 +33,15 @@ class PocketBaseStorageConfig {
   final PocketBaseClientFactory? clientFactory;
 }
 
-/// Parse a `pb://bundles/<recordId>/<filename>` URI back into its parts.
+/// Parse a `pb://bundles/{recordId}/{filename}` URI back into its parts.
 ({String recordId, String filename, String? bucket})? parsePocketBaseStorageUri(
   String storageUri,
 ) {
-  // Accepts both `pb://<bucket>/<id>/<file>` and `pb:///<id>/<file>` (no
+  // Accepts both `pb://{bucket}/{id}/{file}` and `pb:///{id}/{file}` (no
   // bucket). The leading double-slash with an optional bucket prefix is
   // matched explicitly.
-  final match = RegExp(r'^pb://(?:([^/]*)/)?([^/]+)/(.+)$').firstMatch(
-        storageUri,
-      );
+  final match = RegExp(r'^pb://(?:([^/]*)/)?([^/]+)/(.+)$')
+      .firstMatch(storageUri);
   if (match == null) return null;
   final bucket = match.group(1);
   return (
@@ -53,9 +52,11 @@ class PocketBaseStorageConfig {
 }
 
 /// Stringify a PocketBase file storage URI.
-String buildPocketBaseStorageUri(String recordId, String filename,
-        [String? bucket]) =>
-    'pb://${bucket ?? ''}/${recordId}/$filename';
+String buildPocketBaseStorageUri(
+  String recordId,
+  String filename, [
+  String? bucket,
+]) => 'pb://${bucket ?? ''}/${recordId}/$filename';
 
 /// PocketBase-backed [StoragePlugin].
 class _PocketBaseStorage implements StoragePlugin {
@@ -72,9 +73,9 @@ class _PocketBaseStorage implements StoragePlugin {
 
   @override
   StoragePluginProfiles get profiles => StoragePluginProfiles(
-        node: _PocketBaseNodeStorage(this),
-        runtime: _PocketBaseRuntimeStorage(this),
-      );
+    node: _PocketBaseNodeStorage(this),
+    runtime: _PocketBaseRuntimeStorage(this),
+  );
 }
 
 /// Runtime profile: URL-oriented operations used by the device SDK
@@ -103,10 +104,7 @@ class _PocketBaseRuntimeStorage implements RuntimeStorageProfile {
       parsed.filename,
       token.isEmpty ? null : token,
     );
-    return {
-      'fileUrl': url,
-      'storageUri': storageUri,
-    };
+    return {'fileUrl': url, 'storageUri': storageUri};
   }
 
   @override
@@ -152,20 +150,16 @@ class _PocketBaseNodeStorage implements NodeStorageProfile {
       recordId,
     );
     if (!existing) {
-      await _client.createRecord<dynamic>(
-        _config.bundlesCollection,
-        {
-          'id': recordId,
-          'channel': 'pending',
-          'platform': 'android',
-          'enabled': false,
-          'should_force_update': false,
-          'file_hash': '',
-          'storage_uri': '',
-          'rollout_cohort_count': 1000,
-        },
-        (j) => j,
-      );
+      await _client.createRecord<dynamic>(_config.bundlesCollection, {
+        'id': recordId,
+        'channel': 'pending',
+        'platform': 'android',
+        'enabled': false,
+        'should_force_update': false,
+        'file_hash': '',
+        'storage_uri': '',
+        'rollout_cohort_count': 1000,
+      }, (j) => j);
     }
     await _client.uploadFile<dynamic>(
       _config.bundlesCollection,
@@ -176,10 +170,7 @@ class _PocketBaseNodeStorage implements NodeStorageProfile {
       fromJson: (j) => j,
     );
     final uri = buildPocketBaseStorageUri(recordId, filename);
-    return {
-      'key': _fullKey(key),
-      'storageUri': uri,
-    };
+    return {'key': _fullKey(key), 'storageUri': uri};
   }
 
   @override
@@ -253,7 +244,11 @@ class _PocketBaseNodeStorage implements NodeStorageProfile {
 /// Build a `pocketbaseStorage` plugin.
 StoragePlugin pocketbaseStorage(PocketBaseStorageConfig config) {
   final client = config.clientFactory != null
-      ? config.clientFactory!(config.url, config.adminEmail, config.adminPassword)
+      ? config.clientFactory!(
+          config.url,
+          config.adminEmail,
+          config.adminPassword,
+        )
       : PocketBaseClient(config.url);
   client.adminCredentials(config.adminEmail, config.adminPassword);
   return _PocketBaseStorage(config, client);

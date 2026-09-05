@@ -20,11 +20,11 @@ class UpdateBundleParams {
   });
 
   Map<String, dynamic> toJson() => {
-        'platform': platform.value,
-        'bundleId': bundleId,
-        'minBundleId': minBundleId,
-        'channel': channel,
-        'appVersion': appVersion,
-        if (fingerprintHash != null) 'fingerprintHash': fingerprintHash,
-      };
+    'platform': platform.value,
+    'bundleId': bundleId,
+    'minBundleId': minBundleId,
+    'channel': channel,
+    'appVersion': appVersion,
+    if (fingerprintHash != null) 'fingerprintHash': fingerprintHash,
+  };
 }

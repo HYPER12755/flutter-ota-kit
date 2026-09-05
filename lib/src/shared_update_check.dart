@@ -14,6 +14,7 @@ import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
 import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
     show DatabasePlugin, StoragePlugin;
+
 import 'patch_info.dart' show PatchInfo;
 import 'app_version_resolver.dart';
 
@@ -47,7 +48,8 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
   String? currentBundleId,
   Duration timeout = const Duration(seconds: 10),
 }) async {
-  final bundleId = (currentBundleId != null && _uuidRe.hasMatch(currentBundleId))
+  final bundleId =
+      (currentBundleId != null && _uuidRe.hasMatch(currentBundleId))
       ? currentBundleId
       : nilUuid;
 
@@ -71,7 +73,9 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
     );
   }
 
-  final UpdateInfo? info = await db.getUpdateInfo(args).timeout(
+  final UpdateInfo? info = await db
+      .getUpdateInfo(args)
+      .timeout(
         timeout,
         onTimeout: () => throw TimeoutException(
           'update check timed out after ${timeout.inSeconds}s while querying the backend',
@@ -86,7 +90,9 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
 
   final runtime = storage.profiles.runtime;
   if (runtime == null) return ServerUpdateResult.upToDate();
-  final dl = await runtime.getDownloadUrl(storageUri).timeout(
+  final dl = await runtime
+      .getDownloadUrl(storageUri)
+      .timeout(
         timeout,
         onTimeout: () => throw TimeoutException(
           'update check timed out after ${timeout.inSeconds}s while minting the download URL',

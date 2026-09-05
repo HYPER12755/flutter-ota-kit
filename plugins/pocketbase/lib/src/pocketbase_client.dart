@@ -26,18 +26,11 @@ typedef PocketBaseClientFactory = PocketBaseClient Function(
 /// Authenticates with the admin collection to obtain a long-lived auth token,
 /// then exposes typed helpers for CRUD on collections and file storage.
 class PocketBaseClient {
-  PocketBaseClient._(
-    this._baseUrl,
-    this._token,
-    this._http,
-  );
+  PocketBaseClient._(this._baseUrl, this._token, this._http);
 
   /// Build a client (unauthenticated). Call [adminCredentials] and
   /// [authenticate] before use, or rely on lazy auth.
-  factory PocketBaseClient(
-    String baseUrl, {
-    http.Client? httpClient,
-  }) =>
+  factory PocketBaseClient(String baseUrl, {http.Client? httpClient}) =>
       PocketBaseClient._(
         _normalizeUrl(baseUrl),
         '',
@@ -92,9 +85,9 @@ class PocketBaseClient {
   Future<void>? _authInFlight;
 
   Map<String, String> get _authHeaders => {
-        'content-type': 'application/json',
-        'authorization': _token,
-      };
+    'content-type': 'application/json',
+    'authorization': _token,
+  };
 
   Future<void> _ensureAuth() {
     if (_token.isNotEmpty) return Future.value();
@@ -262,11 +255,9 @@ class PocketBaseClient {
     );
     req.headers['authorization'] = _token;
     if (extraFields != null) req.fields.addAll(extraFields);
-    req.files.add(http.MultipartFile.fromBytes(
-      fieldName,
-      bytes,
-      filename: filename,
-    ));
+    req.files.add(
+      http.MultipartFile.fromBytes(fieldName, bytes, filename: filename),
+    );
     final streamed = await req.send();
     final res = await http.Response.fromStream(streamed);
     if (res.statusCode != 200) {
@@ -290,8 +281,12 @@ class PocketBaseClient {
   }
 
   /// Build a public download URL for a record's file field.
-  String fileUrl(String collection, String recordId, String filename,
-      [String? token]) {
+  String fileUrl(
+    String collection,
+    String recordId,
+    String filename, [
+    String? token,
+  ]) {
     final t = token == null ? '' : '?token=$token';
     return '$_baseUrl/api/files/$collection/$recordId/$filename$t';
   }

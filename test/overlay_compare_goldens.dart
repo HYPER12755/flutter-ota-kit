@@ -45,11 +45,13 @@ class _V1DotSpinnerState extends State<_V1DotSpinner>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 800),
-    )..addListener(_tick)
-     ..repeat();
+    _controller =
+        AnimationController(
+            vsync: this,
+            duration: const Duration(milliseconds: 800),
+          )
+          ..addListener(_tick)
+          ..repeat();
   }
 
   void _tick() {
@@ -65,15 +67,15 @@ class _V1DotSpinnerState extends State<_V1DotSpinner>
 
   @override
   Widget build(BuildContext context) => Text(
-        _v1Spinner[_index],
-        style: TextStyle(
-          fontSize: 22,
-          height: 1,
-          fontWeight: FontWeight.bold,
-          color: widget.color,
-          fontFamily: 'monospace',
-        ),
-      );
+    _v1Spinner[_index],
+    style: TextStyle(
+      fontSize: 22,
+      height: 1,
+      fontWeight: FontWeight.bold,
+      color: widget.color,
+      fontFamily: 'monospace',
+    ),
+  );
 }
 
 class _V1Overlay extends StatelessWidget {
@@ -92,7 +94,9 @@ class _V1Overlay extends StatelessWidget {
     final scheme = theme.colorScheme;
     final phaseText = state.hasError
         ? 'Update failed'
-        : (state.phase != null ? _phaseLabel[state.phase]! : 'Preparing update');
+        : (state.phase != null
+              ? _phaseLabel[state.phase]!
+              : 'Preparing update');
     final pct = state.fraction;
     final pctText = pct != null ? '${(pct * 100).toStringAsFixed(0)}%' : null;
     return Material(
@@ -119,13 +123,15 @@ class _V1Overlay extends StatelessWidget {
               Row(
                 children: [
                   _V1DotSpinner(
-                      color: state.hasError ? scheme.error : scheme.primary),
+                    color: state.hasError ? scheme.error : scheme.primary,
+                  ),
                   const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       phaseText,
-                      style: theme.textTheme.titleMedium
-                          ?.copyWith(fontWeight: FontWeight.w600),
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                   ),
                   if (pctText != null)
@@ -145,9 +151,9 @@ class _V1Overlay extends StatelessWidget {
                   value: pct,
                   minHeight: 6,
                   backgroundColor: scheme.onSurface.withValues(alpha: 0.12),
-                  valueColor:
-                      AlwaysStoppedAnimation(
-                          state.hasError ? scheme.error : scheme.primary),
+                  valueColor: AlwaysStoppedAnimation(
+                    state.hasError ? scheme.error : scheme.primary,
+                  ),
                 ),
               ),
               if (state.message != null && state.message!.isNotEmpty) ...[
@@ -198,9 +204,10 @@ class _Compare extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     const Center(
-                      child: Text('v1 (old)',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.black45)),
+                      child: Text(
+                        'v1 (old)',
+                        style: TextStyle(fontSize: 12, color: Colors.black45),
+                      ),
                     ),
                     _V1Overlay(state: v1State),
                   ],
@@ -211,9 +218,10 @@ class _Compare extends StatelessWidget {
                   fit: StackFit.expand,
                   children: [
                     const Center(
-                      child: Text('v2 (new)',
-                          style: TextStyle(
-                              fontSize: 12, color: Colors.black45)),
+                      child: Text(
+                        'v2 (new)',
+                        style: TextStyle(fontSize: 12, color: Colors.black45),
+                      ),
                     ),
                     OtaProgressOverlay(state: ValueNotifier(v2State)),
                   ],
@@ -228,12 +236,12 @@ class _Compare extends StatelessWidget {
 }
 
 OtaOverlayState _v2FromV1(_V1OtaOverlayState v1) => OtaOverlayState(
-      phase: v1.phase,
-      fraction: v1.fraction,
-      message: v1.message,
-      hasError: v1.hasError,
-      errorText: v1.errorText,
-    );
+  phase: v1.phase,
+  fraction: v1.fraction,
+  message: v1.message,
+  hasError: v1.hasError,
+  errorText: v1.errorText,
+);
 
 void main() {
   // Use a deterministic size so the goldens are reproducible across machines.
@@ -255,9 +263,7 @@ void main() {
       targetVersion: '1.0.1',
       message: 'New onboarding flow',
     );
-    await tester.pumpWidget(
-      _Compare(v1State: v1, v2State: v2),
-    );
+    await tester.pumpWidget(_Compare(v1State: v1, v2State: v2));
     await tester.pump(const Duration(milliseconds: 80));
     await expectLater(
       find.byType(MaterialApp),
@@ -278,9 +284,7 @@ void main() {
       targetVersion: '1.0.1',
       message: 'New onboarding flow',
     );
-    await tester.pumpWidget(
-      _Compare(v1State: v1, v2State: v2),
-    );
+    await tester.pumpWidget(_Compare(v1State: v1, v2State: v2));
     await tester.pump(const Duration(milliseconds: 80));
     await expectLater(
       find.byType(MaterialApp),
@@ -301,9 +305,7 @@ void main() {
       targetVersion: '1.0.1',
       message: 'Critical security fix',
     );
-    await tester.pumpWidget(
-      _Compare(v1State: v1, v2State: v2),
-    );
+    await tester.pumpWidget(_Compare(v1State: v1, v2State: v2));
     await tester.pump(const Duration(milliseconds: 80));
     await expectLater(
       find.byType(MaterialApp),
@@ -323,9 +325,7 @@ void main() {
       currentVersion: '1.0.0',
       targetVersion: '1.0.1',
     );
-    await tester.pumpWidget(
-      _Compare(v1State: v1, v2State: v2),
-    );
+    await tester.pumpWidget(_Compare(v1State: v1, v2State: v2));
     await tester.pump(const Duration(milliseconds: 80));
     await expectLater(
       find.byType(MaterialApp),

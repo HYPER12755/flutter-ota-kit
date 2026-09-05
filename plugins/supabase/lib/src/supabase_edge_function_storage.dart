@@ -32,26 +32,27 @@ ParsedStorageUri parseSupabaseEdgeStorageUri(String storageUri) =>
 /// (no node profile) backed by the Supabase client.
 final supabaseEdgeFunctionStorage =
     createRuntimeStoragePlugin<SupabaseEdgeFunctionStorageConfig>(
-  name: 'supabaseEdgeFunctionStorage',
-  supportedProtocol: 'supabase-storage',
-  factory: (config) {
-    final supabase = config.clientFactory(
-      config.supabaseUrl,
-      config.supabaseServiceRoleKey,
-    );
-    final resolveSignedUrl = createSupabaseSignedUrlBatcher(
-      createSignedUrls: (bucketName, keys, expiresIn) =>
-          supabase.storage.from(bucketName).createSignedUrls(keys, expiresIn),
-      expiresIn: config.signedUrlExpiresIn ?? 3600,
-      formatObjectPath: (bucketName, key) => '$bucketName/$key',
-    );
+      name: 'supabaseEdgeFunctionStorage',
+      supportedProtocol: 'supabase-storage',
+      factory: (config) {
+        final supabase = config.clientFactory(
+          config.supabaseUrl,
+          config.supabaseServiceRoleKey,
+        );
+        final resolveSignedUrl = createSupabaseSignedUrlBatcher(
+          createSignedUrls: (bucketName, keys, expiresIn) => supabase.storage
+              .from(bucketName)
+              .createSignedUrls(keys, expiresIn),
+          expiresIn: config.signedUrlExpiresIn ?? 3600,
+          formatObjectPath: (bucketName, key) => '$bucketName/$key',
+        );
 
-    return RuntimeStorageProfileImplEdge(
-      supabase: supabase,
-      resolveSignedUrl: resolveSignedUrl,
+        return RuntimeStorageProfileImplEdge(
+          supabase: supabase,
+          resolveSignedUrl: resolveSignedUrl,
+        );
+      },
     );
-  },
-);
 
 class RuntimeStorageProfileImplEdge implements RuntimeStorageProfile {
   RuntimeStorageProfileImplEdge({
@@ -70,8 +71,7 @@ class RuntimeStorageProfileImplEdge implements RuntimeStorageProfile {
     }
     final res = await supabase.storage.from(parsed.bucket).download(parsed.key);
     if (res.error != null) {
-      final msg = (res.message ?? errorMessage(res.error))
-          .toString();
+      final msg = (res.message ?? errorMessage(res.error)).toString();
       if (msg.contains('not found')) return null;
       throw StateError('Failed to read storage text: $msg');
     }

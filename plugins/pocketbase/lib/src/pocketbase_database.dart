@@ -20,7 +20,11 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
 
   static _PocketBaseDatabase build(PocketBaseConfig config) {
     final client = config.clientFactory != null
-        ? config.clientFactory!(config.url, config.adminEmail, config.adminPassword)
+        ? config.clientFactory!(
+            config.url,
+            config.adminEmail,
+            config.adminPassword,
+          )
         : PocketBaseClient(config.url);
     client.adminCredentials(config.adminEmail, config.adminPassword);
     return _PocketBaseDatabase(config, client);
@@ -127,8 +131,9 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
         hasPreviousPage: hasPreviousPage,
         currentPage: currentPage,
         totalPages: totalPages,
-        nextCursor:
-            list.items.isNotEmpty && hasNextPage ? list.items.last.id : null,
+        nextCursor: list.items.isNotEmpty && hasNextPage
+            ? list.items.last.id
+            : null,
         previousCursor: list.items.isNotEmpty && hasPreviousPage
             ? list.items.first.id
             : null,
@@ -139,9 +144,7 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
   // ----- Mutations (UnitOfWork) -----
 
   @override
-  Future<void> commitBundle({
-    required List<BundleChange> changedSets,
-  }) async {
+  Future<void> commitBundle({required List<BundleChange> changedSets}) async {
     for (final change in changedSets) {
       switch (change.operation) {
         case BundleChangeOperation.insert:
@@ -193,24 +196,24 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
   // ----- Helpers -----
 
   PocketBaseBundleRow _rowFromBundle(Bundle v) => PocketBaseBundleRow(
-        id: v.id,
-        channel: v.channel,
-        enabled: v.enabled,
-        platform: v.platform.value,
-        shouldForceUpdate: v.shouldForceUpdate,
-        fileHash: v.fileHash,
-        storageUri: v.storageUri,
-        rolloutCohortCount: v.rolloutCohortCount ?? 1000,
-        gitCommitHash: v.gitCommitHash,
-        message: v.message,
-        fingerprintHash: v.fingerprintHash,
-        targetAppVersion: v.targetAppVersion,
-        manifestStorageUri: v.manifestStorageUri,
-        manifestFileHash: v.manifestFileHash,
-        assetBaseStorageUri: v.assetBaseStorageUri,
-        targetCohorts: v.targetCohorts,
-        metadata: v.metadata?.toJson(),
-      );
+    id: v.id,
+    channel: v.channel,
+    enabled: v.enabled,
+    platform: v.platform.value,
+    shouldForceUpdate: v.shouldForceUpdate,
+    fileHash: v.fileHash,
+    storageUri: v.storageUri,
+    rolloutCohortCount: v.rolloutCohortCount ?? 1000,
+    gitCommitHash: v.gitCommitHash,
+    message: v.message,
+    fingerprintHash: v.fingerprintHash,
+    targetAppVersion: v.targetAppVersion,
+    manifestStorageUri: v.manifestStorageUri,
+    manifestFileHash: v.manifestFileHash,
+    assetBaseStorageUri: v.assetBaseStorageUri,
+    targetCohorts: v.targetCohorts,
+    metadata: v.metadata?.toJson(),
+  );
 
   String _buildFilter({
     String? channel,
@@ -244,31 +247,28 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
     return clauses.join(' && ');
   }
 
-  String _escape(String s) =>
-      s.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
+  String _escape(String s) => s.replaceAll(r'\', r'\\').replaceAll('"', r'\"');
 
   Map<String, dynamic> _buildUpdatePatch(Bundle v) => {
-        if (v.channel.isNotEmpty) 'channel': v.channel,
-        'enabled': v.enabled,
-        'platform': v.platform.value,
-        'should_force_update': v.shouldForceUpdate,
-        'rollout_cohort_count': v.rolloutCohortCount ?? 1000,
-        'file_hash': v.fileHash,
-        'storage_uri': v.storageUri,
-        if (v.gitCommitHash != null) 'git_commit_hash': v.gitCommitHash,
-        if (v.message != null) 'message': v.message,
-        if (v.fingerprintHash != null) 'fingerprint_hash': v.fingerprintHash,
-        if (v.targetAppVersion != null)
-          'target_app_version': v.targetAppVersion,
-        if (v.manifestStorageUri != null)
-          'manifest_storage_uri': v.manifestStorageUri,
-        if (v.manifestFileHash != null)
-          'manifest_file_hash': v.manifestFileHash,
-        if (v.assetBaseStorageUri != null)
-          'asset_base_storage_uri': v.assetBaseStorageUri,
-        if (v.targetCohorts != null) 'target_cohorts': v.targetCohorts,
-        if (v.metadata != null) 'metadata': v.metadata!.toJson(),
-      };
+    if (v.channel.isNotEmpty) 'channel': v.channel,
+    'enabled': v.enabled,
+    'platform': v.platform.value,
+    'should_force_update': v.shouldForceUpdate,
+    'rollout_cohort_count': v.rolloutCohortCount ?? 1000,
+    'file_hash': v.fileHash,
+    'storage_uri': v.storageUri,
+    if (v.gitCommitHash != null) 'git_commit_hash': v.gitCommitHash,
+    if (v.message != null) 'message': v.message,
+    if (v.fingerprintHash != null) 'fingerprint_hash': v.fingerprintHash,
+    if (v.targetAppVersion != null) 'target_app_version': v.targetAppVersion,
+    if (v.manifestStorageUri != null)
+      'manifest_storage_uri': v.manifestStorageUri,
+    if (v.manifestFileHash != null) 'manifest_file_hash': v.manifestFileHash,
+    if (v.assetBaseStorageUri != null)
+      'asset_base_storage_uri': v.assetBaseStorageUri,
+    if (v.targetCohorts != null) 'target_cohorts': v.targetCohorts,
+    if (v.metadata != null) 'metadata': v.metadata!.toJson(),
+  };
 }
 
 /// Build a `pocketbaseDatabase` plugin factory.

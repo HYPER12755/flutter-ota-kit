@@ -39,6 +39,8 @@ ParsedStorageUri parseStorageUri(String storageUri, String expectedProtocol) {
   return ParsedStorageUri(
     protocol: protocol,
     bucket: uri.host,
-    key: decodeStorageObjectKey(uri.path.startsWith('/') ? uri.path.substring(1) : uri.path),
+    key: decodeStorageObjectKey(
+      uri.path.startsWith('/') ? uri.path.substring(1) : uri.path,
+    ),
   );
 }

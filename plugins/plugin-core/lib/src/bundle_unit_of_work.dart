@@ -105,9 +105,7 @@ class BundleUnitOfWork {
       return const TrackedBundleNotFound();
     }
     final entry = _entries[bundleId];
-    return TrackedBundleFound(
-      entry is _PresentEntry ? entry.bundle : null,
-    );
+    return TrackedBundleFound(entry is _PresentEntry ? entry.bundle : null);
   }
 
   /// Deduped async lookup: returns cached entry, coalesces concurrent loads,
@@ -124,19 +122,23 @@ class BundleUnitOfWork {
     final pending = _pendingLoads[bundleId];
     if (pending != null) return pending;
 
-    final load = loadBundleById().then<Bundle?>((bundle) {
-      _pendingLoads.remove(bundleId);
-      final currentEntry = _entries[bundleId];
-      if (currentEntry != null) {
-        return currentEntry is _PresentEntry ? currentEntry.bundle : null;
-      }
-      _entries[bundleId] =
-          bundle != null ? _PresentEntry(bundle) : const _MissingEntry();
-      return bundle;
-    }, onError: (Object error) {
-      _pendingLoads.remove(bundleId);
-      throw error;
-    });
+    final load = loadBundleById().then<Bundle?>(
+      (bundle) {
+        _pendingLoads.remove(bundleId);
+        final currentEntry = _entries[bundleId];
+        if (currentEntry != null) {
+          return currentEntry is _PresentEntry ? currentEntry.bundle : null;
+        }
+        _entries[bundleId] = bundle != null
+            ? _PresentEntry(bundle)
+            : const _MissingEntry();
+        return bundle;
+      },
+      onError: (Object error) {
+        _pendingLoads.remove(bundleId);
+        throw error;
+      },
+    );
     _pendingLoads[bundleId] = load;
     return load;
   }
@@ -177,9 +179,7 @@ class BundleUnitOfWork {
       }
     }
 
-    return sortBundles(dataById.values.toList(), orderBy)
-        .take(limit)
-        .toList();
+    return sortBundles(dataById.values.toList(), orderBy).take(limit).toList();
   }
 
   void markInsert(Bundle bundle) {
@@ -199,7 +199,8 @@ class BundleUnitOfWork {
     _changes[bundle.id] = _TrackedBundleChange(
       operation: op,
       data: bundle,
-      before: prev?.before ??
+      before:
+          prev?.before ??
           (prevEntry is _PresentEntry ? prevEntry.bundle : null),
     );
   }
@@ -211,7 +212,8 @@ class BundleUnitOfWork {
     _changes[bundle.id] = _TrackedBundleChange(
       operation: BundleChangeOperation.delete,
       data: bundle,
-      before: prev?.before ??
+      before:
+          prev?.before ??
           (prevEntry is _PresentEntry ? prevEntry.bundle : bundle),
     );
   }
@@ -226,9 +228,11 @@ class BundleUnitOfWork {
 
   int listFetchExtraCount() {
     return _changes.values
-        .where((c) =>
-            c.operation == BundleChangeOperation.update ||
-            c.operation == BundleChangeOperation.delete)
+        .where(
+          (c) =>
+              c.operation == BundleChangeOperation.update ||
+              c.operation == BundleChangeOperation.delete,
+        )
         .length;
   }
 
@@ -237,10 +241,11 @@ class BundleUnitOfWork {
     for (final change in _changes.values) {
       if (change.operation == BundleChangeOperation.insert) continue;
       final matchedBefore =
-          change.before != null && bundleMatchesQueryWhere(change.before!, where);
+          change.before != null &&
+          bundleMatchesQueryWhere(change.before!, where);
       final matchesAfter =
           change.operation == BundleChangeOperation.update &&
-              bundleMatchesQueryWhere(change.data, where);
+          bundleMatchesQueryWhere(change.data, where);
       if (matchedBefore && !matchesAfter) {
         total -= 1;
       } else if (!matchedBefore && matchesAfter) {

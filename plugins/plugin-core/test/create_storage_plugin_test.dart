@@ -73,9 +73,14 @@ void main() {
         supportedProtocol: 'mock://',
         factory: (config) => _MockNodeProfile(),
       );
-      final plugin = factory('cfg', StoragePluginHooks(
-        onStorageUploaded: () async { hookCalled = true; },
-      ));
+      final plugin = factory(
+        'cfg',
+        StoragePluginHooks(
+          onStorageUploaded: () async {
+            hookCalled = true;
+          },
+        ),
+      );
       await plugin.profiles.node!.upload('key', '/path');
       expect(hookCalled, isTrue);
     });
@@ -131,8 +136,9 @@ void main() {
         factory: (config) => _MockRuntimeProfile(),
       );
       final plugin = factory('cfg');
-      final url = await plugin.profiles.runtime!
-          .getDownloadUrl('mock://file.zip');
+      final url = await plugin.profiles.runtime!.getDownloadUrl(
+        'mock://file.zip',
+      );
       expect(url['url'], contains('file.zip'));
     });
   });
@@ -142,10 +148,8 @@ void main() {
       final factory = createUniversalStoragePlugin<String>(
         name: 'testUniversal',
         supportedProtocol: 'mock://',
-        factory: (config) => (
-          node: _MockNodeProfile(),
-          runtime: _MockRuntimeProfile(),
-        ),
+        factory: (config) =>
+            (node: _MockNodeProfile(), runtime: _MockRuntimeProfile()),
       );
       final plugin = factory('cfg');
       expect(plugin.name, 'testUniversal');
@@ -157,18 +161,17 @@ void main() {
       final factory = createUniversalStoragePlugin<String>(
         name: 'testUniversal',
         supportedProtocol: 'mock://',
-        factory: (config) => (
-          node: _MockNodeProfile(),
-          runtime: _MockRuntimeProfile(),
-        ),
+        factory: (config) =>
+            (node: _MockNodeProfile(), runtime: _MockRuntimeProfile()),
       );
       final plugin = factory('cfg');
 
       final nodeResult = await plugin.profiles.node!.upload('k', '/p');
       expect(nodeResult, isNotEmpty);
 
-      final runtimeUrl = await plugin.profiles.runtime!
-          .getDownloadUrl('mock://file');
+      final runtimeUrl = await plugin.profiles.runtime!.getDownloadUrl(
+        'mock://file',
+      );
       expect(runtimeUrl, isNotEmpty);
     });
 

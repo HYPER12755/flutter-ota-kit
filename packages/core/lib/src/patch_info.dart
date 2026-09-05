@@ -72,15 +72,16 @@ class PatchInfo {
 
   /// Serializes this patch for the native MethodChannel call.
   Map<String, dynamic> toJson() => {
-        'version': version,
-        'patchUrl': patchUrl,
-        if (md5.isNotEmpty) 'md5': md5,
-        'signature': signature,
-        if (targetVersionCode != null) 'targetVersionCode': targetVersionCode,
-      };
+    'version': version,
+    'patchUrl': patchUrl,
+    if (md5.isNotEmpty) 'md5': md5,
+    'signature': signature,
+    if (targetVersionCode != null) 'targetVersionCode': targetVersionCode,
+  };
 
   @override
-  String toString() => 'PatchInfo('
+  String toString() =>
+      'PatchInfo('
       'version=$version, url=$patchUrl, '
       'md5=${md5.isEmpty ? 'none' : md5}, '
       'sig=${signature.isEmpty ? 'none' : '***'})';

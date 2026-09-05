@@ -8,8 +8,10 @@ class ChangedAssetFile {
 
   const ChangedAssetFile({required this.url, this.compression});
 
-  factory ChangedAssetFile.fromJson(Map<String, dynamic> j) =>
-      ChangedAssetFile(url: j['url'] as String, compression: j['compression'] as String?);
+  factory ChangedAssetFile.fromJson(Map<String, dynamic> j) => ChangedAssetFile(
+    url: j['url'] as String,
+    compression: j['compression'] as String?,
+  );
 
   Map<String, dynamic> toJson() => {'url': url, 'compression': compression};
 }
@@ -41,12 +43,12 @@ class ChangedAssetPatch {
       );
 
   Map<String, dynamic> toJson() => {
-        'algorithm': algorithm,
-        'baseBundleId': baseBundleId,
-        'baseFileHash': baseFileHash,
-        'patchFileHash': patchFileHash,
-        'patchUrl': patchUrl,
-      };
+    'algorithm': algorithm,
+    'baseBundleId': baseBundleId,
+    'baseFileHash': baseFileHash,
+    'patchFileHash': patchFileHash,
+    'patchUrl': patchUrl,
+  };
 }
 
 class ChangedAsset {
@@ -58,20 +60,20 @@ class ChangedAsset {
   const ChangedAsset({required this.fileHash, this.file, this.patch});
 
   factory ChangedAsset.fromJson(Map<String, dynamic> j) => ChangedAsset(
-        fileHash: j['fileHash'] as String,
-        file: j['file'] == null
-            ? null
-            : ChangedAssetFile.fromJson(
-                (j['file'] as Map).cast<String, dynamic>()),
-        patch: j['patch'] == null
-            ? null
-            : ChangedAssetPatch.fromJson(
-                (j['patch'] as Map).cast<String, dynamic>()),
-      );
+    fileHash: j['fileHash'] as String,
+    file: j['file'] == null
+        ? null
+        : ChangedAssetFile.fromJson((j['file'] as Map).cast<String, dynamic>()),
+    patch: j['patch'] == null
+        ? null
+        : ChangedAssetPatch.fromJson(
+            (j['patch'] as Map).cast<String, dynamic>(),
+          ),
+  );
 
   Map<String, dynamic> toJson() => {
-        'fileHash': fileHash,
-        'file': file?.toJson(),
-        'patch': patch?.toJson(),
-      };
+    'fileHash': fileHash,
+    'file': file?.toJson(),
+    'patch': patch?.toJson(),
+  };
 }

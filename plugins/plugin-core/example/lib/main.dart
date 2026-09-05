@@ -18,7 +18,8 @@ void main() {
   // ── 1. Storage URI parser. ───────────────────────────────────────
   // `parseStorageUri` validates the protocol and returns the bucket +
   // key. Throws on unknown protocols so misuse is caught early.
-  const supabaseUri = 'supabase-storage://flutter-ota-bundles/'
+  const supabaseUri =
+      'supabase-storage://flutter-ota-bundles/'
       '01a059a6/patch.zip';
   final parsed = parseStorageUri(supabaseUri, 'supabase-storage');
   print('Parsed protocol: ${parsed.protocol}');
@@ -32,10 +33,11 @@ void main() {
   final patchKey = createBundleStorageKey('01a059a6');
   print('Patch key: $patchKey');
 
-  final assetKey = createBundleStorageKey(
-    '01a059a6',
-    ['assets', 'images', 'logo.png'],
-  );
+  final assetKey = createBundleStorageKey('01a059a6', [
+    'assets',
+    'images',
+    'logo.png',
+  ]);
   print('Asset key: $assetKey');
 
   // ── 3. Patch ID helper. ──────────────────────────────────────────

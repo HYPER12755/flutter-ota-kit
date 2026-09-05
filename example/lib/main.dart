@@ -50,9 +50,8 @@ class _DemoState extends State<Demo> {
 
   Future<void> _applyBundledAssetPatch() async {
     _log.log('loading bundled patch.zip...');
-    final bytes = (await rootBundle.load(
-      _bundledAssetPatch,
-    )).buffer.asUint8List();
+    final bytes = (await rootBundle.load(_bundledAssetPatch)).buffer
+        .asUint8List();
 
     final result = await FlutterPatcher.applyPatchBytes(
       bytes,
@@ -85,7 +84,9 @@ class _DemoState extends State<Demo> {
       if (apply == null) {
         _log.log('Supabase: no update (or already on latest)');
       } else if (apply.ok) {
-        _log.log('Supabase APPLIED: force-stop/reopen or auto-restart if forced');
+        _log.log(
+          'Supabase APPLIED: force-stop/reopen or auto-restart if forced',
+        );
       } else {
         _log.log('Supabase failed: ${apply.error?.name} / ${apply.message}');
       }
@@ -98,8 +99,10 @@ class _DemoState extends State<Demo> {
   void _snack(String label, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('$label button from OTA code patch!',
-            style: TextStyle(color: color, fontWeight: FontWeight.bold)),
+        content: Text(
+          '$label button from OTA code patch!',
+          style: TextStyle(color: color, fontWeight: FontWeight.bold),
+        ),
         duration: const Duration(seconds: 2),
       ),
     );
@@ -126,8 +129,10 @@ class _DemoState extends State<Demo> {
       const SizedBox(height: 4),
       const Center(
         child: Chip(
-          label: Text('v2.0 · delivered by OTA',
-              style: TextStyle(fontWeight: FontWeight.bold)),
+          label: Text(
+            'v2.0 · delivered by OTA',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           avatar: Icon(Icons.new_releases, size: 16),
         ),
       ),
@@ -222,9 +227,8 @@ class _DemoState extends State<Demo> {
             ),
             const SizedBox(height: 8),
             ElevatedButton.icon(
-              onPressed: () => Navigator.of(context).push(
-                MaterialPageRoute(builder: (_) => const NewScreen()),
-              ),
+              onPressed: () => Navigator.of(context)
+                  .push(MaterialPageRoute(builder: (_) => const NewScreen())),
               icon: const Icon(Icons.open_in_new),
               label: const Text('Open New Screen (OTA)'),
             ),
@@ -265,56 +269,62 @@ class _NewScreenState extends State<NewScreen> {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-        appBar: AppBar(title: const Text('New Screen (OTA)')),
-        body: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Card(
-                color: Theme.of(context).colorScheme.primaryContainer,
-                child: Padding(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    children: [
-                      const Text('OTA counter', style: TextStyle(fontSize: 14)),
-                      Text('$_counter',
-                          style: const TextStyle(
-                              fontSize: 40, fontWeight: FontWeight.bold)),
-                      FilledButton.icon(
-                        onPressed: () => setState(() => _counter++),
-                        icon: const Icon(Icons.add),
-                        label: const Text('Increment'),
-                      ),
-                    ],
+    appBar: AppBar(title: const Text('New Screen (OTA)')),
+    body: Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Card(
+            color: Theme.of(context).colorScheme.primaryContainer,
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  const Text('OTA counter', style: TextStyle(fontSize: 14)),
+                  Text(
+                    '$_counter',
+                    style: const TextStyle(
+                      fontSize: 40,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: _controller,
-                decoration: const InputDecoration(
-                  labelText: 'Type something',
-                  border: OutlineInputBorder(),
-                ),
-                onChanged: (_) => setState(() {}),
-              ),
-              const SizedBox(height: 8),
-              Text('You typed: "${_controller.text}"',
-                  style: const TextStyle(fontStyle: FontStyle.italic)),
-              const SizedBox(height: 12),
-              Expanded(
-                child: ListView.separated(
-                  itemCount: _items.length,
-                  separatorBuilder: (_, _) => const Divider(),
-                  itemBuilder: (_, i) => ListTile(
-                    leading: const Icon(Icons.check_circle_outline),
-                    title: Text(_items[i]),
+                  FilledButton.icon(
+                    onPressed: () => setState(() => _counter++),
+                    icon: const Icon(Icons.add),
+                    label: const Text('Increment'),
                   ),
-                ),
+                ],
               ),
-            ],
+            ),
           ),
-        ),
-      );
+          const SizedBox(height: 12),
+          TextField(
+            controller: _controller,
+            decoration: const InputDecoration(
+              labelText: 'Type something',
+              border: OutlineInputBorder(),
+            ),
+            onChanged: (_) => setState(() {}),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            'You typed: "${_controller.text}"',
+            style: const TextStyle(fontStyle: FontStyle.italic),
+          ),
+          const SizedBox(height: 12),
+          Expanded(
+            child: ListView.separated(
+              itemCount: _items.length,
+              separatorBuilder: (_, _) => const Divider(),
+              itemBuilder: (_, i) => ListTile(
+                leading: const Icon(Icons.check_circle_outline),
+                title: Text(_items[i]),
+              ),
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
 }

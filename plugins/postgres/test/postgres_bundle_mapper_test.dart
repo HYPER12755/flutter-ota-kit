@@ -84,10 +84,9 @@ void main() {
 
       final row = bundleToRowValues(bundle);
       final patchRows = bundleToPatchRows(bundle);
-      final back = mapRowToBundle(
-        PostgresBundleRow.fromJson(row),
-        [PostgresBundlePatchRow.fromJson(patchRows.first)],
-      );
+      final back = mapRowToBundle(PostgresBundleRow.fromJson(row), [
+        PostgresBundlePatchRow.fromJson(patchRows.first),
+      ]);
 
       expect(back.id, bundle.id);
       expect(back.fileHash, 'hash-1');

@@ -10,8 +10,9 @@ void ensureExpectedBucket(String bucket, String bucketName) {
 }
 
 /// Matches the `update.json` manifest key layout
-/// `<channel>/<platform>/<version|fingerprintHash>/update.json`.
+/// `{channel}/{platform}/{version|fingerprintHash}/update.json`.
 /// Shared by the blob-database plugins (AWS S3 + the blob-database factory)
 /// so the pattern is defined exactly once.
-final RegExp updateJsonKeyRegex =
-    RegExp(r'^[^/]+/(?:ios|android)/[^/]+/update\.json$');
+final RegExp updateJsonKeyRegex = RegExp(
+  r'^[^/]+/(?:ios|android)/[^/]+/update\.json$',
+);

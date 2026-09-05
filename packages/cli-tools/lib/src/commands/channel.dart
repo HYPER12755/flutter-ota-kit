@@ -9,9 +9,15 @@ class ChannelCommand extends FlutterPatcherCommand {
   final Backend? backendOverride;
 
   ChannelCommand({this.config, this.backendOverride}) {
-    addSubcommand(ChannelListCommand(config: config, backendOverride: backendOverride));
-    addSubcommand(ChannelGetCommand(config: config, backendOverride: backendOverride));
-    addSubcommand(ChannelSetCommand(config: config, backendOverride: backendOverride));
+    addSubcommand(
+      ChannelListCommand(config: config, backendOverride: backendOverride),
+    );
+    addSubcommand(
+      ChannelGetCommand(config: config, backendOverride: backendOverride),
+    );
+    addSubcommand(
+      ChannelSetCommand(config: config, backendOverride: backendOverride),
+    );
   }
 
   @override
@@ -22,13 +28,13 @@ class ChannelCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        print(description);
-        print('');
-        print('Subcommands:');
-        print('  list              List channels');
-        print('  get <channel>     Show the live bundle for a channel');
-        print('  set <c> <id>      Promote a bundle to a channel');
-      });
+    print(description);
+    print('');
+    print('Subcommands:');
+    print('  list              List channels');
+    print('  get <channel>     Show the live bundle for a channel');
+    print('  set <c> <id>      Promote a bundle to a channel');
+  });
 }
 
 class ChannelListCommand extends FlutterPatcherCommand {
@@ -44,21 +50,21 @@ class ChannelListCommand extends FlutterPatcherCommand {
   String get description => 'List channels.';
 
   @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.');
+  ArgParser get argParser =>
+      ArgParser()..addOption('backend', abbr: 'b', help: 'Backend provider.');
 
   @override
   Future<int> run() => runGuarded(() async {
-        final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
-        final backend = requireBackend(cfg, override: backendOverride);
-        banner('channel · list');
-        final channels = await listChannels(backend);
-        if (channels.isEmpty) {
-          step('(no channels)');
-          return;
-        }
-        box('${channels.length} channels', channels.map((c) => '  $c').toList());
-      });
+    final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
+    final backend = requireBackend(cfg, override: backendOverride);
+    banner('channel · list');
+    final channels = await listChannels(backend);
+    if (channels.isEmpty) {
+      step('(no channels)');
+      return;
+    }
+    box('${channels.length} channels', channels.map((c) => '  $c').toList());
+  });
 }
 
 class ChannelGetCommand extends FlutterPatcherCommand {
@@ -80,26 +86,32 @@ class ChannelGetCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        final channel = argResults!['channel'] as String?;
-        if (channel == null || channel.isEmpty) {
-          throw PackException('Usage: flutter_ota_kit channel get --channel <channel>', 64);
-        }
-        final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
-        final backend = requireBackend(cfg, override: backendOverride);
-        banner('channel · get');
-        final bundle = await getChannel(backend, channel);
-        if (bundle == null) {
-          err('no live bundle on channel "$channel"');
-          return;
-        }
-        box('channel "$channel"', [
-          kv('live bundle', cyan(bundle.id)),
-          kv('platform', bundle.platform.value),
-          kv('enabled', bundle.enabled ? green('yes') : yellow('no')),
-          kv('target', bundle.targetAppVersion ?? bundle.fingerprintHash ?? dim('-')),
-          if (bundle.message != null) kv('message', bundle.message!),
-        ]);
-      });
+    final channel = argResults!['channel'] as String?;
+    if (channel == null || channel.isEmpty) {
+      throw PackException(
+        'Usage: flutter_ota_kit channel get --channel <channel>',
+        64,
+      );
+    }
+    final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
+    final backend = requireBackend(cfg, override: backendOverride);
+    banner('channel · get');
+    final bundle = await getChannel(backend, channel);
+    if (bundle == null) {
+      err('no live bundle on channel "$channel"');
+      return;
+    }
+    box('channel "$channel"', [
+      kv('live bundle', cyan(bundle.id)),
+      kv('platform', bundle.platform.value),
+      kv('enabled', bundle.enabled ? green('yes') : yellow('no')),
+      kv(
+        'target',
+        bundle.targetAppVersion ?? bundle.fingerprintHash ?? dim('-'),
+      ),
+      if (bundle.message != null) kv('message', bundle.message!),
+    ]);
+  });
 }
 
 class ChannelSetCommand extends FlutterPatcherCommand {
@@ -122,28 +134,25 @@ class ChannelSetCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        final channel = argResults!['channel'] as String?;
-        final bundleId = argResults!['bundle-id'] as String?;
-        if (channel == null ||
-            channel.isEmpty ||
-            bundleId == null ||
-            bundleId.isEmpty) {
-          throw PackException(
-            'Usage: flutter_ota_kit channel set --channel <c> --bundle-id <id>',
-            64,
-          );
-        }
-        final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
-        final backend = requireBackend(cfg, override: backendOverride);
-        banner('channel · set');
-        await spinner(
-          () => promoteBundle(backend, bundleId, channel),
-          'Promoting $bundleId to $channel',
-          done: 'Channel set',
-        );
-        box('channel set', [
-          kv('channel', channel),
-          kv('bundle', cyan(bundleId)),
-        ]);
-      });
+    final channel = argResults!['channel'] as String?;
+    final bundleId = argResults!['bundle-id'] as String?;
+    if (channel == null ||
+        channel.isEmpty ||
+        bundleId == null ||
+        bundleId.isEmpty) {
+      throw PackException(
+        'Usage: flutter_ota_kit channel set --channel <c> --bundle-id <id>',
+        64,
+      );
+    }
+    final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
+    final backend = requireBackend(cfg, override: backendOverride);
+    banner('channel · set');
+    await spinner(
+      () => promoteBundle(backend, bundleId, channel),
+      'Promoting $bundleId to $channel',
+      done: 'Channel set',
+    );
+    box('channel set', [kv('channel', channel), kv('bundle', cyan(bundleId))]);
+  });
 }

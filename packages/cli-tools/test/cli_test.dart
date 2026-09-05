@@ -118,8 +118,7 @@ class MockBuilder
   bool _ascending = false;
 
   @override
-  SupabaseFilterBuilderLike select(String columns,
-          {bool? count, bool? head}) =>
+  SupabaseFilterBuilderLike select(String columns, {bool? count, bool? head}) =>
       _asSelect(count: count, head: head);
 
   MockBuilder _asSelect({bool? count, bool? head}) {
@@ -175,14 +174,18 @@ class MockBuilder
   @override
   SupabaseFilterBuilderLike isFilter(String column, Object? value) => this;
   @override
-  SupabaseFilterBuilderLike not(String column, String operator, Object? value) =>
-      this;
+  SupabaseFilterBuilderLike not(
+    String column,
+    String operator,
+    Object? value,
+  ) => this;
   @override
   SupabaseFilterBuilderLike order(String column, {bool? ascending}) {
     _order = column;
     _ascending = ascending ?? false;
     return this;
   }
+
   @override
   SupabaseFilterBuilderLike limit(int value) => this;
   @override
@@ -207,8 +210,9 @@ class MockBuilder
     }
     // select
     if (_head && _count) {
-      final total =
-          _table == 'bundles' ? _client._bundles.length : _client._patches.length;
+      final total = _table == 'bundles'
+          ? _client._bundles.length
+          : _client._patches.length;
       return MockResponse(data: const [], count: total, error: null);
     }
     if (_table == 'bundle_patches') {
@@ -225,8 +229,11 @@ class MockBuilder
       rows = rows.where((r) => r['id'] == _eq['id']).toList();
     }
     if (_table == 'bundles' && _order == 'id') {
-      rows.sort((a, b) => (_ascending ? 1 : -1) *
-          (a['id'] as String).compareTo(b['id'] as String));
+      rows.sort(
+        (a, b) =>
+            (_ascending ? 1 : -1) *
+            (a['id'] as String).compareTo(b['id'] as String),
+      );
     }
     if (_single) {
       return MockResponse(data: rows.isEmpty ? null : rows.first, error: null);
@@ -241,22 +248,34 @@ class MockBucket implements SupabaseStorageBucketLike {
   final String _bucket;
 
   @override
-  Future<SupabaseSignedUrlResult> createSignedUrl(String path, int expiresIn) async =>
-      MockSignedUrlResult(signedUrl: 'https://signed/$_bucket/$path', error: null);
+  Future<SupabaseSignedUrlResult> createSignedUrl(
+    String path,
+    int expiresIn,
+  ) async => MockSignedUrlResult(
+    signedUrl: 'https://signed/$_bucket/$path',
+    error: null,
+  );
 
   @override
   Future<SupabaseSignedUrlListResult> createSignedUrls(
-          List<String> paths, int expiresIn) async =>
-      MockSignedUrlListResult(
-          data: paths
-              .map((p) =>
-                  MockSignedUrlResult(signedUrl: 'https://signed/$_bucket/$p'))
-              .toList(),
-          error: null);
+    List<String> paths,
+    int expiresIn,
+  ) async => MockSignedUrlListResult(
+    data: paths
+        .map(
+          (p) => MockSignedUrlResult(signedUrl: 'https://signed/$_bucket/$p'),
+        )
+        .toList(),
+    error: null,
+  );
 
   @override
-  Future<SupabaseUploadResult> upload(String path, List<int> fileBytes,
-          {String? contentType, String? cacheControl}) async {
+  Future<SupabaseUploadResult> upload(
+    String path,
+    List<int> fileBytes, {
+    String? contentType,
+    String? cacheControl,
+  }) async {
     _client._storage[path] = Uint8List.fromList(fileBytes);
     return MockUploadResult(data: {'Key': path}, error: null);
   }
@@ -291,8 +310,7 @@ class MockStorageClient implements SupabaseStorageClientLike {
   MockStorageClient(this._client);
   final MockSupabaseClient _client;
   @override
-  SupabaseStorageBucketLike from(String bucket) =>
-      MockBucket(_client, bucket);
+  SupabaseStorageBucketLike from(String bucket) => MockBucket(_client, bucket);
 }
 
 class MockSupabaseClient implements SupabaseClientLike {
@@ -307,8 +325,10 @@ class MockSupabaseClient implements SupabaseClientLike {
   SupabaseStorageClientLike get storage => MockStorageClient(this);
 
   @override
-  Future<SupabaseRpcResponse> rpc(String functionName,
-      {Map<String, dynamic>? params}) async {
+  Future<SupabaseRpcResponse> rpc(
+    String functionName, {
+    Map<String, dynamic>? params,
+  }) async {
     if (functionName == 'get_channels') {
       return const MockRpcResponse(
         data: [
@@ -327,16 +347,16 @@ class MockSupabaseClient implements SupabaseClientLike {
 // ---------------------------------------------------------------------------
 
 FlutterPatcherConfig _config() => FlutterPatcherConfig(
-      provider: 'supabase',
-      supabase: SupabaseConfigJson(
-        url: 'https://demo.supabase.co',
-        serviceRoleKey: 'service-role-key',
-        bucket: 'bundles',
-      ),
-      channel: 'production',
-      platform: 'android',
-      source: './dist',
-    );
+  provider: 'supabase',
+  supabase: SupabaseConfigJson(
+    url: 'https://demo.supabase.co',
+    serviceRoleKey: 'service-role-key',
+    bucket: 'bundles',
+  ),
+  channel: 'production',
+  platform: 'android',
+  source: './dist',
+);
 
 Backend _backend(MockSupabaseClient mock) =>
     resolveBackend(_config(), supabaseClientFactory: (url, key) => mock);
@@ -357,7 +377,11 @@ void main() {
         await File(p.join(dir.path, 'main.dart')).writeAsString('print(1);');
         final bundle = await deployBundle(
           backend,
-            DeployOptions(source: dir.path, channel: 'production', platform: 'android'),
+          DeployOptions(
+            source: dir.path,
+            channel: 'production',
+            platform: 'android',
+          ),
         );
         expect(bundle.enabled, isTrue);
         expect(mock._bundles.containsKey(bundle.id), isTrue);
@@ -374,9 +398,16 @@ void main() {
         await File(p.join(dir.path, 'a.txt')).writeAsString('x');
         final deployed = await deployBundle(
           backend,
-            DeployOptions(source: dir.path, channel: 'production', platform: 'android'),
+          DeployOptions(
+            source: dir.path,
+            channel: 'production',
+            platform: 'android',
+          ),
         );
-        final res = await listBundles(backend, ListOptions(channel: 'production'));
+        final res = await listBundles(
+          backend,
+          ListOptions(channel: 'production'),
+        );
         expect(res.data.map((b) => b.id), contains(deployed.id));
       } finally {
         await dir.delete(recursive: true);
@@ -394,7 +425,11 @@ void main() {
         await File(p.join(dir.path, 'a.txt')).writeAsString('x');
         final deployed = await deployBundle(
           backend,
-            DeployOptions(source: dir.path, channel: 'production', platform: 'android'),
+          DeployOptions(
+            source: dir.path,
+            channel: 'production',
+            platform: 'android',
+          ),
         );
         await deleteBundle(backend, deployed.id);
         expect(mock._bundles.containsKey(deployed.id), isFalse);
@@ -409,11 +444,19 @@ void main() {
         await File(p.join(dir.path, 'a.txt')).writeAsString('x');
         final first = await deployBundle(
           backend,
-            DeployOptions(source: dir.path, channel: 'production', platform: 'android'),
+          DeployOptions(
+            source: dir.path,
+            channel: 'production',
+            platform: 'android',
+          ),
         );
         final second = await deployBundle(
           backend,
-            DeployOptions(source: dir.path, channel: 'production', platform: 'android'),
+          DeployOptions(
+            source: dir.path,
+            channel: 'production',
+            platform: 'android',
+          ),
         );
         final disabled = await rollbackChannel(backend, 'production');
         expect(disabled, equals(second.id));
@@ -430,7 +473,11 @@ void main() {
         await File(p.join(dir.path, 'a.txt')).writeAsString('x');
         final b = await deployBundle(
           backend,
-            DeployOptions(source: dir.path, channel: 'production', platform: 'android'),
+          DeployOptions(
+            source: dir.path,
+            channel: 'production',
+            platform: 'android',
+          ),
         );
         await promoteBundle(backend, b.id, 'staging');
         expect(mock._bundles[b.id]!['channel'], equals('staging'));

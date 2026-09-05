@@ -61,11 +61,7 @@ Future<void> _verifyObjectCanBeSignedForRuntime({
   required SupabaseStorageBucketLike bucket,
   required String key,
 }) async {
-  await _createSignedUrlOrThrow(
-    bucket: bucket,
-    key: key,
-    expiresIn: 3600,
-  );
+  await _createSignedUrlOrThrow(bucket: bucket, key: key, expiresIn: 3600);
 }
 
 /// Supabase-backed universal (node + runtime) storage plugin.
@@ -118,12 +114,14 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
   final Future<void> Function({
     required SupabaseStorageBucketLike bucket,
     required String key,
-  }) verifySigned;
+  })
+  verifySigned;
   final Future<String> Function({
     required SupabaseStorageBucketLike bucket,
     required String key,
     required int expiresIn,
-  }) createSignedUrlOrThrow;
+  })
+  createSignedUrlOrThrow;
 
   @override
   Future<Map<String, String>> upload(String key, String filePath) async {
@@ -143,9 +141,7 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
     }
 
     await verifySigned(bucket: bucket, key: storageKey);
-    return {
-      'storageUri': 'supabase-storage://$bucketName/$storageKey',
-    };
+    return {'storageUri': 'supabase-storage://$bucketName/$storageKey'};
   }
 
   @override
@@ -201,7 +197,10 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
     if (res.data == null) {
       throw StateError('Failed to download bundle');
     }
-    final dir = filePath.substring(0, filePath.lastIndexOf(io.Platform.pathSeparator));
+    final dir = filePath.substring(
+      0,
+      filePath.lastIndexOf(io.Platform.pathSeparator),
+    );
     await io.Directory(dir).create(recursive: true);
     await io.File(filePath).writeAsBytes(res.data!);
   }
@@ -210,9 +209,7 @@ class NodeStorageProfileImpl implements NodeStorageProfile {
   Future<List<StorageObject>> listObjects([String? prefix]) async {
     final res = await bucket.list(prefix);
     if (res.error != null) {
-      throw StateError(
-        'Failed to list objects: ${errorMessage(res.error)}',
-      );
+      throw StateError('Failed to list objects: ${errorMessage(res.error)}');
     }
     final data = res.data ?? const <SupabaseStorageObject>[];
     return data

@@ -12,8 +12,10 @@ import 'src/patch_info.dart';
 import 'src/patcher_channel.dart';
 import 'src/ota_progress_overlay.dart' show OtaOverlayManager;
 import 'src/flutter_ota_app.dart' show FlutterPatcherShowUpdateUiBinding;
+
 import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
+
 import 'src/supabase_update_source.dart'
     show SupabaseUpdateConfig, SupabaseUpdateSource;
 import 'src/postgres_update_source.dart'
@@ -23,6 +25,7 @@ import 'src/cloudflare_update_source.dart'
 import 'src/aws_update_source.dart' show AwsUpdateConfig, AwsUpdateSource;
 import 'src/pocketbase_update_source.dart'
     show PocketBaseUpdateConfig, PocketBaseUpdateSource;
+
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show Platform, UpdateStrategy;
 
@@ -41,7 +44,12 @@ export 'src/pocketbase_update_source.dart'
     show PocketBaseUpdateConfig, PocketBaseUpdateSource;
 export 'src/flutter_ota_app.dart' show FlutterOtaApp;
 export 'src/ota_progress_overlay.dart'
-    show OtaOverlayManager, OtaOverlayState, OtaProgressOverlay, OtaOverlayHandle;
+    show
+        OtaOverlayManager,
+        OtaOverlayState,
+        OtaProgressOverlay,
+        OtaOverlayHandle;
+
 export 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart';
 export 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show Platform, UpdateStrategy;
@@ -104,13 +112,12 @@ class FlutterPatcher {
   // Wire the widget-level flag to [showUpdateUi] so [FlutterOtaApp] can toggle it,
   // and let the overlay manager fall back to the consumer-provided navigator key.
   static void _wireOverlay() {
-    FlutterPatcherShowUpdateUiBinding.applyShowUpdateUi =
-        (value) => showUpdateUi = value;
+    FlutterPatcherShowUpdateUiBinding.applyShowUpdateUi = (value) =>
+        showUpdateUi = value;
     OtaOverlayManager.instance.setResolver(
       () => navigatorKey.currentState?.overlay,
     );
   }
-
 
   static bool _notAndroidGuard(String method) {
     if (platform_io.isAndroid) return false;
@@ -138,8 +145,8 @@ class FlutterPatcher {
   static Stream<PatchApplyProgress> get applyProgress {
     if (_notAndroidGuard('applyProgress')) return const Stream.empty();
     return _progressStream ??= _eventChannel.receiveBroadcastStream().map(
-          (raw) => PatchApplyProgress.fromNative(raw),
-        );
+      (raw) => PatchApplyProgress.fromNative(raw),
+    );
   }
 
   /// Initializes patch configuration and crash protection.
@@ -238,87 +245,136 @@ class FlutterPatcher {
     // their .env (e.g. switching from supabase to pocketbase), this var
     // disambiguates which one wins. Without it, first-match-wins order is:
     // supabase → postgres → cloudflare → aws → pocketbase.
-    const backendHint = String.fromEnvironment('FLUTTER_OTA_BACKEND', defaultValue: '');
+    const backendHint = String.fromEnvironment(
+      'FLUTTER_OTA_BACKEND',
+      defaultValue: '',
+    );
     bool isMatching(String name) {
       if (backendHint.isEmpty) return true;
       return backendHint.toLowerCase() == name;
     }
 
-    const supabaseUrl =
-        String.fromEnvironment('SUPABASE_URL', defaultValue: '');
+    const supabaseUrl = String.fromEnvironment(
+      'SUPABASE_URL',
+      defaultValue: '',
+    );
     if (supabaseUrl.isNotEmpty && isMatching('supabase')) {
       _supabaseConfig = SupabaseUpdateConfig(
         supabaseUrl: supabaseUrl,
-        anonKey:
-            const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
-        bucket: const String.fromEnvironment('SUPABASE_BUCKET',
-            defaultValue: 'bundles'),
-        channel: const String.fromEnvironment('CHANNEL',
-            defaultValue: 'production'),
+        anonKey: const String.fromEnvironment(
+          'SUPABASE_ANON_KEY',
+          defaultValue: '',
+        ),
+        bucket: const String.fromEnvironment(
+          'SUPABASE_BUCKET',
+          defaultValue: 'bundles',
+        ),
+        channel: const String.fromEnvironment(
+          'CHANNEL',
+          defaultValue: 'production',
+        ),
         platform: Platform.android,
         updateStrategy: UpdateStrategy.appVersion,
-        appVersion: const String.fromEnvironment('APP_VERSION',
-            defaultValue: '1.0.0'),
-        sdkVersion: const String.fromEnvironment('SDK_VERSION',
-            defaultValue: '1.0.0'),
+        appVersion: const String.fromEnvironment(
+          'APP_VERSION',
+          defaultValue: '1.0.0',
+        ),
+        sdkVersion: const String.fromEnvironment(
+          'SDK_VERSION',
+          defaultValue: '1.0.0',
+        ),
       );
       return;
     }
 
     const pgHost = String.fromEnvironment('POSTGRES_HOST', defaultValue: '');
-    const pgDatabaseUrl =
-        String.fromEnvironment('DATABASE_URL', defaultValue: '');
+    const pgDatabaseUrl = String.fromEnvironment(
+      'DATABASE_URL',
+      defaultValue: '',
+    );
     if ((pgHost.isNotEmpty || pgDatabaseUrl.isNotEmpty) &&
         isMatching('postgres')) {
       _postgresConfig = PostgresUpdateConfig(
         host: pgHost,
-        port: int.tryParse(const String.fromEnvironment('POSTGRES_PORT',
-            defaultValue: '5432')) ?? 5432,
-        database: const String.fromEnvironment('POSTGRES_DB',
-            defaultValue: 'postgres'),
-        username: const String.fromEnvironment('POSTGRES_USER',
-            defaultValue: ''),
-        password: const String.fromEnvironment('POSTGRES_PASSWORD',
-            defaultValue: ''),
+        port:
+            int.tryParse(
+              const String.fromEnvironment(
+                'POSTGRES_PORT',
+                defaultValue: '5432',
+              ),
+            ) ??
+            5432,
+        database: const String.fromEnvironment(
+          'POSTGRES_DB',
+          defaultValue: 'postgres',
+        ),
+        username: const String.fromEnvironment(
+          'POSTGRES_USER',
+          defaultValue: '',
+        ),
+        password: const String.fromEnvironment(
+          'POSTGRES_PASSWORD',
+          defaultValue: '',
+        ),
         servingBaseUrl: const String.fromEnvironment(
-            'POSTGRES_SERVING_BASE_URL',
-            defaultValue: ''),
-        channel: const String.fromEnvironment('CHANNEL',
-            defaultValue: 'production'),
+          'POSTGRES_SERVING_BASE_URL',
+          defaultValue: '',
+        ),
+        channel: const String.fromEnvironment(
+          'CHANNEL',
+          defaultValue: 'production',
+        ),
         platform: Platform.android,
         updateStrategy: UpdateStrategy.appVersion,
-        appVersion: const String.fromEnvironment('APP_VERSION',
-            defaultValue: '1.0.0'),
+        appVersion: const String.fromEnvironment(
+          'APP_VERSION',
+          defaultValue: '1.0.0',
+        ),
       );
       return;
     }
 
-    const cfAccount =
-        String.fromEnvironment('CLOUDFLARE_ACCOUNT_ID', defaultValue: '');
+    const cfAccount = String.fromEnvironment(
+      'CLOUDFLARE_ACCOUNT_ID',
+      defaultValue: '',
+    );
     if (cfAccount.isNotEmpty && isMatching('cloudflare')) {
       _cloudflareConfig = CloudflareUpdateConfig(
         accountId: cfAccount,
         databaseId: const String.fromEnvironment(
-            'CLOUDFLARE_D1_DATABASE_ID',
-            defaultValue: ''),
+          'CLOUDFLARE_D1_DATABASE_ID',
+          defaultValue: '',
+        ),
         cloudflareApiToken: const String.fromEnvironment(
-            'CLOUDFLARE_API_TOKEN',
-            defaultValue: ''),
-        bucketName: const String.fromEnvironment('R2_BUCKET',
-            defaultValue: 'bundles'),
-        accessKeyId: const String.fromEnvironment('R2_ACCESS_KEY_ID',
-            defaultValue: ''),
+          'CLOUDFLARE_API_TOKEN',
+          defaultValue: '',
+        ),
+        bucketName: const String.fromEnvironment(
+          'R2_BUCKET',
+          defaultValue: 'bundles',
+        ),
+        accessKeyId: const String.fromEnvironment(
+          'R2_ACCESS_KEY_ID',
+          defaultValue: '',
+        ),
         secretAccessKey: const String.fromEnvironment(
-            'R2_SECRET_ACCESS_KEY',
-            defaultValue: ''),
-        basePath:
-            const String.fromEnvironment('R2_BASE_PATH', defaultValue: ''),
-        channel: const String.fromEnvironment('CHANNEL',
-            defaultValue: 'production'),
+          'R2_SECRET_ACCESS_KEY',
+          defaultValue: '',
+        ),
+        basePath: const String.fromEnvironment(
+          'R2_BASE_PATH',
+          defaultValue: '',
+        ),
+        channel: const String.fromEnvironment(
+          'CHANNEL',
+          defaultValue: 'production',
+        ),
         platform: Platform.android,
         updateStrategy: UpdateStrategy.appVersion,
-        appVersion: const String.fromEnvironment('APP_VERSION',
-            defaultValue: '1.0.0'),
+        appVersion: const String.fromEnvironment(
+          'APP_VERSION',
+          defaultValue: '1.0.0',
+        ),
       );
       return;
     }
@@ -327,23 +383,33 @@ class FlutterPatcher {
     if (awsBucket.isNotEmpty && isMatching('aws')) {
       _awsConfig = AwsUpdateConfig(
         bucketName: awsBucket,
-        region:
-            const String.fromEnvironment('AWS_REGION', defaultValue: ''),
-        accessKeyId: const String.fromEnvironment('AWS_ACCESS_KEY_ID',
-            defaultValue: ''),
+        region: const String.fromEnvironment('AWS_REGION', defaultValue: ''),
+        accessKeyId: const String.fromEnvironment(
+          'AWS_ACCESS_KEY_ID',
+          defaultValue: '',
+        ),
         secretAccessKey: const String.fromEnvironment(
-            'AWS_SECRET_ACCESS_KEY',
-            defaultValue: ''),
-        basePath:
-            const String.fromEnvironment('AWS_BASE_PATH', defaultValue: ''),
-        endpoint:
-            const String.fromEnvironment('AWS_ENDPOINT', defaultValue: ''),
-        channel:
-            const String.fromEnvironment('CHANNEL', defaultValue: 'production'),
+          'AWS_SECRET_ACCESS_KEY',
+          defaultValue: '',
+        ),
+        basePath: const String.fromEnvironment(
+          'AWS_BASE_PATH',
+          defaultValue: '',
+        ),
+        endpoint: const String.fromEnvironment(
+          'AWS_ENDPOINT',
+          defaultValue: '',
+        ),
+        channel: const String.fromEnvironment(
+          'CHANNEL',
+          defaultValue: 'production',
+        ),
         platform: Platform.android,
         updateStrategy: UpdateStrategy.appVersion,
-        appVersion: const String.fromEnvironment('APP_VERSION',
-            defaultValue: '1.0.0'),
+        appVersion: const String.fromEnvironment(
+          'APP_VERSION',
+          defaultValue: '1.0.0',
+        ),
       );
       return;
     }
@@ -352,22 +418,32 @@ class FlutterPatcher {
     if (pbUrl.isNotEmpty && isMatching('pocketbase')) {
       _pocketbaseConfig = PocketBaseUpdateConfig(
         url: pbUrl,
-        adminEmail: const String.fromEnvironment('POCKETBASE_ADMIN_EMAIL',
-            defaultValue: ''),
+        adminEmail: const String.fromEnvironment(
+          'POCKETBASE_ADMIN_EMAIL',
+          defaultValue: '',
+        ),
         adminPassword: const String.fromEnvironment(
-            'POCKETBASE_ADMIN_PASSWORD',
-            defaultValue: ''),
+          'POCKETBASE_ADMIN_PASSWORD',
+          defaultValue: '',
+        ),
         bundlesCollection: const String.fromEnvironment(
-            'POCKETBASE_BUNDLES_COLLECTION',
-            defaultValue: 'bundles'),
-        bundlesBucket: const String.fromEnvironment('POCKETBASE_BUCKET',
-            defaultValue: 'bundles'),
-        channel: const String.fromEnvironment('CHANNEL',
-            defaultValue: 'production'),
+          'POCKETBASE_BUNDLES_COLLECTION',
+          defaultValue: 'bundles',
+        ),
+        bundlesBucket: const String.fromEnvironment(
+          'POCKETBASE_BUCKET',
+          defaultValue: 'bundles',
+        ),
+        channel: const String.fromEnvironment(
+          'CHANNEL',
+          defaultValue: 'production',
+        ),
         platform: Platform.android,
         updateStrategy: UpdateStrategy.appVersion,
-        appVersion: const String.fromEnvironment('APP_VERSION',
-            defaultValue: '1.0.0'),
+        appVersion: const String.fromEnvironment(
+          'APP_VERSION',
+          defaultValue: '1.0.0',
+        ),
       );
       return;
     }

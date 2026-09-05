@@ -29,8 +29,7 @@ void main() {
     targetAppVersion: '1.0.0',
     metadata: const BundleMetadata(
       appVersion: '1.0.1',
-      signature:
-          'ed25519:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
+      signature: 'ed25519:9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08',
     ),
     rolloutCohortCount: 100, // 10% of devices (per-mille 0..1000).
   );

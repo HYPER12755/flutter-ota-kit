@@ -70,7 +70,7 @@ class S3DatabaseConfig {
 
   /// Test seam: override the concrete CloudFront client.
   final AwsCloudFrontClientLike Function(S3DatabaseConfig config)
-      cloudfrontClientFactory;
+  cloudfrontClientFactory;
 }
 
 /// Default factory producing a real [AwsS3Client] with runtime region applied.
@@ -92,22 +92,21 @@ AwsS3ClientLike defaultAwsS3DatabaseClientFactory(S3DatabaseConfig config) =>
 /// Default factory producing a real [AwsCloudFrontClient].
 AwsCloudFrontClientLike defaultAwsCloudFrontClientFactory(
   S3DatabaseConfig config,
-) =>
-    AwsCloudFrontClient(
-      AwsCloudFrontConfig(
-        accessKeyId: config.accessKeyId,
-        secretAccessKey: config.secretAccessKey,
-        sessionToken: config.sessionToken,
-      ),
-    );
+) => AwsCloudFrontClient(
+  AwsCloudFrontConfig(
+    accessKeyId: config.accessKeyId,
+    secretAccessKey: config.secretAccessKey,
+    sessionToken: config.sessionToken,
+  ),
+);
 
 /// S3-backed [BlobOperations] for the AWS `s3Database` plugin.
 class S3BlobOperations implements BlobOperations {
   S3BlobOperations(this.config)
-      : _client = config.clientFactory(config),
-        _cloudfront = config.cloudfrontDistributionId != null
-            ? config.cloudfrontClientFactory(config)
-            : null {
+    : _client = config.clientFactory(config),
+      _cloudfront = config.cloudfrontDistributionId != null
+          ? config.cloudfrontClientFactory(config)
+          : null {
     final keyBuilder = createDatabaseKeyBuilder(config.basePath);
     _toStorageKey = keyBuilder.$1;
     _fromStorageKey = keyBuilder.$2;

@@ -76,7 +76,9 @@ class MockD1Client implements D1ClientLike {
     if (where.contains('target_app_version = ?')) {
       if (row['target_app_version'] != params[p++]) return false;
     }
-    if (where.contains('target_app_version IN (SELECT value FROM json_each(?))')) {
+    if (where.contains(
+      'target_app_version IN (SELECT value FROM json_each(?))',
+    )) {
       if (!_asList(params[p++]).contains(row['target_app_version'])) {
         return false;
       }
@@ -140,7 +142,9 @@ class MockD1Client implements D1ClientLike {
       final channels = {
         for (final row in store.bundleRows) row['channel'] as String,
       };
-      return [for (final c in channels) {'channel': c}];
+      return [
+        for (final c in channels) {'channel': c},
+      ];
     }
 
     if (sql.contains('SELECT target_app_version FROM bundles')) {
@@ -164,9 +168,11 @@ class MockD1Client implements D1ClientLike {
           .where((row) => ids.contains(row['bundle_id']))
           .toList();
       rows.sort(
-        (a, b) => (a['order_index'] as num).compareTo(b['order_index'] as num) +
-            (a['base_bundle_id'] as String)
-                .compareTo(b['base_bundle_id'] as String),
+        (a, b) =>
+            (a['order_index'] as num).compareTo(b['order_index'] as num) +
+            (a['base_bundle_id'] as String).compareTo(
+              b['base_bundle_id'] as String,
+            ),
       );
       return rows;
     }
@@ -195,8 +201,7 @@ class MockD1Client implements D1ClientLike {
         'rollout_cohort_count': params[15],
         'target_cohorts': params[16],
       };
-      store.bundleRows
-          .removeWhere((r) => r['id'] == row['id']);
+      store.bundleRows.removeWhere((r) => r['id'] == row['id']);
       store.bundleRows.add(row);
       return const [];
     }
@@ -219,8 +224,9 @@ class MockD1Client implements D1ClientLike {
     if (sql.contains('DELETE FROM bundles')) {
       final id = params[0];
       store.bundleRows.removeWhere((r) => r['id'] == id);
-      store.patchRows
-          .removeWhere((r) => r['bundle_id'] == id || r['base_bundle_id'] == id);
+      store.patchRows.removeWhere(
+        (r) => r['bundle_id'] == id || r['base_bundle_id'] == id,
+      );
       return const [];
     }
 
@@ -240,17 +246,16 @@ class MockD1Client implements D1ClientLike {
 
 /// Build a [D1DatabaseConfig] wired to an in-memory [Store].
 D1DatabaseConfig mockConfig(Store store) => D1DatabaseConfig(
-      databaseId: 'test-db',
-      accountId: 'test-account',
-      cloudflareApiToken: 'test-token',
-      clientFactory: (_) => MockD1Client(store),
-    );
+  databaseId: 'test-db',
+  accountId: 'test-account',
+  cloudflareApiToken: 'test-token',
+  clientFactory: (_) => MockD1Client(store),
+);
 
 /// Construct the plugin with an in-memory store.
 DatabasePlugin newPlugin(Store store) => d1Database(mockConfig(store))();
 
 /// Construct the Workers D1 variant with an in-memory store.
-DatabasePlugin newWorkerPlugin(Store store) =>
-    cloudflareWorkerDatabase(
-      CloudflareWorkerDatabaseConfig(getDb: () => MockD1Client(store)),
-    )();
+DatabasePlugin newWorkerPlugin(Store store) => cloudflareWorkerDatabase(
+  CloudflareWorkerDatabaseConfig(getDb: () => MockD1Client(store)),
+)();

@@ -28,16 +28,17 @@ Bundle mapRowToBundle(
     });
 
   final patchArtifacts = patches
-      .map((p) => BundlePatchArtifact(
-            baseBundleId: p.baseBundleId,
-            baseFileHash: p.baseFileHash,
-            patchFileHash: p.patchFileHash,
-            patchStorageUri: p.patchStorageUri,
-          ))
+      .map(
+        (p) => BundlePatchArtifact(
+          baseBundleId: p.baseBundleId,
+          baseFileHash: p.baseFileHash,
+          patchFileHash: p.patchFileHash,
+          patchStorageUri: p.patchStorageUri,
+        ),
+      )
       .toList();
 
-  final primaryPatch =
-      patchArtifacts.isNotEmpty ? patchArtifacts.first : null;
+  final primaryPatch = patchArtifacts.isNotEmpty ? patchArtifacts.first : null;
 
   return Bundle(
     id: row.id,
@@ -51,8 +52,7 @@ Bundle mapRowToBundle(
     targetAppVersion: row.targetAppVersion,
     fingerprintHash: row.fingerprintHash,
     storageUri: row.storageUri,
-    metadata:
-        rawMetadata != null ? BundleMetadata.fromJson(rawMetadata) : null,
+    metadata: rawMetadata != null ? BundleMetadata.fromJson(rawMetadata) : null,
     manifestStorageUri: row.manifestStorageUri,
     manifestFileHash: row.manifestFileHash,
     assetBaseStorageUri: row.assetBaseStorageUri,
@@ -61,33 +61,31 @@ Bundle mapRowToBundle(
     patchBaseFileHash: primaryPatch?.baseFileHash,
     patchFileHash: primaryPatch?.patchFileHash,
     patchStorageUri: primaryPatch?.patchStorageUri,
-    rolloutCohortCount:
-        row.rolloutCohortCount ?? defaultRolloutCohortCount,
+    rolloutCohortCount: row.rolloutCohortCount ?? defaultRolloutCohortCount,
     targetCohorts: row.targetCohorts,
   );
 }
 
 /// Map a [Bundle] to a Supabase row for upsert.
 SupabaseBundleRow bundleToRow(Bundle bundle) => SupabaseBundleRow(
-      id: bundle.id,
-      channel: bundle.channel,
-      enabled: bundle.enabled,
-      shouldForceUpdate: bundle.shouldForceUpdate,
-      fileHash: bundle.fileHash,
-      gitCommitHash: bundle.gitCommitHash,
-      message: bundle.message,
-      platform: bundle.platform.value,
-      targetAppVersion: bundle.targetAppVersion,
-      fingerprintHash: bundle.fingerprintHash,
-      storageUri: bundle.storageUri,
-      metadata: stripBundleArtifactMetadata(bundle.metadata?.toJson()),
-      manifestStorageUri: getManifestStorageUri(bundle),
-      manifestFileHash: getManifestFileHash(bundle),
-      assetBaseStorageUri: getAssetBaseStorageUri(bundle),
-      rolloutCohortCount:
-          bundle.rolloutCohortCount ?? defaultRolloutCohortCount,
-      targetCohorts: bundle.targetCohorts,
-    );
+  id: bundle.id,
+  channel: bundle.channel,
+  enabled: bundle.enabled,
+  shouldForceUpdate: bundle.shouldForceUpdate,
+  fileHash: bundle.fileHash,
+  gitCommitHash: bundle.gitCommitHash,
+  message: bundle.message,
+  platform: bundle.platform.value,
+  targetAppVersion: bundle.targetAppVersion,
+  fingerprintHash: bundle.fingerprintHash,
+  storageUri: bundle.storageUri,
+  metadata: stripBundleArtifactMetadata(bundle.metadata?.toJson()),
+  manifestStorageUri: getManifestStorageUri(bundle),
+  manifestFileHash: getManifestFileHash(bundle),
+  assetBaseStorageUri: getAssetBaseStorageUri(bundle),
+  rolloutCohortCount: bundle.rolloutCohortCount ?? defaultRolloutCohortCount,
+  targetCohorts: bundle.targetCohorts,
+);
 
 /// Map a [Bundle] to its patch rows for upsert.
 List<SupabaseBundlePatchRow> bundleToPatchRows(Bundle bundle) {
@@ -95,8 +93,7 @@ List<SupabaseBundlePatchRow> bundleToPatchRows(Bundle bundle) {
   return [
     for (var i = 0; i < patchArtifacts.length; i++)
       SupabaseBundlePatchRow(
-        id: buildBundlePatchId(
-            bundle.id, patchArtifacts[i].baseBundleId),
+        id: buildBundlePatchId(bundle.id, patchArtifacts[i].baseBundleId),
         bundleId: bundle.id,
         baseBundleId: patchArtifacts[i].baseBundleId,
         baseFileHash: patchArtifacts[i].baseFileHash,

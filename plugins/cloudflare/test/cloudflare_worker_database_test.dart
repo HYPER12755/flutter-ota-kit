@@ -21,20 +21,19 @@ Bundle _makeBundle({
   String? targetAppVersion,
   String? message,
   List<BundlePatchArtifact>? patches,
-}) =>
-    Bundle(
-      id: id,
-      channel: channel,
-      enabled: enabled,
-      shouldForceUpdate: false,
-      fileHash: 'h-$id',
-      platform: Platform.android,
-      targetAppVersion: targetAppVersion,
-      storageUri: 's3://$id',
-      fingerprintHash: fingerprintHash,
-      message: message,
-      patches: patches,
-    );
+}) => Bundle(
+  id: id,
+  channel: channel,
+  enabled: enabled,
+  shouldForceUpdate: false,
+  fileHash: 'h-$id',
+  platform: Platform.android,
+  targetAppVersion: targetAppVersion,
+  storageUri: 's3://$id',
+  fingerprintHash: fingerprintHash,
+  message: message,
+  patches: patches,
+);
 
 void main() {
   group('cloudflare d1WorkerDatabase', () {
@@ -57,19 +56,20 @@ void main() {
       expect(channels, containsAll(['production', 'staging']));
     });
 
-    test('getBundleById returns null for missing, bundle for existing',
-        () async {
-      await plugin.appendBundle(_makeBundle(id: 'b1'));
-      await plugin.commitBundle();
+    test(
+      'getBundleById returns null for missing, bundle for existing',
+      () async {
+        await plugin.appendBundle(_makeBundle(id: 'b1'));
+        await plugin.commitBundle();
 
-      expect(await plugin.getBundleById('missing'), isNull);
-      final got = await plugin.getBundleById('b1');
-      expect(got, isNotNull);
-      expect(got!.id, 'b1');
-    });
+        expect(await plugin.getBundleById('missing'), isNull);
+        final got = await plugin.getBundleById('b1');
+        expect(got, isNotNull);
+        expect(got!.id, 'b1');
+      },
+    );
 
-    test('commitBundle append -> update -> delete reflects in store',
-        () async {
+    test('commitBundle append -> update -> delete reflects in store', () async {
       await plugin.appendBundle(_makeBundle(id: 'b1', message: 'original'));
       await plugin.commitBundle();
       expect((await plugin.getBundleById('b1'))!.message, 'original');
@@ -85,24 +85,28 @@ void main() {
       expect(await plugin.getBundleById('b1'), isNull);
     });
 
-    test('getUpdateInfo (appVersion) returns UpdateInfo for compatible bundle',
-        () async {
-      await plugin.appendBundle(_makeBundle(id: 'b1', targetAppVersion: '1.0.0'));
-      await plugin.commitBundle();
+    test(
+      'getUpdateInfo (appVersion) returns UpdateInfo for compatible bundle',
+      () async {
+        await plugin.appendBundle(
+          _makeBundle(id: 'b1', targetAppVersion: '1.0.0'),
+        );
+        await plugin.commitBundle();
 
-      final info = await plugin.getUpdateInfo(
-        AppVersionGetBundlesArgs(
-          platform: Platform.android,
-          bundleId: nilUuid,
-          appVersion: '1.0.0',
-          channel: 'production',
-          minBundleId: nilUuid,
-        ),
-      );
-      expect(info, isNotNull);
-      expect(info!.id, 'b1');
-      expect(info.status, UpdateStatus.update);
-    });
+        final info = await plugin.getUpdateInfo(
+          AppVersionGetBundlesArgs(
+            platform: Platform.android,
+            bundleId: nilUuid,
+            appVersion: '1.0.0',
+            channel: 'production',
+            minBundleId: nilUuid,
+          ),
+        );
+        expect(info, isNotNull);
+        expect(info!.id, 'b1');
+        expect(info.status, UpdateStatus.update);
+      },
+    );
 
     test('getUpdateInfo (fingerprint) returns matching bundle', () async {
       await plugin.appendBundle(_makeBundle(id: 'fp', fingerprintHash: 'fp1'));

@@ -12,8 +12,7 @@ import 'bundle_patch_artifact.dart';
 /// there is nothing to strip.)
 Map<String, Object?>? stripBundleArtifactMetadata(
   Map<String, Object?>? metadata,
-) =>
-    metadata;
+) => metadata;
 
 /// Extract `manifestStorageUri` from a bundle, defaulting to null.
 String? getManifestStorageUri(Bundle bundle) => bundle.manifestStorageUri;

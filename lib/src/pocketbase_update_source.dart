@@ -8,6 +8,7 @@ import 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart'
         pocketbaseStorage,
         PocketBaseConfig,
         PocketBaseStorageConfig;
+
 import 'shared_update_check.dart';
 
 /// Configuration for a **PocketBase** update source (self-hosted, single binary).

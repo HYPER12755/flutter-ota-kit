@@ -2,7 +2,8 @@ import 'package:flutter_ota_kit_plugin_core/src/bundle_unit_of_work.dart';
 import 'package:flutter_ota_kit_plugin_core/src/types.dart';
 import 'package:test/test.dart';
 
-Bundle _bundle(String id, {
+Bundle _bundle(
+  String id, {
   String channel = 'production',
   Platform platform = Platform.android,
   bool enabled = true,
@@ -57,11 +58,17 @@ void main() {
         final b1 = _bundle('a');
         uow.markInsert(b1);
         // Seed with different data — insert should stay
-        uow.seed([Bundle(
-          id: 'a', platform: Platform.android, shouldForceUpdate: false,
-          enabled: false, fileHash: 'other', storageUri: 'other',
-          channel: 'production',
-        )]);
+        uow.seed([
+          Bundle(
+            id: 'a',
+            platform: Platform.android,
+            shouldForceUpdate: false,
+            enabled: false,
+            fileHash: 'other',
+            storageUri: 'other',
+            channel: 'production',
+          ),
+        ]);
         final changed = uow.changedSets();
         expect(changed.length, 1);
         expect(changed.first.data.fileHash, 'hash_a'); // original insert
@@ -114,13 +121,15 @@ void main() {
       test('returns cached entry on second call', () {
         var loadCount = 0;
         uow.seed([_bundle('a')]);
-        return uow.getById('a', () async {
-          loadCount++;
-          return _bundle('a');
-        }).then((b) {
-          expect(b, isNotNull);
-          expect(loadCount, 0); // never called — seed provided it
-        });
+        return uow
+            .getById('a', () async {
+              loadCount++;
+              return _bundle('a');
+            })
+            .then((b) {
+              expect(b, isNotNull);
+              expect(loadCount, 0); // never called — seed provided it
+            });
       });
 
       test('loads and caches missing entry', () async {
@@ -172,8 +181,12 @@ void main() {
       test('markUpdate on existing insert keeps insert', () {
         final b1 = _bundle('a');
         final b2 = Bundle(
-          id: 'a', platform: Platform.android, shouldForceUpdate: false,
-          enabled: false, fileHash: 'hash2', storageUri: 'uri2',
+          id: 'a',
+          platform: Platform.android,
+          shouldForceUpdate: false,
+          enabled: false,
+          fileHash: 'hash2',
+          storageUri: 'uri2',
           channel: 'production',
         );
         uow.markInsert(b1);

@@ -29,8 +29,7 @@ class MockR2Client implements R2S3ClientLike {
   }
 
   @override
-  Future<bool> headObject(String key) async =>
-      store.objects.containsKey(key);
+  Future<bool> headObject(String key) async => store.objects.containsKey(key);
 
   @override
   Future<List<int>> getObjectAsBytes(String key) async {
@@ -64,20 +63,16 @@ class MockR2Client implements R2S3ClientLike {
   }
 
   @override
-  Future<void> putObject(
-    String key,
-    List<int> body,
-    String contentType,
-  ) async {
+  Future<void> putObject(String key, List<int> body, String contentType) async {
     store.objects[key] = body;
   }
 }
 
 /// Build an [R2S3StorageConfig] wired to an in-memory [Store].
 R2S3StorageConfig mockR2Config(Store store) => R2S3StorageConfig(
-      accountId: 'test-account',
-      bucketName: 'test-bucket',
-      accessKeyId: 'test-access-key',
-      secretAccessKey: 'test-secret',
-      clientFactory: (_) => MockR2Client(store),
-    );
+  accountId: 'test-account',
+  bucketName: 'test-bucket',
+  accessKeyId: 'test-access-key',
+  secretAccessKey: 'test-secret',
+  clientFactory: (_) => MockR2Client(store),
+);

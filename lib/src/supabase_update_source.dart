@@ -8,6 +8,7 @@ import 'package:flutter_ota_kit_supabase/flutter_ota_kit_supabase.dart'
         supabaseStorage,
         SupabaseServiceRoleConfig,
         SupabaseStorageConfig;
+
 import 'shared_update_check.dart';
 
 /// Configuration for a hosted **Supabase** update source.

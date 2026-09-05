@@ -24,6 +24,6 @@ class CloudflareWorkerDatabaseConfig {
 /// client source differs (an in-process D1 binding instead of the REST API).
 final cloudflareWorkerDatabase =
     createDatabasePlugin<CloudflareWorkerDatabaseConfig>(
-  name: 'd1WorkerDatabase',
-  factory: (config) => D1DatabasePlugin(config.getDb()),
-);
+      name: 'd1WorkerDatabase',
+      factory: (config) => D1DatabasePlugin(config.getDb()),
+    );

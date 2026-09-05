@@ -118,11 +118,7 @@ class AwsCloudFrontClient implements AwsCloudFrontClientLike {
     return m?.group(1);
   }
 
-  Map<String, String> _authHeaders(
-    String method,
-    Uri uri,
-    List<int>? body,
-  ) {
+  Map<String, String> _authHeaders(String method, Uri uri, List<int>? body) {
     final now = DateTime.now().toUtc();
     final amzDate = _amzDate(now);
     final dateStamp = amzDate.substring(0, 8);
@@ -130,7 +126,8 @@ class AwsCloudFrontClient implements AwsCloudFrontClientLike {
         '$dateStamp/$_cloudfrontRegion/$_cloudfrontService/aws4_request';
     final payloadHash = body == null ? _hashHex(const []) : _hashHex(body);
 
-    final canonicalHeaders = 'host:${uri.host}\n'
+    final canonicalHeaders =
+        'host:${uri.host}\n'
         'x-amz-content-sha256:$payloadHash\n'
         'x-amz-date:$amzDate\n'
         '${config.sessionToken != null ? 'x-amz-security-token:${config.sessionToken}\n' : ''}';
@@ -138,7 +135,8 @@ class AwsCloudFrontClient implements AwsCloudFrontClientLike {
         ? 'host;x-amz-content-sha256;x-amz-date;x-amz-security-token'
         : 'host;x-amz-content-sha256;x-amz-date';
 
-    final canonicalRequest = '$method\n${uri.path}\n'
+    final canonicalRequest =
+        '$method\n${uri.path}\n'
         '\n$canonicalHeaders$signedHeaders\n$payloadHash';
     final stringToSign = _stringToSign(amzDate, scope, canonicalRequest);
     final signingKey = _signingKey(dateStamp);
@@ -181,23 +179,20 @@ class AwsCloudFrontClient implements AwsCloudFrontClientLike {
   static String _amzDate(DateTime utc) =>
       '${utc.toIso8601String().replaceAll('-', '').replaceAll(':', '').split('.').first}Z';
 
-  static String _xmlEscape(String value) =>
-      value.replaceAll('&', '&amp;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
+  static String _xmlEscape(String value) => value
+      .replaceAll('&', '&amp;')
+      .replaceAll('<', '&lt;')
+      .replaceAll('>', '&gt;');
 
   static Uint8List _hmac(List<int> key, String data) =>
       Hmac(sha256, key).convert(utf8.encode(data)).bytes as Uint8List;
 
-  static String _hashHex(List<int> data) =>
-      _toHex(sha256.convert(data).bytes);
+  static String _hashHex(List<int> data) => _toHex(sha256.convert(data).bytes);
 
   static String _toHex(List<int> bytes) =>
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();
 
-  static void _assertStatus(
-    Response response,
-    List<int> ok,
-    String operation,
-  ) {
+  static void _assertStatus(Response response, List<int> ok, String operation) {
     if (!ok.contains(response.statusCode)) {
       throw Exception(
         'CloudFront $operation failed (${response.statusCode}): ${response.body}',

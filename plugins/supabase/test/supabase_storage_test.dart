@@ -75,9 +75,7 @@ void main() {
 
     test('rejects a different bucket', () async {
       await expectLater(
-        node.exists(
-          'supabase-storage://other/assets/sha256/fi/file-hash.png',
-        ),
+        node.exists('supabase-storage://other/assets/sha256/fi/file-hash.png'),
         throwsA(
           isA<StateError>().having(
             (e) => e.message,
@@ -92,12 +90,11 @@ void main() {
 
   group('supabaseStorage runtime.getDownloadUrl', () {
     test('batches concurrent signed URL requests', () async {
-      final paths = List.generate(
-        20,
-        (i) => 'assets/sha256/file-$i.png',
-      );
+      final paths = List.generate(20, (i) => 'assets/sha256/file-$i.png');
       final results = await Future.wait(
-        paths.map((p) => runtime.getDownloadUrl('supabase-storage://updates/$p')),
+        paths.map(
+          (p) => runtime.getDownloadUrl('supabase-storage://updates/$p'),
+        ),
       );
       expect(
         results,
@@ -129,29 +126,26 @@ void main() {
       expect(bucket.createSignedUrlsCalls, hasLength(1));
     });
 
-    test('decodes percent-encoded object keys before signing and removing',
-        () async {
-      const uri = 'supabase-storage://updates/'
-          'assets/bootsplash/logo-ios%402x.png';
-      final url = await runtime.getDownloadUrl(uri);
-      expect(
-        url,
-        {
-          'fileUrl': 'https://example.supabase.co/3600/'
-              'assets/bootsplash/logo-ios@2x.png'
-        },
-      );
-      expect(
-        bucket.createSignedUrlsCalls.first,
-        ['assets/bootsplash/logo-ios@2x.png'],
-      );
+    test(
+      'decodes percent-encoded object keys before signing and removing',
+      () async {
+        const uri =
+            'supabase-storage://updates/'
+            'assets/bootsplash/logo-ios%402x.png';
+        final url = await runtime.getDownloadUrl(uri);
+        expect(url, {
+          'fileUrl':
+              'https://example.supabase.co/3600/'
+              'assets/bootsplash/logo-ios@2x.png',
+        });
+        expect(bucket.createSignedUrlsCalls.first, [
+          'assets/bootsplash/logo-ios@2x.png',
+        ]);
 
-      await node.delete(uri);
-      expect(
-        bucket.removeCalls.first,
-        ['assets/bootsplash/logo-ios@2x.png'],
-      );
-    });
+        await node.delete(uri);
+        expect(bucket.removeCalls.first, ['assets/bootsplash/logo-ios@2x.png']);
+      },
+    );
   });
 
   group('supabaseStorage node.upload', () {
@@ -162,10 +156,9 @@ void main() {
       bucket.uploadData = {'fullPath': 'updates/bundles/bundle.zip'};
 
       final result = await node.upload('bundles', uploadPath);
-      expect(
-        result,
-        {'storageUri': 'supabase-storage://updates/bundles/bundle.zip'},
-      );
+      expect(result, {
+        'storageUri': 'supabase-storage://updates/bundles/bundle.zip',
+      });
       expect(bucket.uploadCalls, ['bundles/bundle.zip']);
       expect(bucket.createSignedUrlCalls, ['bundles/bundle.zip']);
 

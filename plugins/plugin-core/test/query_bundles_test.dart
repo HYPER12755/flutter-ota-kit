@@ -44,18 +44,42 @@ void main() {
     });
 
     test('eq match', () {
-      expect(bundleIdMatchesFilter('abc', const DatabaseBundleIdFilter(eq: 'abc')), isTrue);
-      expect(bundleIdMatchesFilter('abc', const DatabaseBundleIdFilter(eq: 'def')), isFalse);
+      expect(
+        bundleIdMatchesFilter('abc', const DatabaseBundleIdFilter(eq: 'abc')),
+        isTrue,
+      );
+      expect(
+        bundleIdMatchesFilter('abc', const DatabaseBundleIdFilter(eq: 'def')),
+        isFalse,
+      );
     });
 
     test('gt match', () {
-      expect(bundleIdMatchesFilter('b', const DatabaseBundleIdFilter(gt: 'a')), isTrue);
-      expect(bundleIdMatchesFilter('a', const DatabaseBundleIdFilter(gt: 'b')), isFalse);
+      expect(
+        bundleIdMatchesFilter('b', const DatabaseBundleIdFilter(gt: 'a')),
+        isTrue,
+      );
+      expect(
+        bundleIdMatchesFilter('a', const DatabaseBundleIdFilter(gt: 'b')),
+        isFalse,
+      );
     });
 
     test('in match', () {
-      expect(bundleIdMatchesFilter('a', const DatabaseBundleIdFilter(ins: ['a', 'b'])), isTrue);
-      expect(bundleIdMatchesFilter('c', const DatabaseBundleIdFilter(ins: ['a', 'b'])), isFalse);
+      expect(
+        bundleIdMatchesFilter(
+          'a',
+          const DatabaseBundleIdFilter(ins: ['a', 'b']),
+        ),
+        isTrue,
+      );
+      expect(
+        bundleIdMatchesFilter(
+          'c',
+          const DatabaseBundleIdFilter(ins: ['a', 'b']),
+        ),
+        isFalse,
+      );
     });
 
     test('combined filters', () {
@@ -73,20 +97,56 @@ void main() {
 
     test('filters by channel', () {
       final bundle = _testBundle(channel: 'prod');
-      expect(bundleMatchesQueryWhere(bundle, const DatabaseBundleQueryWhere(channel: 'prod')), isTrue);
-      expect(bundleMatchesQueryWhere(bundle, const DatabaseBundleQueryWhere(channel: 'dev')), isFalse);
+      expect(
+        bundleMatchesQueryWhere(
+          bundle,
+          const DatabaseBundleQueryWhere(channel: 'prod'),
+        ),
+        isTrue,
+      );
+      expect(
+        bundleMatchesQueryWhere(
+          bundle,
+          const DatabaseBundleQueryWhere(channel: 'dev'),
+        ),
+        isFalse,
+      );
     });
 
     test('filters by enabled', () {
       final bundle = _testBundle(enabled: true);
-      expect(bundleMatchesQueryWhere(bundle, const DatabaseBundleQueryWhere(enabled: true)), isTrue);
-      expect(bundleMatchesQueryWhere(bundle, const DatabaseBundleQueryWhere(enabled: false)), isFalse);
+      expect(
+        bundleMatchesQueryWhere(
+          bundle,
+          const DatabaseBundleQueryWhere(enabled: true),
+        ),
+        isTrue,
+      );
+      expect(
+        bundleMatchesQueryWhere(
+          bundle,
+          const DatabaseBundleQueryWhere(enabled: false),
+        ),
+        isFalse,
+      );
     });
 
     test('filters by targetAppVersion null', () {
       final bundle = _testBundle(targetAppVersion: null);
-      expect(bundleMatchesQueryWhere(bundle, const DatabaseBundleQueryWhere(targetAppVersionNotNull: true)), isFalse);
-      expect(bundleMatchesQueryWhere(bundle, const DatabaseBundleQueryWhere(targetAppVersionNotNull: false)), isTrue);
+      expect(
+        bundleMatchesQueryWhere(
+          bundle,
+          const DatabaseBundleQueryWhere(targetAppVersionNotNull: true),
+        ),
+        isFalse,
+      );
+      expect(
+        bundleMatchesQueryWhere(
+          bundle,
+          const DatabaseBundleQueryWhere(targetAppVersionNotNull: false),
+        ),
+        isTrue,
+      );
     });
   });
 
@@ -107,7 +167,10 @@ void main() {
         _testBundle(id: 'a'),
         _testBundle(id: 'b'),
       ];
-      final sorted = sortBundles(bundles, const DatabaseBundleQueryOrder(direction: 'asc'));
+      final sorted = sortBundles(
+        bundles,
+        const DatabaseBundleQueryOrder(direction: 'asc'),
+      );
       expect(sorted.map((b) => b.id).toList(), ['a', 'b', 'c']);
     });
   });

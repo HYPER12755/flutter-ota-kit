@@ -21,14 +21,25 @@ class MigrateCommand extends FlutterPatcherCommand {
   @override
   ArgParser get argParser => ArgParser()
     ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('database-url',
-        help: 'Postgres connection string (or DATABASE_URL env).')
-    ..addOption('management-key',
-        help: 'Supabase Management API key (or SUPABASE_MANAGEMENT_KEY env) — '
-            'runs migrations without a separate Postgres connection.')
-    ..addOption('migrations-dir',
-        help: 'Directory of *.sql migration files (ordered by name).')
-    ..addFlag('dry-run', abbr: 'd', help: 'Print migrations instead of applying them.');
+    ..addOption(
+      'database-url',
+      help: 'Postgres connection string (or DATABASE_URL env).',
+    )
+    ..addOption(
+      'management-key',
+      help:
+          'Supabase Management API key (or SUPABASE_MANAGEMENT_KEY env) — '
+          'runs migrations without a separate Postgres connection.',
+    )
+    ..addOption(
+      'migrations-dir',
+      help: 'Directory of *.sql migration files (ordered by name).',
+    )
+    ..addFlag(
+      'dry-run',
+      abbr: 'd',
+      help: 'Print migrations instead of applying them.',
+    );
 
   /// Default migrations dir lives next to the CLI entrypoint; each backend has
   /// its own dialect's migrations (cloudflare = D1 SQLite, postgres = plain
@@ -49,12 +60,13 @@ class MigrateCommand extends FlutterPatcherCommand {
     if (!migrationsDir.existsSync()) {
       throw StateError('Migrations directory not found: $dir');
     }
-    final files = migrationsDir
-        .listSync()
-        .whereType<File>()
-        .where((f) => f.path.endsWith('.sql'))
-        .toList()
-      ..sort((a, b) => a.path.compareTo(b.path));
+    final files =
+        migrationsDir
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('.sql'))
+            .toList()
+          ..sort((a, b) => a.path.compareTo(b.path));
     if (files.isEmpty) {
       throw StateError('No *.sql files in $dir');
     }
@@ -71,92 +83,98 @@ class MigrateCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        final provider = argResults!['backend'] as String? ?? 'supabase';
+    final provider = argResults!['backend'] as String? ?? 'supabase';
 
-        // Backends with no relational SQL handled out-of-band (S3 blob store).
-        // Short-circuit before any SQL discovery so a missing or empty
-        // (README-only) migrations dir does not abort.
-        if (provider == 'aws') {
-          final dir = argResults!['migrations-dir'] as String? ??
-              defaultMigrationsDir(provider);
-          banner('migrate');
-          box('migrate', [
-            'Migrations for "$provider" do not run through this command:',
-            '  • aws  → S3 blob store, no relational SQL (see $dir/README.md)',
-            '',
-            'See the README under $dir for the intended setup.',
-          ]);
-          return;
-        }
+    // Backends with no relational SQL handled out-of-band (S3 blob store).
+    // Short-circuit before any SQL discovery so a missing or empty
+    // (README-only) migrations dir does not abort.
+    if (provider == 'aws') {
+      final dir =
+          argResults!['migrations-dir'] as String? ??
+          defaultMigrationsDir(provider);
+      banner('migrate');
+      box('migrate', [
+        'Migrations for "$provider" do not run through this command:',
+        '  • aws  → S3 blob store, no relational SQL (see $dir/README.md)',
+        '',
+        'See the README under $dir for the intended setup.',
+      ]);
+      return;
+    }
 
-        final dir = argResults!['migrations-dir'] as String? ??
-            defaultMigrationsDir(provider);
-        final files = _listMigrations(dir);
+    final dir =
+        argResults!['migrations-dir'] as String? ??
+        defaultMigrationsDir(provider);
+    final files = _listMigrations(dir);
 
-        if (argResults!['dry-run'] as bool) {
-          banner('migrate · dry-run');
-          for (final f in files) {
-            stdout.writeln('--- ${p.basename(f.path)} ---');
-            stdout.writeln(f.readAsStringSync());
-          }
-          return;
-        }
+    if (argResults!['dry-run'] as bool) {
+      banner('migrate · dry-run');
+      for (final f in files) {
+        stdout.writeln('--- ${p.basename(f.path)} ---');
+        stdout.writeln(f.readAsStringSync());
+      }
+      return;
+    }
 
-        if (provider == 'cloudflare') {
-          banner('migrate');
-          box('migrate', [
-            'Cloudflare (D1 SQLite) migrations run via `wrangler d1 execute`:',
-            '  wrangler d1 execute <DB> --file=$dir/0001_hot-updater_init.sql',
-            '  (apply each *.sql under $dir in filename order)',
-            '',
-            'The SQL files under $dir show the intended D1 schema.',
-          ]);
-          return;
-        }
+    if (provider == 'cloudflare') {
+      banner('migrate');
+      box('migrate', [
+        'Cloudflare (D1 SQLite) migrations run via `wrangler d1 execute`:',
+        '  wrangler d1 execute <DB> --file=$dir/0001_hot-updater_init.sql',
+        '  (apply each *.sql under $dir in filename order)',
+        '',
+        'The SQL files under $dir show the intended D1 schema.',
+      ]);
+      return;
+    }
 
-        if (provider == 'supabase') {
-          final cfg = loadConfig() ??
+    if (provider == 'supabase') {
+      final cfg =
+          loadConfig() ??
           FlutterPatcherConfig(
             provider: 'supabase',
             supabase: const SupabaseConfigJson(),
           );
-          final mgmtKey = argResults!['management-key'] as String? ??
-              Platform.environment['SUPABASE_MANAGEMENT_KEY'] ??
-              cfg.supabase.managementKey;
-          final pgUrl = argResults!['database-url'] as String? ??
-              Platform.environment['DATABASE_URL'] ??
-              cfg.supabase.databaseUrl;
-          if (mgmtKey != null && mgmtKey.isNotEmpty) {
-            await _runViaManagementApi(mgmtKey, files);
-            return;
-          }
-          if (pgUrl != null && pgUrl.isNotEmpty) {
-            await _runViaPostgres(pgUrl, files);
-            return;
-          }
-          throw StateError(
-            'For the supabase backend, provide either:\n'
-            '  • --management-key (or SUPABASE_MANAGEMENT_KEY, or set it via '
-            '`flutter-ota init`) — a Supabase Management API key, OR\n'
-            '  • --database-url (or DATABASE_URL, or set it via `init`) — a '
-            'Postgres connection string.',
-          );
-        }
+      final mgmtKey =
+          argResults!['management-key'] as String? ??
+          Platform.environment['SUPABASE_MANAGEMENT_KEY'] ??
+          cfg.supabase.managementKey;
+      final pgUrl =
+          argResults!['database-url'] as String? ??
+          Platform.environment['DATABASE_URL'] ??
+          cfg.supabase.databaseUrl;
+      if (mgmtKey != null && mgmtKey.isNotEmpty) {
+        await _runViaManagementApi(mgmtKey, files);
+        return;
+      }
+      if (pgUrl != null && pgUrl.isNotEmpty) {
+        await _runViaPostgres(pgUrl, files);
+        return;
+      }
+      throw StateError(
+        'For the supabase backend, provide either:\n'
+        '  • --management-key (or SUPABASE_MANAGEMENT_KEY, or set it via '
+        '`flutter-ota init`) — a Supabase Management API key, OR\n'
+        '  • --database-url (or DATABASE_URL, or set it via `init`) — a '
+        'Postgres connection string.',
+      );
+    }
 
-        if (provider == 'postgres') {
-          final pgUrl = argResults!['database-url'] as String? ??
-              Platform.environment['DATABASE_URL'];
-          if (pgUrl == null || pgUrl.isEmpty) {
-            throw StateError(
-              'For the postgres backend, provide --database-url or set DATABASE_URL.',
-            );
-          }
-          await _runViaPostgres(pgUrl, files);
-          return;
-        }
+    if (provider == 'postgres') {
+      final pgUrl =
+          argResults!['database-url'] as String? ??
+          Platform.environment['DATABASE_URL'];
+      if (pgUrl == null || pgUrl.isEmpty) {
+        throw StateError(
+          'For the postgres backend, provide --database-url or set DATABASE_URL.',
+        );
+      }
+      await _runViaPostgres(pgUrl, files);
+      return;
+    }
 
-        throw StateError('Unknown backend provider: "$provider".');
-      });
+    throw StateError('Unknown backend provider: "$provider".');
+  });
 
   /// Run migrations through the Supabase Management API (no Postgres creds
   /// needed). Derived from the Supabase project ref in the configured URL.
@@ -169,8 +187,7 @@ class MigrateCommand extends FlutterPatcherCommand {
           ),
     );
     final ref = Uri.parse(cfg.supabaseUrl).host.split('.').first;
-    final endpoint =
-        'https://api.supabase.com/v1/projects/$ref/database/query';
+    final endpoint = 'https://api.supabase.com/v1/projects/$ref/database/query';
     banner('migrate · supabase (management api)');
     for (final file in files) {
       final sql = file.readAsStringSync();
@@ -206,8 +223,8 @@ class MigrateCommand extends FlutterPatcherCommand {
     if (storage.supabaseServiceRoleKey == null) {
       box('migrate', [
         'Skipped storage bucket creation — set supabase.serviceRoleKey '
-        '(or SUPABASE_SERVICE_ROLE_KEY) to auto-create the '
-        '"${storage.bucketName}" bucket.',
+            '(or SUPABASE_SERVICE_ROLE_KEY) to auto-create the '
+            '"${storage.bucketName}" bucket.',
       ]);
       return;
     }
@@ -218,10 +235,7 @@ class MigrateCommand extends FlutterPatcherCommand {
         'apikey': storage.supabaseServiceRoleKey!,
         'Content-Type': 'application/json',
       },
-      body: jsonEncode({
-        'name': storage.bucketName,
-        'public': true,
-      }),
+      body: jsonEncode({'name': storage.bucketName, 'public': true}),
     );
     if (res.statusCode >= 400) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;

@@ -11,18 +11,18 @@ void main() {
       final b = PocketBaseInstallPaths.resolve(version: '0.22.21');
       expect(a.installDir.path, b.installDir.path);
       expect(a.installDir.path, endsWith(p.join('pocketbase', '0.22.21')));
-      expect(a.binaryPath.path, anyOf(
-        endsWith(p.join('0.22.21', 'pocketbase')),
-        endsWith(p.join('0.22.21', 'pocketbase.exe')),
-      ));
+      expect(
+        a.binaryPath.path,
+        anyOf(
+          endsWith(p.join('0.22.21', 'pocketbase')),
+          endsWith(p.join('0.22.21', 'pocketbase.exe')),
+        ),
+      );
     });
 
     test('resolve uses custom root', () {
       final tmp = Directory.systemTemp.createTempSync('fp-pb-paths-');
-      final a = PocketBaseInstallPaths.resolve(
-        version: '0.22.21',
-        root: tmp,
-      );
+      final a = PocketBaseInstallPaths.resolve(version: '0.22.21', root: tmp);
       expect(a.installDir.path, tmp.path);
       tmp.deleteSync(recursive: true);
     });
@@ -37,12 +37,13 @@ void main() {
           .writeAsStringSync('// hook v1');
       final dataDir = Directory(p.join(tmp.path, 'data'))..createSync();
 
-      final bootstrap =
-          PocketBaseDataBootstrap(dataDir: dataDir, hooksSourceDir: source);
+      final bootstrap = PocketBaseDataBootstrap(
+        dataDir: dataDir,
+        hooksSourceDir: source,
+      );
       final installed = await bootstrap.install();
       expect(installed, ['bundles.pb.js']);
-      final copied =
-          File(p.join(dataDir.path, 'pb_hooks', 'bundles.pb.js'));
+      final copied = File(p.join(dataDir.path, 'pb_hooks', 'bundles.pb.js'));
       expect(copied.existsSync(), isTrue);
       expect(copied.readAsStringSync(), '// hook v1');
 
@@ -59,8 +60,10 @@ void main() {
       final tmp = Directory.systemTemp.createTempSync('fp-pb-data-');
       final source = Directory(p.join(tmp.path, 'missing'));
       final dataDir = Directory(p.join(tmp.path, 'data'))..createSync();
-      final bootstrap =
-          PocketBaseDataBootstrap(dataDir: dataDir, hooksSourceDir: source);
+      final bootstrap = PocketBaseDataBootstrap(
+        dataDir: dataDir,
+        hooksSourceDir: source,
+      );
       final installed = await bootstrap.install();
       expect(installed, isEmpty);
       tmp.deleteSync(recursive: true);

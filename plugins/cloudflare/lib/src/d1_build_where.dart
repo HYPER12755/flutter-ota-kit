@@ -87,7 +87,8 @@ _BuildWhereResult buildWhereClause(DatabaseBundleQueryWhere conditions) {
     params.add(conditions.fingerprintHash);
   }
 
-  final whereClause =
-      clauses.isNotEmpty ? ' WHERE ${clauses.join(' AND ')}' : '';
+  final whereClause = clauses.isNotEmpty
+      ? ' WHERE ${clauses.join(' AND ')}'
+      : '';
   return _BuildWhereResult(whereClause, params);
 }

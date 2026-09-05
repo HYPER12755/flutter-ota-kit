@@ -12,7 +12,9 @@ void main() {
     test('encodes provided timestamp', () {
       final ts = DateTime.utc(2026, 1, 1);
       final id = uuidV7(now: ts);
-      final tsHex = ts.millisecondsSinceEpoch.toRadixString(16).padLeft(12, '0');
+      final tsHex = ts.millisecondsSinceEpoch
+          .toRadixString(16)
+          .padLeft(12, '0');
       expect(id.substring(0, 8), tsHex.substring(0, 8));
       expect(id.substring(9, 13), tsHex.substring(8, 12));
       expect(id[14], '7');

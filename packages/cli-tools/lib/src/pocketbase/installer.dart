@@ -40,12 +40,13 @@ class PocketBaseInstallPaths {
     String? version = kDefaultPocketBaseVersion,
     Directory? root,
   }) {
-    final base = root ??
+    final base =
+        root ??
         Directory(
           p.join(
             Platform.environment['HOME'] ??
                 Platform.environment['USERPROFILE'] ??
-            '.',
+                '.',
             '.flutter_ota_kit',
             'pocketbase',
             version!,
@@ -85,7 +86,8 @@ _OsArch _detectOsArch() {
   // detect arm64 via the Dart version since `Platform` doesn't expose arch
   // directly in stable Dart.
   final dartVersion = Platform.version.toLowerCase();
-  final isArm = dartVersion.contains('arm64') || dartVersion.contains('aarch64');
+  final isArm =
+      dartVersion.contains('arm64') || dartVersion.contains('aarch64');
   final arch = isArm ? 'arm64' : 'amd64';
   return _OsArch(os, arch, '${assetOs}_$arch');
 }
@@ -105,11 +107,9 @@ class PocketBaseInstallResult {
 
 /// Downloads, extracts, and verifies the PocketBase binary.
 class PocketBaseInstaller {
-  PocketBaseInstaller({
-    http.Client? httpClient,
-    String? version,
-  })  : _http = httpClient ?? http.Client(),
-        _version = version ?? kDefaultPocketBaseVersion;
+  PocketBaseInstaller({http.Client? httpClient, String? version})
+    : _http = httpClient ?? http.Client(),
+      _version = version ?? kDefaultPocketBaseVersion;
 
   final http.Client _http;
   final String _version;
@@ -184,5 +184,6 @@ class PocketBaseInstaller {
   }
 
   /// Resolves the install paths without downloading.
-  PocketBaseInstallPaths paths() => PocketBaseInstallPaths.resolve(version: _version);
+  PocketBaseInstallPaths paths() =>
+      PocketBaseInstallPaths.resolve(version: _version);
 }

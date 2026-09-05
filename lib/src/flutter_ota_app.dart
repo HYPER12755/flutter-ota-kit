@@ -59,9 +59,7 @@ class _FlutterOtaAppState extends State<FlutterOtaApp> {
     // `child`) nests its own route Overlay inside, which is fully supported.
     return Overlay(
       key: _overlayKey,
-      initialEntries: [
-        OverlayEntry(builder: (_) => widget.child),
-      ],
+      initialEntries: [OverlayEntry(builder: (_) => widget.child)],
     );
   }
 

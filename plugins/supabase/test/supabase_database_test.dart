@@ -10,12 +10,12 @@ late FakeStorageBucket bucket;
 late SupabaseClientLike client;
 
 DatabasePlugin newPlugin() => supabaseDatabase(
-      SupabaseServiceRoleConfig(
-        supabaseUrl: 'https://test.supabase.invalid',
-        supabaseAnonKey: 'test-anon-key',
-        clientFactory: (_, __) => client,
-      ),
-    )();
+  SupabaseServiceRoleConfig(
+    supabaseUrl: 'https://test.supabase.invalid',
+    supabaseAnonKey: 'test-anon-key',
+    clientFactory: (_, __) => client,
+  ),
+)();
 
 Bundle _bundle(
   String id, {
@@ -23,24 +23,23 @@ Bundle _bundle(
   String? fp,
   String? message,
   String channel = 'production',
-}) =>
-    Bundle(
-      id: id,
-      platform: Platform.android,
-      shouldForceUpdate: false,
-      enabled: enabled,
-      fileHash: 'file-$id',
-      gitCommitHash: 'git-$id',
-      message: message ?? 'msg-$id',
-      channel: channel,
-      storageUri: 'supabase-storage://updates/bundles/$id.zip',
-      targetAppVersion: '1.0.0',
-      fingerprintHash: fp,
-      metadata: const BundleMetadata(),
-      manifestStorageUri: 'supabase-storage://updates/manifests/$id.json',
-      manifestFileHash: 'mf-$id',
-      assetBaseStorageUri: 'supabase-storage://updates/assets',
-    );
+}) => Bundle(
+  id: id,
+  platform: Platform.android,
+  shouldForceUpdate: false,
+  enabled: enabled,
+  fileHash: 'file-$id',
+  gitCommitHash: 'git-$id',
+  message: message ?? 'msg-$id',
+  channel: channel,
+  storageUri: 'supabase-storage://updates/bundles/$id.zip',
+  targetAppVersion: '1.0.0',
+  fingerprintHash: fp,
+  metadata: const BundleMetadata(),
+  manifestStorageUri: 'supabase-storage://updates/manifests/$id.json',
+  manifestFileHash: 'mf-$id',
+  assetBaseStorageUri: 'supabase-storage://updates/assets',
+);
 
 void main() {
   setUp(() {
@@ -85,9 +84,7 @@ void main() {
     test('getChannels returns distinct channels', () async {
       final plugin = newPlugin();
       await plugin.appendBundle(_bundle('b1'));
-      await plugin.appendBundle(
-        _bundle('b2', channel: 'staging'),
-      );
+      await plugin.appendBundle(_bundle('b2', channel: 'staging'));
       await plugin.commitBundle();
       final channels = await plugin.getChannels();
       expect(channels, containsAll(['production', 'staging']));
@@ -144,16 +141,10 @@ void main() {
     test('fingerprint strategy returns matching bundle', () async {
       final plugin = newPlugin();
       await plugin.appendBundle(
-        _bundle(
-          '018f0000-0000-7000-8000-000000000001',
-          fp: 'fp-current',
-        ),
+        _bundle('018f0000-0000-7000-8000-000000000001', fp: 'fp-current'),
       );
       await plugin.appendBundle(
-        _bundle(
-          '018f0000-0000-7000-8000-000000000002',
-          fp: 'fp-target',
-        ),
+        _bundle('018f0000-0000-7000-8000-000000000002', fp: 'fp-target'),
       );
       await plugin.commitBundle();
 

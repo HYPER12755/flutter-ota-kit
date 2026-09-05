@@ -1,8 +1,5 @@
 import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
-    show
-        RuntimeStorageProfile,
-        StoragePlugin,
-        StoragePluginProfiles;
+    show RuntimeStorageProfile, StoragePlugin, StoragePluginProfiles;
 
 import 'aws_cloudfront_signer.dart' show cloudfrontSignedUrl;
 import 'aws_ssm_client.dart' show AwsSsmClient;
@@ -67,10 +64,8 @@ class _CloudFrontSignedStoragePlugin implements StoragePlugin {
   String get supportedProtocol => _base.supportedProtocol;
 
   @override
-  StoragePluginProfiles get profiles => StoragePluginProfiles(
-        node: _base.profiles.node,
-        runtime: _runtime,
-      );
+  StoragePluginProfiles get profiles =>
+      StoragePluginProfiles(node: _base.profiles.node, runtime: _runtime);
 }
 
 class _CloudFrontSignedRuntimeProfile implements RuntimeStorageProfile {
@@ -124,7 +119,9 @@ class _CloudFrontSignedRuntimeProfile implements RuntimeStorageProfile {
     if (_config.publicBaseUrlResolver != null) {
       final value = await _config.publicBaseUrlResolver!();
       if (value.isEmpty) {
-        throw StateError('CloudFront publicBaseUrl resolver returned empty URL');
+        throw StateError(
+          'CloudFront publicBaseUrl resolver returned empty URL',
+        );
       }
       return value;
     }

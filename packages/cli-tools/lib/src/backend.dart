@@ -9,11 +9,7 @@ import 'config.dart';
 
 /// Backend handle wiring the database + node storage profiles used by the CLI.
 class Backend {
-  const Backend({
-    required this.db,
-    required this.storage,
-    this.basePath,
-  });
+  const Backend({required this.db, required this.storage, this.basePath});
 
   final DatabasePlugin db;
   final NodeStorageProfile storage;
@@ -46,7 +42,7 @@ Backend resolveBackend(
   PostgresClientFactory? postgresClientFactory,
   AwsS3ClientLike Function(S3DatabaseConfig config)? awsS3ClientFactory,
   AwsCloudFrontClientLike Function(S3DatabaseConfig config)?
-      awsCloudFrontClientFactory,
+  awsCloudFrontClientFactory,
   AwsS3ClientLike Function(AwsS3StorageConfig config)? awsStorageClientFactory,
   PocketBaseClientFactory? pocketbaseClientFactory,
 }) {
@@ -66,11 +62,7 @@ Backend resolveBackend(
       if (node == null) {
         throw StateError('Supabase storage plugin exposes no node profile.');
       }
-      return Backend(
-        db: db,
-        storage: node,
-        basePath: storageConfig.basePath,
-      );
+      return Backend(db: db, storage: node, basePath: storageConfig.basePath);
 
     case 'postgres':
       final dbConfig = resolvePostgresDatabaseConfig(
@@ -87,11 +79,7 @@ Backend resolveBackend(
       if (node == null) {
         throw StateError('Postgres storage plugin exposes no node profile.');
       }
-      return Backend(
-        db: db,
-        storage: node,
-        basePath: storageConfig.basePath,
-      );
+      return Backend(db: db, storage: node, basePath: storageConfig.basePath);
 
     case 'cloudflare':
       final dbConfig = resolveCloudflareDatabaseConfig(
@@ -108,11 +96,7 @@ Backend resolveBackend(
       if (node == null) {
         throw StateError('R2 storage plugin exposes no node profile.');
       }
-      return Backend(
-        db: db,
-        storage: node,
-        basePath: storageConfig.basePath,
-      );
+      return Backend(db: db, storage: node, basePath: storageConfig.basePath);
 
     case 'aws':
       final dbConfig = resolveAwsDatabaseConfig(
@@ -130,11 +114,7 @@ Backend resolveBackend(
       if (node == null) {
         throw StateError('S3 storage plugin exposes no node profile.');
       }
-      return Backend(
-        db: db,
-        storage: node,
-        basePath: storageConfig.basePath,
-      );
+      return Backend(db: db, storage: node, basePath: storageConfig.basePath);
 
     case 'pocketbase':
       final dbConfig = resolvePocketBaseDatabaseConfig(
@@ -151,11 +131,7 @@ Backend resolveBackend(
       if (node == null) {
         throw StateError('PocketBase storage plugin exposes no node profile.');
       }
-      return Backend(
-        db: db,
-        storage: node,
-        basePath: storageConfig.basePath,
-      );
+      return Backend(db: db, storage: node, basePath: storageConfig.basePath);
 
     default:
       throw UnsupportedError(

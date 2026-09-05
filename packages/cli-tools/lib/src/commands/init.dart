@@ -33,14 +33,30 @@ class InitCommand extends FlutterPatcherCommand {
 
   @override
   ArgParser get argParser => ArgParser()
-    ..addOption('provider',
-        abbr: 'p',
-        defaultsTo: 'supabase',
-        help: 'Backend provider (also accepted as the first positional argument).')
-    ..addOption('channel', abbr: 'c', defaultsTo: 'production', help: 'Default channel.')
+    ..addOption(
+      'provider',
+      abbr: 'p',
+      defaultsTo: 'supabase',
+      help:
+          'Backend provider (also accepted as the first positional argument).',
+    )
+    ..addOption(
+      'channel',
+      abbr: 'c',
+      defaultsTo: 'production',
+      help: 'Default channel.',
+    )
     ..addOption('platform', defaultsTo: 'android', help: 'Default platform.')
-    ..addOption('source', abbr: 's', defaultsTo: './dist', help: 'Default deploy source.')
-    ..addFlag('global', help: 'Write to the global ~/.flutter_ota_kit config (no scaffolding).')
+    ..addOption(
+      'source',
+      abbr: 's',
+      defaultsTo: './dist',
+      help: 'Default deploy source.',
+    )
+    ..addFlag(
+      'global',
+      help: 'Write to the global ~/.flutter_ota_kit config (no scaffolding).',
+    )
     ..addFlag('force', abbr: 'f', help: 'Overwrite an existing config.');
 
   String? _p(String label, String? current) {
@@ -81,188 +97,208 @@ class InitCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        // A positional backend (`flutter_ota_kit init supabase`) takes precedence
-        // over the --provider flag.
-        final positional = argResults!.rest;
-        final requested = positional.isNotEmpty
-            ? positional.first
-            : (argResults!['provider'] as String);
-        final provider =
-            stdin.hasTerminal ? _chooseProvider(requested) : requested;
-        if (!_providers.contains(provider)) {
-          throw PackException(
-            'Unknown provider "$provider". Choose one of: '
-            '${_providers.join(', ')}.',
-            64,
-          );
-        }
+    // A positional backend (`flutter_ota_kit init supabase`) takes precedence
+    // over the --provider flag.
+    final positional = argResults!.rest;
+    final requested = positional.isNotEmpty
+        ? positional.first
+        : (argResults!['provider'] as String);
+    final provider = stdin.hasTerminal ? _chooseProvider(requested) : requested;
+    if (!_providers.contains(provider)) {
+      throw PackException(
+        'Unknown provider "$provider". Choose one of: '
+        '${_providers.join(', ')}.',
+        64,
+      );
+    }
 
-        final global = argResults!['global'] as bool;
-        final file = global
-            ? configCandidates().last
-            : configCandidates().first;
-        if (file.existsSync() && !(argResults!['force'] as bool)) {
-          throw PackException(
-            'Config already exists at ${file.path}. Use --force to overwrite.',
-            64,
-          );
-        }
+    final global = argResults!['global'] as bool;
+    final file = global ? configCandidates().last : configCandidates().first;
+    if (file.existsSync() && !(argResults!['force'] as bool)) {
+      throw PackException(
+        'Config already exists at ${file.path}. Use --force to overwrite.',
+        64,
+      );
+    }
 
-        final channel =
-            argResults!['channel'] as String? ?? 'production';
-        final platform =
-            argResults!['platform'] as String? ?? 'android';
-        final source = argResults!['source'] as String? ?? './dist';
-        final env = Platform.environment;
+    final channel = argResults!['channel'] as String? ?? 'production';
+    final platform = argResults!['platform'] as String? ?? 'android';
+    final source = argResults!['source'] as String? ?? './dist';
+    final env = Platform.environment;
 
-        banner('init');
+    banner('init');
 
-        late FlutterPatcherConfig cfg;
-        switch (provider) {
-          case 'postgres':
-            cfg = FlutterPatcherConfig(
-              provider: provider,
-              channel: channel,
-              platform: platform,
-              source: source,
-              supabase: const SupabaseConfigJson(),
-              postgres: PostgresConfigJson(
-                host: _p('Postgres host', env['POSTGRES_HOST']),
-                port: _p('Postgres port', env['POSTGRES_PORT'] ?? '5432'),
-                database:
-                    _p('Postgres database', env['POSTGRES_DB'] ?? 'postgres'),
-                username: _p('Postgres username', env['POSTGRES_USER']),
-                password: _p('Postgres password', env['POSTGRES_PASSWORD']),
-                sslMode: _p('Postgres sslmode', env['POSTGRES_SSLMODE']),
-                basePath: _p('Storage base path', env['POSTGRES_BASE_PATH']),
-                servingBaseUrl: _p(
-                    'Serving base url', env['POSTGRES_SERVING_BASE_URL']),
-              ),
-            );
-          case 'cloudflare':
-            cfg = FlutterPatcherConfig(
-              provider: provider,
-              channel: channel,
-              platform: platform,
-              source: source,
-              supabase: const SupabaseConfigJson(),
-              cloudflare: CloudflareConfigJson(
-                accountId:
-                    _p('Cloudflare account id', env['CLOUDFLARE_ACCOUNT_ID']),
-                d1DatabaseId: _p(
-                    'Cloudflare D1 database id', env['CLOUDFLARE_D1_DATABASE_ID']),
-                apiToken:
-                    _p('Cloudflare API token', env['CLOUDFLARE_API_TOKEN']),
-                r2Bucket: _p('R2 bucket', env['R2_BUCKET'] ?? 'bundles'),
-                r2AccessKeyId:
-                    _p('R2 access key id', env['R2_ACCESS_KEY_ID']),
-                r2SecretAccessKey:
-                    _p('R2 secret access key', env['R2_SECRET_ACCESS_KEY']),
-                r2BasePath: _p('R2 base path', env['R2_BASE_PATH']),
-              ),
-            );
-          case 'aws':
-            cfg = FlutterPatcherConfig(
-              provider: provider,
-              channel: channel,
-              platform: platform,
-              source: source,
-              supabase: const SupabaseConfigJson(),
-              aws: AwsConfigJson(
-                bucket: _p('AWS bucket', env['AWS_BUCKET']),
-                region: _p('AWS region', env['AWS_REGION']),
-                accessKeyId:
-                    _p('AWS access key id', env['AWS_ACCESS_KEY_ID']),
-                secretAccessKey:
-                    _p('AWS secret access key', env['AWS_SECRET_ACCESS_KEY']),
-                endpoint: _p('AWS endpoint', env['AWS_ENDPOINT']),
-                basePath: _p('AWS base path', env['AWS_BASE_PATH']),
-                sessionToken:
-                    _p('AWS session token', env['AWS_SESSION_TOKEN']),
-              ),
-            );
-          case 'pocketbase':
-            cfg = FlutterPatcherConfig(
-              provider: provider,
-              channel: channel,
-              platform: platform,
-              source: source,
-              supabase: const SupabaseConfigJson(),
-              pocketbase: PocketBaseConfigJson(
-                url: _p('PocketBase URL', env['POCKETBASE_URL']),
-                adminEmail: _p(
-                    'PocketBase admin email', env['POCKETBASE_ADMIN_EMAIL']),
-                adminPassword: _p('PocketBase admin password',
-                    env['POCKETBASE_ADMIN_PASSWORD']),
-              ),
-            );
-          case 'supabase':
-          default:
-            cfg = FlutterPatcherConfig(
-              provider: 'supabase',
-              channel: channel,
-              platform: platform,
-              source: source,
-              supabase: SupabaseConfigJson(
-                url: _p('Supabase URL', env['SUPABASE_URL']),
-                serviceRoleKey: _p(
-                    'Supabase service role key', env['SUPABASE_SERVICE_ROLE_KEY']),
-                anonKey: _p('Supabase publishable key', env['SUPABASE_PUBLISHABLE_KEY']),
-                bucket: _p('Storage bucket', env['SUPABASE_BUCKET'] ?? 'bundles'),
-                basePath: _p('Storage base path', env['SUPABASE_BASE_PATH']),
-                managementKey: _p(
-                    'Supabase Management API key (optional, used by `migrate`)',
-                    env['SUPABASE_MANAGEMENT_KEY']),
-                databaseUrl: _p(
-                    'Postgres DATABASE_URL (optional, used by `migrate`)',
-                    env['SUPABASE_DATABASE_URL']),
-              ),
-            );
-        }
+    late FlutterPatcherConfig cfg;
+    switch (provider) {
+      case 'postgres':
+        cfg = FlutterPatcherConfig(
+          provider: provider,
+          channel: channel,
+          platform: platform,
+          source: source,
+          supabase: const SupabaseConfigJson(),
+          postgres: PostgresConfigJson(
+            host: _p('Postgres host', env['POSTGRES_HOST']),
+            port: _p('Postgres port', env['POSTGRES_PORT'] ?? '5432'),
+            database: _p('Postgres database', env['POSTGRES_DB'] ?? 'postgres'),
+            username: _p('Postgres username', env['POSTGRES_USER']),
+            password: _p('Postgres password', env['POSTGRES_PASSWORD']),
+            sslMode: _p('Postgres sslmode', env['POSTGRES_SSLMODE']),
+            basePath: _p('Storage base path', env['POSTGRES_BASE_PATH']),
+            servingBaseUrl: _p(
+              'Serving base url',
+              env['POSTGRES_SERVING_BASE_URL'],
+            ),
+          ),
+        );
+      case 'cloudflare':
+        cfg = FlutterPatcherConfig(
+          provider: provider,
+          channel: channel,
+          platform: platform,
+          source: source,
+          supabase: const SupabaseConfigJson(),
+          cloudflare: CloudflareConfigJson(
+            accountId: _p(
+              'Cloudflare account id',
+              env['CLOUDFLARE_ACCOUNT_ID'],
+            ),
+            d1DatabaseId: _p(
+              'Cloudflare D1 database id',
+              env['CLOUDFLARE_D1_DATABASE_ID'],
+            ),
+            apiToken: _p('Cloudflare API token', env['CLOUDFLARE_API_TOKEN']),
+            r2Bucket: _p('R2 bucket', env['R2_BUCKET'] ?? 'bundles'),
+            r2AccessKeyId: _p('R2 access key id', env['R2_ACCESS_KEY_ID']),
+            r2SecretAccessKey: _p(
+              'R2 secret access key',
+              env['R2_SECRET_ACCESS_KEY'],
+            ),
+            r2BasePath: _p('R2 base path', env['R2_BASE_PATH']),
+          ),
+        );
+      case 'aws':
+        cfg = FlutterPatcherConfig(
+          provider: provider,
+          channel: channel,
+          platform: platform,
+          source: source,
+          supabase: const SupabaseConfigJson(),
+          aws: AwsConfigJson(
+            bucket: _p('AWS bucket', env['AWS_BUCKET']),
+            region: _p('AWS region', env['AWS_REGION']),
+            accessKeyId: _p('AWS access key id', env['AWS_ACCESS_KEY_ID']),
+            secretAccessKey: _p(
+              'AWS secret access key',
+              env['AWS_SECRET_ACCESS_KEY'],
+            ),
+            endpoint: _p('AWS endpoint', env['AWS_ENDPOINT']),
+            basePath: _p('AWS base path', env['AWS_BASE_PATH']),
+            sessionToken: _p('AWS session token', env['AWS_SESSION_TOKEN']),
+          ),
+        );
+      case 'pocketbase':
+        cfg = FlutterPatcherConfig(
+          provider: provider,
+          channel: channel,
+          platform: platform,
+          source: source,
+          supabase: const SupabaseConfigJson(),
+          pocketbase: PocketBaseConfigJson(
+            url: _p('PocketBase URL', env['POCKETBASE_URL']),
+            adminEmail: _p(
+              'PocketBase admin email',
+              env['POCKETBASE_ADMIN_EMAIL'],
+            ),
+            adminPassword: _p(
+              'PocketBase admin password',
+              env['POCKETBASE_ADMIN_PASSWORD'],
+            ),
+          ),
+        );
+      case 'supabase':
+      default:
+        cfg = FlutterPatcherConfig(
+          provider: 'supabase',
+          channel: channel,
+          platform: platform,
+          source: source,
+          supabase: SupabaseConfigJson(
+            url: _p('Supabase URL', env['SUPABASE_URL']),
+            serviceRoleKey: _p(
+              'Supabase service role key',
+              env['SUPABASE_SERVICE_ROLE_KEY'],
+            ),
+            anonKey: _p(
+              'Supabase publishable key',
+              env['SUPABASE_PUBLISHABLE_KEY'],
+            ),
+            bucket: _p('Storage bucket', env['SUPABASE_BUCKET'] ?? 'bundles'),
+            basePath: _p('Storage base path', env['SUPABASE_BASE_PATH']),
+            managementKey: _p(
+              'Supabase Management API key (optional, used by `migrate`)',
+              env['SUPABASE_MANAGEMENT_KEY'],
+            ),
+            databaseUrl: _p(
+              'Postgres DATABASE_URL (optional, used by `migrate`)',
+              env['SUPABASE_DATABASE_URL'],
+            ),
+          ),
+        );
+    }
 
-        saveConfig(cfg, global: global);
-        step('Wrote ${file.path}');
+    saveConfig(cfg, global: global);
+    step('Wrote ${file.path}');
 
-        if (global) {
-          stdout.writeln(
-            '  ${yellow('⚠')} Secrets are stored in plaintext under ~/.flutter_ota_kit. '
-            'Restrict permissions and use a secrets manager in production.',
-          );
-          return;
-        }
+    if (global) {
+      stdout.writeln(
+        '  ${yellow('⚠')} Secrets are stored in plaintext under ~/.flutter_ota_kit. '
+        'Restrict permissions and use a secrets manager in production.',
+      );
+      return;
+    }
 
-        // Scaffold the host project integration files.
-        await _scaffoldProject(cfg, provider);
+    // Scaffold the host project integration files.
+    await _scaffoldProject(cfg, provider);
 
-        stdout.writeln();
-        stdout.writeln(cyan('Next steps:'));
-        stdout.writeln('  1. ${dim('flutter pub get')}');
-        stdout.writeln(
-            '  2. In lib/main.dart call ${green('await setupFlutterOta();')} '
-            'right after WidgetsFlutterBinding.ensureInitialized() (before runApp).');
-        stdout.writeln(
-            '     A `.env` scaffold was written — put secrets there, then build with '
-            '`--dart-define-from-file=.env` (environment overrides config).');
-        if (provider == 'supabase') {
-          stdout.writeln(
-              '  3. Provision the backend once: ${dim('flutter_ota_kit migrate supabase')}');
-        } else if (provider == 'postgres') {
-          stdout.writeln(
-              '  3. Provision the backend: ${dim('flutter_ota_kit migrate postgres')}');
-        } else if (provider == 'pocketbase') {
-          stdout.writeln(
-              '  3. Install PocketBase + provision the schema: '
-              '${dim('flutter_ota_kit pocketbase install')} then '
-              '${dim('flutter_ota_kit pocketbase serve')}.');
-        }
-        stdout.writeln(
-            '  4. Build a patch: ${dim('flutter_ota_kit build --name 1.0.1')} '
-            'then ${dim('flutter_ota_kit deploy')}');
-      });
+    stdout.writeln();
+    stdout.writeln(cyan('Next steps:'));
+    stdout.writeln('  1. ${dim('flutter pub get')}');
+    stdout.writeln(
+      '  2. In lib/main.dart call ${green('await setupFlutterOta();')} '
+      'right after WidgetsFlutterBinding.ensureInitialized() (before runApp).',
+    );
+    stdout.writeln(
+      '     A `.env` scaffold was written — put secrets there, then build with '
+      '`--dart-define-from-file=.env` (environment overrides config).',
+    );
+    if (provider == 'supabase') {
+      stdout.writeln(
+        '  3. Provision the backend once: ${dim('flutter_ota_kit migrate supabase')}',
+      );
+    } else if (provider == 'postgres') {
+      stdout.writeln(
+        '  3. Provision the backend: ${dim('flutter_ota_kit migrate postgres')}',
+      );
+    } else if (provider == 'pocketbase') {
+      stdout.writeln(
+        '  3. Install PocketBase + provision the schema: '
+        '${dim('flutter_ota_kit pocketbase install')} then '
+        '${dim('flutter_ota_kit pocketbase serve')}.',
+      );
+    }
+    stdout.writeln(
+      '  4. Build a patch: ${dim('flutter_ota_kit build --name 1.0.1')} '
+      'then ${dim('flutter_ota_kit deploy')}',
+    );
+  });
 
   /// Generate the integration files (pubspec dep, manifest permission, setup dart
   /// file, .gitignore entry) inside the current directory.
-  Future<void> _scaffoldProject(FlutterPatcherConfig cfg, String provider) async {
+  Future<void> _scaffoldProject(
+    FlutterPatcherConfig cfg,
+    String provider,
+  ) async {
     _addPubDependency();
     _addInternetPermission();
     await _writeSetupFile(cfg, provider);
@@ -273,7 +309,9 @@ class InitCommand extends FlutterPatcherCommand {
   void _addPubDependency() {
     final pubspec = File('pubspec.yaml');
     if (!pubspec.existsSync()) {
-      stdout.writeln(yellow('  ⚠ pubspec.yaml not found; skipping dependency injection.'));
+      stdout.writeln(
+        yellow('  ⚠ pubspec.yaml not found; skipping dependency injection.'),
+      );
       return;
     }
     var content = pubspec.readAsStringSync();
@@ -285,7 +323,11 @@ class InitCommand extends FlutterPatcherCommand {
     final marker = '\ndependencies:';
     final idx = content.indexOf(marker);
     if (idx == -1) {
-      stdout.writeln(yellow('  ⚠ could not find a `dependencies:` block; add `flutter_ota_kit` manually.'));
+      stdout.writeln(
+        yellow(
+          '  ⚠ could not find a `dependencies:` block; add `flutter_ota_kit` manually.',
+        ),
+      );
       return;
     }
     final insertAt = idx + marker.length;
@@ -297,7 +339,11 @@ class InitCommand extends FlutterPatcherCommand {
   void _addInternetPermission() {
     final mf = File('android/app/src/main/AndroidManifest.xml');
     if (!mf.existsSync()) {
-      stdout.writeln(yellow('  ⚠ AndroidManifest.xml not found; skipping INTERNET permission.'));
+      stdout.writeln(
+        yellow(
+          '  ⚠ AndroidManifest.xml not found; skipping INTERNET permission.',
+        ),
+      );
       return;
     }
     var content = mf.readAsStringSync();
@@ -307,7 +353,11 @@ class InitCommand extends FlutterPatcherCommand {
     }
     final match = RegExp(r'<manifest[^>]*>').firstMatch(content);
     if (match == null) {
-      stdout.writeln(yellow('  ⚠ could not locate <manifest> tag; add INTERNET permission manually.'));
+      stdout.writeln(
+        yellow(
+          '  ⚠ could not locate <manifest> tag; add INTERNET permission manually.',
+        ),
+      );
       return;
     }
     final insertAt = match.end;
@@ -317,10 +367,15 @@ class InitCommand extends FlutterPatcherCommand {
       '\n    <uses-permission android:name="android.permission.INTERNET" />',
     );
     mf.writeAsStringSync(content);
-    step('Added INTERNET permission to android/app/src/main/AndroidManifest.xml');
+    step(
+      'Added INTERNET permission to android/app/src/main/AndroidManifest.xml',
+    );
   }
 
-  Future<void> _writeSetupFile(FlutterPatcherConfig cfg, String provider) async {
+  Future<void> _writeSetupFile(
+    FlutterPatcherConfig cfg,
+    String provider,
+  ) async {
     final dir = Directory('lib');
     if (!dir.existsSync()) dir.createSync(recursive: true);
     final file = File('lib/flutter_ota_kit_setup.dart');
@@ -335,7 +390,9 @@ class InitCommand extends FlutterPatcherCommand {
       step('.gitignore already ignores .flutter_ota_kit/');
       return;
     }
-    final next = content.isEmpty ? '.flutter_ota_kit/\n' : '$content\n.flutter_ota_kit/\n';
+    final next = content.isEmpty
+        ? '.flutter_ota_kit/\n'
+        : '$content\n.flutter_ota_kit/\n';
     gi.writeAsStringSync(next);
     step('Added .flutter_ota_kit/ to .gitignore');
   }
@@ -405,7 +462,9 @@ class InitCommand extends FlutterPatcherCommand {
     buffer.writeln('# Generated by `flutter-ota init $provider`.');
     buffer.writeln('# Fill in (or override) values, then build with:');
     buffer.writeln('#   flutter run --dart-define-from-file=.env');
-    buffer.writeln('# Environment overrides the project config and any defaults.');
+    buffer.writeln(
+      '# Environment overrides the project config and any defaults.',
+    );
     for (final e in entries.entries) {
       buffer.writeln('${e.key}=${e.value}');
     }
@@ -422,8 +481,9 @@ class InitCommand extends FlutterPatcherCommand {
 
   void _ensureEnvGitignored() {
     final gi = File('.gitignore');
-    final lines =
-        gi.existsSync() ? gi.readAsStringSync().split('\n') : const <String>[];
+    final lines = gi.existsSync()
+        ? gi.readAsStringSync().split('\n')
+        : const <String>[];
     if (lines.contains('.env')) {
       step('.gitignore already ignores .env');
       return;
@@ -450,7 +510,8 @@ class InitCommand extends FlutterPatcherCommand {
     switch (provider) {
       case 'postgres':
         final c = cfg.postgres;
-        configure = '''
+        configure =
+            '''
   FlutterPatcher.configurePostgres(PostgresUpdateConfig(
     host: const String.fromEnvironment('POSTGRES_HOST', defaultValue: ${_q(c.host ?? '')}),
     port: int.tryParse(const String.fromEnvironment('POSTGRES_PORT', defaultValue: ${_q(c.port ?? '5432')})) ?? 5432,
@@ -465,7 +526,8 @@ class InitCommand extends FlutterPatcherCommand {
   ));''';
       case 'cloudflare':
         final c = cfg.cloudflare;
-        configure = '''
+        configure =
+            '''
   FlutterPatcher.configureCloudflare(CloudflareUpdateConfig(
     accountId: const String.fromEnvironment('CLOUDFLARE_ACCOUNT_ID', defaultValue: ${_q(c.accountId ?? '')}),
     databaseId: const String.fromEnvironment('CLOUDFLARE_D1_DATABASE_ID', defaultValue: ${_q(c.d1DatabaseId ?? '')}),
@@ -481,7 +543,8 @@ class InitCommand extends FlutterPatcherCommand {
   ));''';
       case 'aws':
         final c = cfg.aws;
-        configure = '''
+        configure =
+            '''
   FlutterPatcher.configureAws(AwsUpdateConfig(
     bucketName: const String.fromEnvironment('AWS_BUCKET', defaultValue: ${_q(c.bucket ?? '')}),
     region: const String.fromEnvironment('AWS_REGION', defaultValue: ${_q(c.region ?? '')}),
@@ -496,7 +559,8 @@ class InitCommand extends FlutterPatcherCommand {
   ));''';
       case 'pocketbase':
         final c = cfg.pocketbase;
-        configure = '''
+        configure =
+            '''
   FlutterPatcher.configurePocketBase(PocketBaseUpdateConfig(
     url: const String.fromEnvironment('POCKETBASE_URL', defaultValue: ${_q(c.url ?? '')}),
     adminEmail: const String.fromEnvironment('POCKETBASE_ADMIN_EMAIL', defaultValue: ''),
@@ -511,7 +575,8 @@ class InitCommand extends FlutterPatcherCommand {
       case 'supabase':
       default:
         final c = cfg.supabase;
-        configure = '''
+        configure =
+            '''
   FlutterPatcher.configureSupabase(SupabaseUpdateConfig(
      supabaseUrl: const String.fromEnvironment('SUPABASE_URL', defaultValue: ${_q(c.url ?? '')}),
      anonKey: const String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY', defaultValue: ''),

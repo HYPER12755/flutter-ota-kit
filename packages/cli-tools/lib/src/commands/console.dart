@@ -16,8 +16,11 @@ class ConsoleCommand extends FlutterPatcherCommand {
 
   @override
   ArgParser get argParser => ArgParser()
-    ..addFlag('open',
-        help: 'Launch the console with `flutter run -d chrome` (requires Flutter).');
+    ..addFlag(
+      'open',
+      help:
+          'Launch the console with `flutter run -d chrome` (requires Flutter).',
+    );
 
   Directory? _findConsoleDir() {
     var dir = Directory(p.dirname(Platform.script.path));
@@ -31,29 +34,29 @@ class ConsoleCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        final consoleDir = _findConsoleDir();
-        if (consoleDir == null) {
-          err('Console package not found (expected packages/console).');
-          return;
-        }
-        if (argResults!['open'] as bool) {
-          step('Launching console...');
-          final process = await Process.start(
-            'flutter',
-            ['run', '-d', 'chrome'],
-            workingDirectory: consoleDir.path,
-            runInShell: true,
-            mode: ProcessStartMode.inheritStdio,
-          );
-          exitCode = await process.exitCode;
-          return;
-        }
-        banner('console');
-        box('flutter_ota_kit console', [
-          'Open the web console with Flutter:',
-          '',
-          kv('dir', consoleDir.path),
-          kv('run', 'flutter run -d chrome'),
-        ]);
-      });
+    final consoleDir = _findConsoleDir();
+    if (consoleDir == null) {
+      err('Console package not found (expected packages/console).');
+      return;
+    }
+    if (argResults!['open'] as bool) {
+      step('Launching console...');
+      final process = await Process.start(
+        'flutter',
+        ['run', '-d', 'chrome'],
+        workingDirectory: consoleDir.path,
+        runInShell: true,
+        mode: ProcessStartMode.inheritStdio,
+      );
+      exitCode = await process.exitCode;
+      return;
+    }
+    banner('console');
+    box('flutter_ota_kit console', [
+      'Open the web console with Flutter:',
+      '',
+      kv('dir', consoleDir.path),
+      kv('run', 'flutter run -d chrome'),
+    ]);
+  });
 }

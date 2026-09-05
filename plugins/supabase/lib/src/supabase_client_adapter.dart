@@ -7,18 +7,11 @@ library;
 
 /// Minimal PostgREST query-builder surface used by the database plugin.
 abstract class SupabaseQueryBuilderLike {
-  SupabaseFilterBuilderLike select(
-    String columns, {
-    bool? count,
-    bool? head,
-  });
+  SupabaseFilterBuilderLike select(String columns, {bool? count, bool? head});
 
   SupabaseFilterBuilderLike delete();
 
-  Future<dynamic> upsert(
-    dynamic values, {
-    String? onConflict,
-  });
+  Future<dynamic> upsert(dynamic values, {String? onConflict});
 }
 
 /// Minimal PostgREST filter-builder surface.
@@ -47,10 +40,7 @@ abstract class SupabaseResponseLike {
 
 /// Storage bucket surface used by the storage plugin.
 abstract class SupabaseStorageBucketLike {
-  Future<SupabaseSignedUrlResult> createSignedUrl(
-    String path,
-    int expiresIn,
-  );
+  Future<SupabaseSignedUrlResult> createSignedUrl(String path, int expiresIn);
 
   Future<SupabaseSignedUrlListResult> createSignedUrls(
     List<String> paths,

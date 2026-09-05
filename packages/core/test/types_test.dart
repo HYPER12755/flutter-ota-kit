@@ -2,28 +2,28 @@ import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart';
 import 'package:test/test.dart';
 
 Bundle _sample() => Bundle(
-      id: '019b76da-a800-7cc2-b5a5-c8f4a1e9d001',
-      platform: Platform.android,
-      shouldForceUpdate: false,
-      enabled: true,
-      fileHash: 'a' * 64,
-      storageUri: 'supabase-storage://flutter-ota-storage/bundles/x/bundle.zip',
-      gitCommitHash: 'deadbeef',
-      message: 'test bundle',
-      channel: 'production',
-      targetAppVersion: '^1.2.0',
-      metadata: const BundleMetadata(appVersion: '1.2.3'),
-      rolloutCohortCount: 137,
-      targetCohorts: ['qa-group'],
-      patches: [
-        BundlePatchArtifact(
-          baseBundleId: 'base-id',
-          baseFileHash: 'b' * 64,
-          patchFileHash: 'c' * 64,
-          patchStorageUri: 'supabase-storage://bucket/patches/p.bsdiff',
-        ),
-      ],
-    );
+  id: '019b76da-a800-7cc2-b5a5-c8f4a1e9d001',
+  platform: Platform.android,
+  shouldForceUpdate: false,
+  enabled: true,
+  fileHash: 'a' * 64,
+  storageUri: 'supabase-storage://flutter-ota-storage/bundles/x/bundle.zip',
+  gitCommitHash: 'deadbeef',
+  message: 'test bundle',
+  channel: 'production',
+  targetAppVersion: '^1.2.0',
+  metadata: const BundleMetadata(appVersion: '1.2.3'),
+  rolloutCohortCount: 137,
+  targetCohorts: ['qa-group'],
+  patches: [
+    BundlePatchArtifact(
+      baseBundleId: 'base-id',
+      baseFileHash: 'b' * 64,
+      patchFileHash: 'c' * 64,
+      patchStorageUri: 'supabase-storage://bucket/patches/p.bsdiff',
+    ),
+  ],
+);
 
 void main() {
   group('Bundle JSON', () {
@@ -100,8 +100,10 @@ void main() {
         },
       }) as AppUpdateAvailableInfo;
       expect(info.status, UpdateStatus.update);
-      expect(info.changedAssets?['assets/logo.png']?.file?.url,
-          'https://cdn/logo.png');
+      expect(
+        info.changedAssets?['assets/logo.png']?.file?.url,
+        'https://cdn/logo.png',
+      );
     });
 
     test('available info serializes', () {

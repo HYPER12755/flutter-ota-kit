@@ -22,10 +22,14 @@ class ConfigCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        // No subcommand selected.
-        print(description);
-        print(''); print('Subcommands:'); print('  get <key>'); print('  set <key> <value>'); print('  list');
-      });
+    // No subcommand selected.
+    print(description);
+    print('');
+    print('Subcommands:');
+    print('  get <key>');
+    print('  set <key> <value>');
+    print('  list');
+  });
 }
 
 Map<String, dynamic> _loadProjectJson() {
@@ -39,9 +43,7 @@ Map<String, dynamic> _loadProjectJson() {
 void _saveProjectJson(Map<String, dynamic> json) {
   final file = configCandidates().first;
   file.parent.createSync(recursive: true);
-  file.writeAsStringSync(
-    const JsonEncoder.withIndent('  ').convert(json),
-  );
+  file.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(json));
 }
 
 class ConfigGetCommand extends FlutterPatcherCommand {
@@ -49,26 +51,28 @@ class ConfigGetCommand extends FlutterPatcherCommand {
   String get name => 'get';
 
   @override
-  String get description => 'Print a config value by dot-path (e.g. supabase.url).';
+  String get description =>
+      'Print a config value by dot-path (e.g. supabase.url).';
 
   @override
-  ArgParser get argParser => ArgParser()..addOption('key', abbr: 'k', help: 'Dot-path key.');
+  ArgParser get argParser =>
+      ArgParser()..addOption('key', abbr: 'k', help: 'Dot-path key.');
 
   @override
   Future<int> run() => runGuarded(() async {
-        final key = argResults!['key'] as String?;
-        if (key == null || key.isEmpty) {
-          throw StateError('Usage: flutter_ota_kit config get <key>');
-        }
-        final value = readPath(_loadProjectJson(), key);
-        if (value == null) {
-          stderr.writeln('(not set)');
-          return;
-        }
-        stdout.writeln(
-          value is String ? value : const JsonEncoder().convert(value),
-        );
-      });
+    final key = argResults!['key'] as String?;
+    if (key == null || key.isEmpty) {
+      throw StateError('Usage: flutter_ota_kit config get <key>');
+    }
+    final value = readPath(_loadProjectJson(), key);
+    if (value == null) {
+      stderr.writeln('(not set)');
+      return;
+    }
+    stdout.writeln(
+      value is String ? value : const JsonEncoder().convert(value),
+    );
+  });
 }
 
 class ConfigSetCommand extends FlutterPatcherCommand {
@@ -85,16 +89,16 @@ class ConfigSetCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        final key = argResults!['key'] as String?;
-        final value = argResults!['value'] as String?;
-        if (key == null || key.isEmpty || value == null) {
-          throw StateError('Usage: flutter_ota_kit config set <key> <value>');
-        }
-        final json = _loadProjectJson();
-        writePath(json, key, value);
-        _saveProjectJson(json);
-        stdout.writeln('Set $key = $value');
-      });
+    final key = argResults!['key'] as String?;
+    final value = argResults!['value'] as String?;
+    if (key == null || key.isEmpty || value == null) {
+      throw StateError('Usage: flutter_ota_kit config set <key> <value>');
+    }
+    final json = _loadProjectJson();
+    writePath(json, key, value);
+    _saveProjectJson(json);
+    stdout.writeln('Set $key = $value');
+  });
 }
 
 class ConfigListCommand extends FlutterPatcherCommand {
@@ -106,7 +110,7 @@ class ConfigListCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-        final json = _loadProjectJson();
-        stdout.writeln(const JsonEncoder.withIndent('  ').convert(json));
-      });
+    final json = _loadProjectJson();
+    stdout.writeln(const JsonEncoder.withIndent('  ').convert(json));
+  });
 }

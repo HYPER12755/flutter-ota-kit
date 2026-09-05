@@ -49,14 +49,13 @@ class PocketBaseConfig {
     String? channelsCollection,
     String? bundlesBucket,
     PocketBaseClientFactory? clientFactory,
-  }) =>
-      PocketBaseConfig(
-        url: url ?? this.url,
-        adminEmail: adminEmail ?? this.adminEmail,
-        adminPassword: adminPassword ?? this.adminPassword,
-        bundlesCollection: bundlesCollection ?? this.bundlesCollection,
-        channelsCollection: channelsCollection ?? this.channelsCollection,
-        bundlesBucket: bundlesBucket ?? this.bundlesBucket,
-        clientFactory: clientFactory ?? this.clientFactory,
-      );
+  }) => PocketBaseConfig(
+    url: url ?? this.url,
+    adminEmail: adminEmail ?? this.adminEmail,
+    adminPassword: adminPassword ?? this.adminPassword,
+    bundlesCollection: bundlesCollection ?? this.bundlesCollection,
+    channelsCollection: channelsCollection ?? this.channelsCollection,
+    bundlesBucket: bundlesBucket ?? this.bundlesBucket,
+    clientFactory: clientFactory ?? this.clientFactory,
+  );
 }

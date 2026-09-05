@@ -1,5 +1,6 @@
 import 'content_addressed_assets.dart' show getContentAddressedAssetStoragePath;
-import 'legacy_asset_storage_layout.dart' show getLegacyManifestAssetStoragePath;
+import 'legacy_asset_storage_layout.dart'
+    show getLegacyManifestAssetStoragePath;
 
 /// The two supported asset storage layout strategies.
 typedef AssetStorageLayout = String;
@@ -27,8 +28,7 @@ String createStorageUriWithRelativePath({
   required String relativePath,
 }) {
   final storageUrl = Uri.parse(baseStorageUri);
-  final normalizedBasePath =
-      storageUrl.path.replaceAll(RegExp(r'/+$'), '');
+  final normalizedBasePath = storageUrl.path.replaceAll(RegExp(r'/+$'), '');
   final normalizedRelativePath = relativePath
       .replaceAll('\\', '/')
       .split('/')
@@ -46,8 +46,8 @@ String createStorageUriWithRelativePath({
 /// Returns `'content-addressed'` if the URI path ends with `/assets`,
 /// otherwise `'legacy-files'`.
 AssetStorageLayout getAssetStorageLayout(String assetBaseStorageUri) {
-  final pathname =
-      Uri.parse(assetBaseStorageUri).path.replaceAll(RegExp(r'/+$'), '');
+  final pathname = Uri.parse(assetBaseStorageUri).path
+      .replaceAll(RegExp(r'/+$'), '');
   return pathname.endsWith('/assets') || pathname == '/assets'
       ? assetLayoutContentAddressed
       : assetLayoutLegacyFiles;

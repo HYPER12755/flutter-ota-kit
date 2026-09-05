@@ -24,10 +24,7 @@ import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
         ResolveUpdateInfoFromBundlesOptions;
 
 import 'd1_bundle_mapper.dart'
-    show
-        bundleToPatchRows,
-        defaultRolloutCohortCount,
-        transformRowToBundle;
+    show bundleToPatchRows, defaultRolloutCohortCount, transformRowToBundle;
 import 'd1_build_where.dart' show buildWhereClause;
 import 'd1_client.dart' show D1ClientLike;
 
@@ -77,8 +74,9 @@ class D1DatabasePlugin implements AbstractDatabasePlugin {
     DatabaseBundleQueryOrder? orderBy,
   ) async {
     final where = buildWhereClause(conditions);
-    final orderBySql =
-        orderBy?.direction == 'asc' ? 'ORDER BY id ASC' : 'ORDER BY id DESC';
+    final orderBySql = orderBy?.direction == 'asc'
+        ? 'ORDER BY id ASC'
+        : 'ORDER BY id DESC';
 
     final rows = await _client.query(
       'SELECT * FROM bundles ${where.sql} $orderBySql LIMIT ? OFFSET ?',
@@ -89,7 +87,9 @@ class D1DatabasePlugin implements AbstractDatabasePlugin {
       rows.map((row) => row['id'] as String).toList(),
     );
     return rows
-        .map((row) => transformRowToBundle(row, patchMap[row['id']] ?? const []))
+        .map(
+          (row) => transformRowToBundle(row, patchMap[row['id']] ?? const []),
+        )
         .toList();
   }
 
@@ -105,7 +105,9 @@ class D1DatabasePlugin implements AbstractDatabasePlugin {
       rows.map((row) => row['id'] as String).toList(),
     );
     return rows
-        .map((row) => transformRowToBundle(row, patchMap[row['id']] ?? const []))
+        .map(
+          (row) => transformRowToBundle(row, patchMap[row['id']] ?? const []),
+        )
         .toList();
   }
 
@@ -121,9 +123,7 @@ class D1DatabasePlugin implements AbstractDatabasePlugin {
       'GROUP BY target_app_version',
       [channel, platform, minBundleId],
     );
-    return rows
-        .map((row) => row['target_app_version'] as String)
-        .toList();
+    return rows.map((row) => row['target_app_version'] as String).toList();
   }
 
   @override
@@ -197,7 +197,8 @@ class D1DatabasePlugin implements AbstractDatabasePlugin {
   ) async {
     final where = options.where ?? const DatabaseBundleQueryWhere();
     final limit = options.limit;
-    final offset = options.offset ??
+    final offset =
+        options.offset ??
         (options.page != null ? (options.page! - 1) * limit : 0);
 
     final totalCount = await _getTotalCount(where);
@@ -232,25 +233,19 @@ class D1DatabasePlugin implements AbstractDatabasePlugin {
   Future<void> onUnmount() async {}
 
   @override
-  Future<void> commitBundle({
-    required List<BundleChange> changedSets,
-  }) async {
+  Future<void> commitBundle({required List<BundleChange> changedSets}) async {
     if (changedSets.isEmpty) return;
 
     for (final op in changedSets) {
       if (op.operation == BundleChangeOperation.delete) {
-        await _client.query(
-          'DELETE FROM bundle_patches WHERE bundle_id = ?',
-          [op.data.id],
-        );
+        await _client.query('DELETE FROM bundle_patches WHERE bundle_id = ?', [
+          op.data.id,
+        ]);
         await _client.query(
           'DELETE FROM bundle_patches WHERE base_bundle_id = ?',
           [op.data.id],
         );
-        await _client.query(
-          'DELETE FROM bundles WHERE id = ?',
-          [op.data.id],
-        );
+        await _client.query('DELETE FROM bundles WHERE id = ?', [op.data.id]);
       } else {
         final bundle = op.data;
         await _client.query(
@@ -272,9 +267,7 @@ class D1DatabasePlugin implements AbstractDatabasePlugin {
             bundle.targetAppVersion,
             bundle.storageUri,
             bundle.fingerprintHash,
-            jsonEncode(
-              bundle.metadata?.toJson() ?? <String, dynamic>{},
-            ),
+            jsonEncode(bundle.metadata?.toJson() ?? <String, dynamic>{}),
             bundle.manifestStorageUri,
             bundle.manifestFileHash,
             bundle.assetBaseStorageUri,
@@ -285,10 +278,9 @@ class D1DatabasePlugin implements AbstractDatabasePlugin {
           ],
         );
 
-        await _client.query(
-          'DELETE FROM bundle_patches WHERE bundle_id = ?',
-          [bundle.id],
-        );
+        await _client.query('DELETE FROM bundle_patches WHERE bundle_id = ?', [
+          bundle.id,
+        ]);
 
         final patchRows = bundleToPatchRows(bundle);
         for (final patchRow in patchRows) {

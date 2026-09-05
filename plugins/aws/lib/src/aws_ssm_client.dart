@@ -55,7 +55,8 @@ class AwsSsmClient {
     final scope = '$dateStamp/$region/$_service/aws4_request';
     final payloadHash = _hashHex(body);
 
-    final canonicalHeaders = 'host:${uri.host}\n'
+    final canonicalHeaders =
+        'host:${uri.host}\n'
         'x-amz-content-sha256:$payloadHash\n'
         'x-amz-date:$amzDate\n'
         '${sessionToken != null ? 'x-amz-security-token:$sessionToken\n' : ''}'
@@ -64,7 +65,8 @@ class AwsSsmClient {
         ? 'host;x-amz-content-sha256;x-amz-date;x-amz-security-token'
         : 'host;x-amz-content-sha256;x-amz-date';
 
-    final canonicalRequest = '$method\n${uri.path}\n'
+    final canonicalRequest =
+        '$method\n${uri.path}\n'
         '\n$canonicalHeaders$signedHeaders\n$payloadHash';
     final stringToSign = _stringToSign(amzDate, scope, canonicalRequest);
     final signingKey = _signingKey(dateStamp);
@@ -109,8 +111,7 @@ class AwsSsmClient {
   static Uint8List _hmac(List<int> key, String data) =>
       Hmac(sha256, key).convert(utf8.encode(data)).bytes as Uint8List;
 
-  static String _hashHex(List<int> data) =>
-      _toHex(sha256.convert(data).bytes);
+  static String _hashHex(List<int> data) => _toHex(sha256.convert(data).bytes);
 
   static String _toHex(List<int> bytes) =>
       bytes.map((b) => b.toRadixString(16).padLeft(2, '0')).join();

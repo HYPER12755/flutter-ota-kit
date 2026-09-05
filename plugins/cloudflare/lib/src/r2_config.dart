@@ -35,7 +35,7 @@ class R2S3StorageConfig {
   /// R2 region (defaults to "auto").
   final String region;
 
-  /// Override endpoint (defaults to `https://<accountId>.r2.cloudflarestorage.com`).
+  /// Override endpoint (defaults to `https://{accountId}.r2.cloudflarestorage.com`).
   final String? endpoint;
 
   /// Optional factory used to inject an [R2S3ClientLike] in tests.

@@ -38,17 +38,18 @@ class SemVer implements Comparable<SemVer> {
   }
 
   factory SemVer.fromJson(Map<String, dynamic> j) => SemVer(
-        j['major'] as int,
-        j['minor'] as int,
-        j['patch'] as int,
-        (j['prerelease'] as List?)?.map((e) => '$e').toList() ?? const [],
-        j['build'] as String?,
-      );
+    j['major'] as int,
+    j['minor'] as int,
+    j['patch'] as int,
+    (j['prerelease'] as List?)?.map((e) => '$e').toList() ?? const [],
+    j['build'] as String?,
+  );
 
   bool get isPrerelease => prerelease.isNotEmpty;
 
   @override
-  String toString() => '$major.$minor.$patch'
+  String toString() =>
+      '$major.$minor.$patch'
       '${prerelease.isEmpty ? '' : '-${prerelease.join('.')}'}'
       '${build == null ? '' : '+$build'}';
 

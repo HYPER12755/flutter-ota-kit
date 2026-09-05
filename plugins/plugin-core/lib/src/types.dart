@@ -86,10 +86,7 @@ class DatabaseBundleQueryWhere {
 }
 
 class DatabaseBundleQueryOrder {
-  const DatabaseBundleQueryOrder({
-    this.field = 'id',
-    this.direction = 'desc',
-  });
+  const DatabaseBundleQueryOrder({this.field = 'id', this.direction = 'desc'});
 
   final String field;
   final String direction;
@@ -141,9 +138,13 @@ abstract class DatabasePlugin {
   Future<UpdateInfo?> getUpdateInfo(GetBundlesArgs args);
 
   Future<Paginated<List<Bundle>>> getBundles(
-      DatabaseBundleQueryOptions options);
+    DatabaseBundleQueryOptions options,
+  );
 
-  Future<void> updateBundle(String targetBundleId, Map<String, Object?> newBundle);
+  Future<void> updateBundle(
+    String targetBundleId,
+    Map<String, Object?> newBundle,
+  );
 
   Future<void> appendBundle(Bundle insertBundle);
 

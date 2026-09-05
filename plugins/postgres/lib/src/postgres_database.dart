@@ -33,7 +33,8 @@ import 'postgres_types.dart';
 DatabasePlugin Function() Function(
   PostgresConfig config, [
   DatabasePluginHooks? hooks,
-]) postgresDatabase = createDatabasePlugin<PostgresConfig>(
+])
+postgresDatabase = createDatabasePlugin<PostgresConfig>(
   name: 'postgresDatabase',
   factory: (config) {
     final client = config.clientFactory != null
@@ -126,12 +127,10 @@ class _PostgresDatabasePlugin implements AbstractDatabasePlugin {
   final PostgresClientLike client;
   final Future<Map<String, List<PostgresBundlePatchRow>>> Function(
     List<String> bundleIds,
-  ) fetchPatchMap;
+  )
+  fetchPatchMap;
 
-  _PostgresDatabasePlugin({
-    required this.client,
-    required this.fetchPatchMap,
-  });
+  _PostgresDatabasePlugin({required this.client, required this.fetchPatchMap});
 
   @override
   bool get supportsCursorPagination => false;
@@ -143,17 +142,16 @@ class _PostgresDatabasePlugin implements AbstractDatabasePlugin {
   @override
   Future<Bundle?> getBundleById(String bundleId) async {
     final results = await Future.wait([
-      client.execute(
-        'SELECT * FROM bundles WHERE id = @p0',
-        {'p0': bundleId},
-      ),
+      client.execute('SELECT * FROM bundles WHERE id = @p0', {'p0': bundleId}),
       fetchPatchMap([bundleId]),
     ]);
 
     final data = results[0] as List<Map<String, dynamic>>;
     if (data.isEmpty) return null;
     final row = PostgresBundleRow.fromJson(data.first);
-    final patches = (results[1] as Map<String, List<PostgresBundlePatchRow>>)[bundleId] ?? [];
+    final patches =
+        (results[1] as Map<String, List<PostgresBundlePatchRow>>)[bundleId] ??
+        [];
     return mapRowToBundle(row, patches);
   }
 
@@ -166,9 +164,11 @@ class _PostgresDatabasePlugin implements AbstractDatabasePlugin {
     final orderBy =
         options.orderBy ?? const DatabaseBundleQueryOrder(direction: 'desc');
     final offset =
-        options.offset ?? (options.page != null ? (options.page! - 1) * limit : 0);
+        options.offset ??
+        (options.page != null ? (options.page! - 1) * limit : 0);
 
-    if ((where?.targetAppVersionIn != null && where!.targetAppVersionIn!.isEmpty) ||
+    if ((where?.targetAppVersionIn != null &&
+            where!.targetAppVersionIn!.isEmpty) ||
         (where?.id?.ins != null && where!.id!.ins!.isEmpty)) {
       return Paginated(
         data: const [],
@@ -222,18 +222,15 @@ class _PostgresDatabasePlugin implements AbstractDatabasePlugin {
   }
 
   @override
-  Future<void> commitBundle({
-    required List<BundleChange> changedSets,
-  }) async {
+  Future<void> commitBundle({required List<BundleChange> changedSets}) async {
     if (changedSets.isEmpty) return;
 
     await client.runTx((tx) async {
       for (final op in changedSets) {
         if (op.operation == BundleChangeOperation.delete) {
-          await tx.execute(
-            'DELETE FROM bundle_patches WHERE bundle_id = @p0',
-            {'p0': op.data.id},
-          );
+          await tx.execute('DELETE FROM bundle_patches WHERE bundle_id = @p0', {
+            'p0': op.data.id,
+          });
           await tx.execute(
             'DELETE FROM bundle_patches WHERE base_bundle_id = @p0',
             {'p0': op.data.id},
@@ -250,8 +247,9 @@ class _PostgresDatabasePlugin implements AbstractDatabasePlugin {
           final values = bundleToRowValues(bundle);
           final columns = values.keys.toList();
           final insertCols = columns.join(', ');
-          final placeholders =
-              columns.map((c) => '@${c.replaceAll('.', '_')}').join(', ');
+          final placeholders = columns
+              .map((c) => '@${c.replaceAll('.', '_')}')
+              .join(', ');
           final updateSets = columns
               .where((c) => c != 'id')
               .map((c) => '$c = EXCLUDED.$c')
@@ -262,17 +260,17 @@ class _PostgresDatabasePlugin implements AbstractDatabasePlugin {
             {for (final c in columns) c.replaceAll('.', '_'): values[c]},
           );
 
-          await tx.execute(
-            'DELETE FROM bundle_patches WHERE bundle_id = @p0',
-            {'p0': bundle.id},
-          );
+          await tx.execute('DELETE FROM bundle_patches WHERE bundle_id = @p0', {
+            'p0': bundle.id,
+          });
           final patchRows = bundleToPatchRows(bundle);
           if (patchRows.isNotEmpty) {
             for (final pr in patchRows) {
               final patchCols = pr.keys.toList();
               final patchInsert = patchCols.join(', ');
-              final patchPlaceholders =
-                  patchCols.map((c) => '@${c.replaceAll('.', '_')}').join(', ');
+              final patchPlaceholders = patchCols
+                  .map((c) => '@${c.replaceAll('.', '_')}')
+                  .join(', ');
               await tx.execute(
                 'INSERT INTO bundle_patches ($patchInsert) '
                 'VALUES ($patchPlaceholders) '

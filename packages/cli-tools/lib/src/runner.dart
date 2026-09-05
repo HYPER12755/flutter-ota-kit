@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:args/args.dart';
 import 'package:args/command_runner.dart';
+
 import 'ui/ui.dart';
 import 'verbose.dart';
 
@@ -30,8 +31,10 @@ class FlutterPatcherRunner extends CommandRunner<int> {
       maxName = maxName < n.length ? n.length : maxName;
     }
     final buf = StringBuffer();
-    buf.writeln('  ${cyan('▶')} ${cyan(bold(executableName))} '
-        '${dim('·')} ${bold(description)}');
+    buf.writeln(
+      '  ${cyan('▶')} ${cyan(bold(executableName))} '
+      '${dim('·')} ${bold(description)}',
+    );
     buf.writeln('  ${dim('─' * 60)}');
     buf.writeln('');
     buf.writeln('  ${bold('USAGE')}');
@@ -43,10 +46,14 @@ class FlutterPatcherRunner extends CommandRunner<int> {
       buf.writeln('    ${cyan(n.padRight(maxName))}  ${dim(c.description)}');
     }
     buf.writeln('');
-    buf.writeln('  ${dim('Run "$executableName help <command>" for more about a command.')}');
+    buf.writeln(
+      '  ${dim('Run "$executableName help <command>" for more about a command.')}',
+    );
     buf.writeln('');
     buf.writeln('  ${bold('GLOBAL OPTIONS')}');
-    buf.writeln('    ${cyan('-v, --verbose')}  ${dim('Show full error stack traces.')}');
+    buf.writeln(
+      '    ${cyan('-v, --verbose')}  ${dim('Show full error stack traces.')}',
+    );
     return buf.toString();
   }
 
@@ -72,8 +79,10 @@ abstract class FlutterPatcherCommand extends Command<int> {
   @override
   String get usage {
     final buf = StringBuffer();
-    buf.writeln('  ${cyan('▶')} ${cyan(bold(name))} '
-        '${dim('·')} $description');
+    buf.writeln(
+      '  ${cyan('▶')} ${cyan(bold(name))} '
+      '${dim('·')} $description',
+    );
     buf.writeln('  ${dim('─' * 60)}');
     buf.writeln('');
     buf.writeln('  ${bold('USAGE')}');
@@ -91,18 +100,25 @@ abstract class FlutterPatcherCommand extends Command<int> {
         buf.writeln('    ${cyan(n.padRight(maxName))}  ${dim(c.description)}');
       }
       buf.writeln('');
-      buf.writeln('  ${dim('Run "${_fullName(this)} <command>" for more about a command.')}');
+      buf.writeln(
+        '  ${dim('Run "${_fullName(this)} <command>" for more about a command.')}',
+      );
     }
     if (argParser.options.isNotEmpty) {
       buf.writeln('');
       buf.writeln('  ${bold('OPTIONS')}');
-      final optLines =
-          argParser.usage.split('\n').where((l) => l.trim().isNotEmpty);
+      final optLines = argParser.usage
+          .split('\n')
+          .where((l) => l.trim().isNotEmpty);
       for (final l in optLines) {
         final m = RegExp(r'^\s*(-{1,2}[\w-]+)(.*)$').firstMatch(l);
         if (m != null) {
           buf.writeln(
-              '    ${cyan(m.group(1)!)}${dim(m.group(2) ?? '')}'.replaceAll('\n', '\n    '));
+            '    ${cyan(m.group(1)!)}${dim(m.group(2) ?? '')}'.replaceAll(
+              '\n',
+              '\n    ',
+            ),
+          );
         } else {
           buf.writeln('    ${dim(l.trim())}');
         }

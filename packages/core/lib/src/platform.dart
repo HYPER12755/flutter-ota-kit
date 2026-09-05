@@ -9,7 +9,8 @@ enum Platform {
   final String value;
   const Platform(this.value);
 
-  static Platform fromValue(String v) =>
-      Platform.values.firstWhere((p) => p.value == v,
-          orElse: () => throw ArgumentError('unknown platform: $v'));
+  static Platform fromValue(String v) => Platform.values.firstWhere(
+    (p) => p.value == v,
+    orElse: () => throw ArgumentError('unknown platform: $v'),
+  );
 }

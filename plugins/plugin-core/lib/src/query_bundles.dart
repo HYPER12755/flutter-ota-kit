@@ -47,8 +47,7 @@ bool bundleMatchesQueryWhere(Bundle bundle, DatabaseBundleQueryWhere? where) {
     return false;
   }
   if (where.targetAppVersionIn != null &&
-      !where.targetAppVersionIn!
-          .contains(bundle.targetAppVersion ?? '')) {
+      !where.targetAppVersionIn!.contains(bundle.targetAppVersion ?? '')) {
     return false;
   }
   if (where.fingerprintHash != null &&
@@ -59,7 +58,10 @@ bool bundleMatchesQueryWhere(Bundle bundle, DatabaseBundleQueryWhere? where) {
 }
 
 /// Sort bundles by ID in the specified direction.
-List<Bundle> sortBundles(List<Bundle> bundles, DatabaseBundleQueryOrder? orderBy) {
+List<Bundle> sortBundles(
+  List<Bundle> bundles,
+  DatabaseBundleQueryOrder? orderBy,
+) {
   final direction = orderBy?.direction ?? 'desc';
   final sorted = List<Bundle>.from(bundles);
   sorted.sort((a, b) {

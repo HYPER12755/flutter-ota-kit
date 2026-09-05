@@ -17,13 +17,15 @@ void main() {
         );
       });
 
-      test('classifies non-/assets roots as legacy per-bundle file storage',
-          () {
-        expect(
-          getAssetStorageLayout('s3://bucket/releases/bundle-id/files'),
-          'legacy-files',
-        );
-      });
+      test(
+        'classifies non-/assets roots as legacy per-bundle file storage',
+        () {
+          expect(
+            getAssetStorageLayout('s3://bucket/releases/bundle-id/files'),
+            'legacy-files',
+          );
+        },
+      );
     });
 
     group('getManifestAssetStoragePath', () {
@@ -78,8 +80,10 @@ void main() {
     group('isBrotliManifestAssetPath', () {
       test('matches index.*.bundle paths', () {
         expect(isBrotliManifestAssetPath('index.ios.bundle'), isTrue);
-        expect(isBrotliManifestAssetPath('nested/index.android.bundle'),
-            isTrue);
+        expect(
+          isBrotliManifestAssetPath('nested/index.android.bundle'),
+          isTrue,
+        );
       });
 
       test('rejects non-index bundle paths', () {

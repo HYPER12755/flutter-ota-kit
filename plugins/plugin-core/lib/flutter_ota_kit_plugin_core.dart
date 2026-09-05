@@ -2,12 +2,7 @@ library;
 
 // Re-export core types for convenience.
 export 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
-    show
-        Bundle,
-        GetBundlesArgs,
-        Platform,
-        UpdateInfo,
-        semverSatisfies;
+    show Bundle, GetBundlesArgs, Platform, UpdateInfo, semverSatisfies;
 
 // Plugin-core types.
 export 'src/types.dart';

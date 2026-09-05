@@ -25,13 +25,17 @@ Paginated<List<Bundle>> paginateBundles({
             normalizedOffset + limit > total ? total : normalizedOffset + limit,
           )
         : sortedBundles.sublist(normalizedOffset);
-    final pagination = calculatePagination(total, limit: limit, offset: normalizedOffset);
-    final nextCursor =
-        data.isNotEmpty && normalizedOffset + data.length < total
-            ? data.last.id
-            : null;
-    final previousCursor =
-        data.isNotEmpty && normalizedOffset > 0 ? data.first.id : null;
+    final pagination = calculatePagination(
+      total,
+      limit: limit,
+      offset: normalizedOffset,
+    );
+    final nextCursor = data.isNotEmpty && normalizedOffset + data.length < total
+        ? data.last.id
+        : null;
+    final previousCursor = data.isNotEmpty && normalizedOffset > 0
+        ? data.first.id
+        : null;
 
     return Paginated(
       data: data,
@@ -55,7 +59,12 @@ Paginated<List<Bundle>> paginateBundles({
           ? bundle.id.compareTo(cursor!.after!) < 0
           : bundle.id.compareTo(cursor!.after!) > 0;
     }).toList();
-    data = limit > 0 ? candidates.sublist(0, limit > candidates.length ? candidates.length : limit) : candidates;
+    data = limit > 0
+        ? candidates.sublist(
+            0,
+            limit > candidates.length ? candidates.length : limit,
+          )
+        : candidates;
   } else if (cursor?.before != null) {
     final candidates = sortedBundles.where((bundle) {
       return direction == 'desc'
@@ -76,15 +85,19 @@ Paginated<List<Bundle>> paginateBundles({
   final startIndex = data.isNotEmpty
       ? sortedBundles.indexWhere((b) => b.id == data.first.id)
       : cursor?.after != null
-          ? total
-          : 0;
-  final pagination = calculatePagination(total, limit: limit, offset: startIndex);
-  final nextCursor =
-      data.isNotEmpty && startIndex + data.length < total
-          ? data.last.id
-          : null;
-  final previousCursor =
-      data.isNotEmpty && startIndex > 0 ? data.first.id : null;
+      ? total
+      : 0;
+  final pagination = calculatePagination(
+    total,
+    limit: limit,
+    offset: startIndex,
+  );
+  final nextCursor = data.isNotEmpty && startIndex + data.length < total
+      ? data.last.id
+      : null;
+  final previousCursor = data.isNotEmpty && startIndex > 0
+      ? data.first.id
+      : null;
 
   String? effectiveNextCursor = nextCursor;
   String? effectivePreviousCursor = previousCursor;

@@ -103,7 +103,9 @@ class MockPocketBaseClient implements PocketBaseClient {
     T Function(Map<String, dynamic>) fromJson,
   ) async {
     _checkAuth();
-    final id = (body['id'] as String?) ?? DateTime.now().microsecondsSinceEpoch.toString();
+    final id =
+        (body['id'] as String?) ??
+        DateTime.now().microsecondsSinceEpoch.toString();
     final existing = store.records(collection)[id];
     if (existing != null) {
       // PB returns 409 on duplicate id; the mock simulates the real API by
@@ -159,9 +161,12 @@ class MockPocketBaseClient implements PocketBaseClient {
   Future<String> getFileToken(String recordId, String filename) async => 'mock';
 
   @override
-  String fileUrl(String collection, String recordId, String filename,
-          [String? token]) =>
-      'pb://mock/$collection/$recordId/$filename';
+  String fileUrl(
+    String collection,
+    String recordId,
+    String filename, [
+    String? token,
+  ]) => 'pb://mock/$collection/$recordId/$filename';
 
   @override
   Future<List<int>> downloadFile(String url) async {

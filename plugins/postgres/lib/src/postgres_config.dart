@@ -32,4 +32,6 @@ class PostgresConfig {
 }
 
 /// Builds a [PostgresClientLike] from a [PostgresConfig].
-typedef PostgresClientFactory = PostgresClientLike Function(PostgresConfig config);
+typedef PostgresClientFactory = PostgresClientLike Function(
+  PostgresConfig config,
+);

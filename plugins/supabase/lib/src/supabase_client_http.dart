@@ -38,12 +38,12 @@ class _FilterBuilder implements SupabaseFilterBuilderLike {
     Map<String, String>? query,
     String method = 'GET',
     Object? body,
-  })  : _baseUrl = baseUrl,
-        _table = table,
-        _headers = headers,
-        _query = query ?? {},
-        _method = method,
-        _body = body;
+  }) : _baseUrl = baseUrl,
+       _table = table,
+       _headers = headers,
+       _query = query ?? {},
+       _method = method,
+       _body = body;
 
   @override
   SupabaseFilterBuilderLike eq(String column, Object? value) =>
@@ -78,11 +78,7 @@ class _FilterBuilder implements SupabaseFilterBuilderLike {
   }
 
   @override
-  SupabaseFilterBuilderLike not(
-    String column,
-    String operator,
-    Object? value,
-  ) {
+  SupabaseFilterBuilderLike not(String column, String operator, Object? value) {
     _query[column] = 'not.$operator.${_enc(value)}';
     return this;
   }
@@ -129,8 +125,7 @@ class _FilterBuilder implements SupabaseFilterBuilderLike {
         .replace(queryParameters: _query.isEmpty ? null : _query);
     final headers = <String, String>{
       ..._headers,
-      if (_method != 'GET' && _body != null)
-        'Content-Type': 'application/json',
+      if (_method != 'GET' && _body != null) 'Content-Type': 'application/json',
     };
 
     late http.Response res;
@@ -181,11 +176,7 @@ class _QueryBuilder implements SupabaseQueryBuilderLike {
   _QueryBuilder(this._baseUrl, this._table, this._headers);
 
   @override
-  SupabaseFilterBuilderLike select(
-    String columns, {
-    bool? count,
-    bool? head,
-  }) {
+  SupabaseFilterBuilderLike select(String columns, {bool? count, bool? head}) {
     final headers = <String, String>{..._headers};
     if (count == true) headers['Prefer'] = 'count=exact';
     if (head == true) headers['Range'] = '0-0';
@@ -199,18 +190,16 @@ class _QueryBuilder implements SupabaseQueryBuilderLike {
 
   @override
   SupabaseFilterBuilderLike delete() => _FilterBuilder(
-        baseUrl: _baseUrl,
-        table: _table,
-        headers: _headers,
-        method: 'DELETE',
-      );
+    baseUrl: _baseUrl,
+    table: _table,
+    headers: _headers,
+    method: 'DELETE',
+  );
 
   @override
   Future<dynamic> upsert(dynamic values, {String? onConflict}) async {
     final uri = Uri.parse('$_baseUrl/rest/v1/$_table').replace(
-      queryParameters: onConflict != null
-          ? {'on_conflict': onConflict}
-          : null,
+      queryParameters: onConflict != null ? {'on_conflict': onConflict} : null,
     );
     final headers = <String, String>{
       ..._headers,
@@ -273,10 +262,7 @@ class _StorageBucket implements SupabaseStorageBucketLike {
     final res = await http.post(
       uri,
       headers: {..._headers, 'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'expiresIn': expiresIn,
-        'paths': paths,
-      }),
+      body: jsonEncode({'expiresIn': expiresIn, 'paths': paths}),
     );
     if (res.statusCode >= 400) {
       return _MockSignedUrlListResult(null, jsonDecode(res.body));
@@ -284,14 +270,16 @@ class _StorageBucket implements SupabaseStorageBucketLike {
     final body = jsonDecode(res.body) as List<dynamic>;
     return _MockSignedUrlListResult(
       body
-          .map((e) => _MockSignedUrlResult(
-                // Supabase returns a relative path; make it absolute against
-                // the project base URL, matching [createSignedUrl].
-                e['signedURL'] == null
-                    ? null
-                    : '$_baseUrl/storage/v1${e['signedURL'] as String}',
-                e['error'] as String?,
-              ))
+          .map(
+            (e) => _MockSignedUrlResult(
+              // Supabase returns a relative path; make it absolute against
+              // the project base URL, matching [createSignedUrl].
+              e['signedURL'] == null
+                  ? null
+                  : '$_baseUrl/storage/v1${e['signedURL'] as String}',
+              e['error'] as String?,
+            ),
+          )
           .toList(),
       null,
     );
@@ -367,9 +355,8 @@ class _StorageBucket implements SupabaseStorageBucketLike {
 
   @override
   Future<SupabaseExistsResult> exists(String path) async {
-    final uri = Uri.parse(
-      '$_baseUrl/storage/v1/object/$_bucket/$path',
-    ).replace(queryParameters: {'_method': 'HEAD'});
+    final uri = Uri.parse('$_baseUrl/storage/v1/object/$_bucket/$path')
+        .replace(queryParameters: {'_method': 'HEAD'});
     final res = await http.get(uri, headers: _headers);
     if (res.statusCode == 404) {
       return _MockExistsResult(false, null);
@@ -404,11 +391,10 @@ class _StorageBucket implements SupabaseStorageBucketLike {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       return _MockListResult(null, body['message'] as String?);
     }
-    final body = (res.body.isEmpty ? [] : jsonDecode(res.body)) as List<dynamic>;
+    final body =
+        (res.body.isEmpty ? [] : jsonDecode(res.body)) as List<dynamic>;
     return _MockListResult(
-      body
-          .map((e) => _MockStorageObject(e as Map<String, dynamic>))
-          .toList(),
+      body.map((e) => _MockStorageObject(e as Map<String, dynamic>)).toList(),
       null,
     );
   }
@@ -510,19 +496,15 @@ class SupabaseHttpClient implements SupabaseClientLike {
   final Map<String, String> _headers;
 
   SupabaseHttpClient(String supabaseUrl, String key)
-      : _baseUrl = supabaseUrl,
-        _headers = {
-          'apikey': key,
-          'Authorization': 'Bearer $key',
-        };
+    : _baseUrl = supabaseUrl,
+      _headers = {'apikey': key, 'Authorization': 'Bearer $key'};
 
   @override
   SupabaseQueryBuilderLike from(String table) =>
       _QueryBuilder(_baseUrl, table, _headers);
 
   @override
-  SupabaseStorageClientLike get storage =>
-      _StorageClient(_baseUrl, _headers);
+  SupabaseStorageClientLike get storage => _StorageClient(_baseUrl, _headers);
 
   @override
   Future<SupabaseRpcResponse> rpc(

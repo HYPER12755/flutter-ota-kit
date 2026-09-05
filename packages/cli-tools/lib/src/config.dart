@@ -66,17 +66,17 @@ class FlutterPatcherConfig {
   final String? publicKey;
 
   Map<String, dynamic> toJson() => {
-        'provider': provider,
-        'supabase': supabase.toJson(),
-        'postgres': postgres.toJson(),
-        'cloudflare': cloudflare.toJson(),
-        'aws': aws.toJson(),
-        'pocketbase': pocketbase.toJson(),
-        'channel': channel,
-        'platform': platform,
-        'source': source,
-        if (publicKey != null) 'publicKey': publicKey,
-      };
+    'provider': provider,
+    'supabase': supabase.toJson(),
+    'postgres': postgres.toJson(),
+    'cloudflare': cloudflare.toJson(),
+    'aws': aws.toJson(),
+    'pocketbase': pocketbase.toJson(),
+    'channel': channel,
+    'platform': platform,
+    'source': source,
+    if (publicKey != null) 'publicKey': publicKey,
+  };
 
   FlutterPatcherConfig copyWith({
     String? provider,
@@ -89,19 +89,18 @@ class FlutterPatcherConfig {
     String? platform,
     String? source,
     String? publicKey,
-  }) =>
-      FlutterPatcherConfig(
-        provider: provider ?? this.provider,
-        supabase: supabase ?? this.supabase,
-        postgres: postgres ?? this.postgres,
-        cloudflare: cloudflare ?? this.cloudflare,
-        aws: aws ?? this.aws,
-        pocketbase: pocketbase ?? this.pocketbase,
-        channel: channel ?? this.channel,
-        platform: platform ?? this.platform,
-        source: source ?? this.source,
-        publicKey: publicKey ?? this.publicKey,
-      );
+  }) => FlutterPatcherConfig(
+    provider: provider ?? this.provider,
+    supabase: supabase ?? this.supabase,
+    postgres: postgres ?? this.postgres,
+    cloudflare: cloudflare ?? this.cloudflare,
+    aws: aws ?? this.aws,
+    pocketbase: pocketbase ?? this.pocketbase,
+    channel: channel ?? this.channel,
+    platform: platform ?? this.platform,
+    source: source ?? this.source,
+    publicKey: publicKey ?? this.publicKey,
+  );
 }
 
 /// Supabase section of [FlutterPatcherConfig].
@@ -136,24 +135,25 @@ class SupabaseConfigJson {
   final String? databaseUrl;
 
   Map<String, dynamic> toJson() => {
-        if (url != null) 'url': url,
-        if (serviceRoleKey != null) 'serviceRoleKey': serviceRoleKey,
-        if (anonKey != null) 'anonKey': anonKey,
-        if (bucket != null) 'bucket': bucket,
-        if (basePath != null) 'basePath': basePath,
-        if (managementKey != null) 'managementKey': managementKey,
-        if (databaseUrl != null) 'databaseUrl': databaseUrl,
-      };
+    if (url != null) 'url': url,
+    if (serviceRoleKey != null) 'serviceRoleKey': serviceRoleKey,
+    if (anonKey != null) 'anonKey': anonKey,
+    if (bucket != null) 'bucket': bucket,
+    if (basePath != null) 'basePath': basePath,
+    if (managementKey != null) 'managementKey': managementKey,
+    if (databaseUrl != null) 'databaseUrl': databaseUrl,
+  };
 }
 
 /// Search order for a config file on disk. Both the project config and the
 /// global config live under a `.flutter_ota_kit/` directory so all CLI state is
 /// grouped in one place (and can be git-ignored together).
 List<File> configCandidates() {
-  final cwd = File(p.join(Directory.current.path, '.flutter_ota_kit', 'config.json'));
-  final home = Platform.environment['HOME'] ??
-      Platform.environment['USERPROFILE'] ??
-      '';
+  final cwd = File(
+    p.join(Directory.current.path, '.flutter_ota_kit', 'config.json'),
+  );
+  final home =
+      Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'] ?? '';
   final global = File(p.join(home, '.flutter_ota_kit', 'config.json'));
   return [cwd, global];
 }
@@ -231,7 +231,8 @@ SupabaseServiceRoleConfig resolveSupabaseConfig(
 }) {
   final env = Platform.environment;
   final resolvedUrl = url ?? env['SUPABASE_URL'] ?? config.supabase.url;
-  final resolvedService = serviceRoleKey ??
+  final resolvedService =
+      serviceRoleKey ??
       env['SUPABASE_SERVICE_ROLE_KEY'] ??
       config.supabase.serviceRoleKey;
   final resolvedAnon =
@@ -278,11 +279,12 @@ SupabaseStorageConfig resolveSupabaseStorageConfig(
     clientFactory: db.clientFactory,
     bucketName: db.supabaseServiceRoleKey != null || db.supabaseAnonKey != null
         ? (bucket ??
-            Platform.environment['SUPABASE_BUCKET'] ??
-            config.supabase.bucket ??
-            'bundles')
+              Platform.environment['SUPABASE_BUCKET'] ??
+              config.supabase.bucket ??
+              'bundles')
         : (bucket ?? config.supabase.bucket ?? 'bundles'),
-    basePath: basePath ??
+    basePath:
+        basePath ??
         Platform.environment['SUPABASE_BASE_PATH'] ??
         config.supabase.basePath,
   );
@@ -327,15 +329,15 @@ class PostgresConfigJson {
   final String? servingBaseUrl;
 
   Map<String, dynamic> toJson() => {
-        if (host != null) 'host': host,
-        if (port != null) 'port': port,
-        if (database != null) 'database': database,
-        if (username != null) 'username': username,
-        if (password != null) 'password': password,
-        if (sslMode != null) 'sslMode': sslMode,
-        if (basePath != null) 'basePath': basePath,
-        if (servingBaseUrl != null) 'servingBaseUrl': servingBaseUrl,
-      };
+    if (host != null) 'host': host,
+    if (port != null) 'port': port,
+    if (database != null) 'database': database,
+    if (username != null) 'username': username,
+    if (password != null) 'password': password,
+    if (sslMode != null) 'sslMode': sslMode,
+    if (basePath != null) 'basePath': basePath,
+    if (servingBaseUrl != null) 'servingBaseUrl': servingBaseUrl,
+  };
 }
 
 SslMode? _parseSslMode(String? value) {
@@ -367,13 +369,12 @@ PostgresConfig resolvePostgresDatabaseConfig(
   final resolvedHost = host ?? env['POSTGRES_HOST'] ?? config.postgres.host;
   final resolvedDatabase =
       database ?? env['POSTGRES_DB'] ?? config.postgres.database;
-  final resolvedUser = username ?? env['POSTGRES_USER'] ?? config.postgres.username;
+  final resolvedUser =
+      username ?? env['POSTGRES_USER'] ?? config.postgres.username;
   final resolvedPassword =
       password ?? env['POSTGRES_PASSWORD'] ?? config.postgres.password;
-  final resolvedPort = port ??
-      env['POSTGRES_PORT'] ??
-      config.postgres.port ??
-      '5432';
+  final resolvedPort =
+      port ?? env['POSTGRES_PORT'] ?? config.postgres.port ?? '5432';
   final resolvedSsl =
       sslMode ?? env['POSTGRES_SSLMODE'] ?? config.postgres.sslMode;
 
@@ -420,10 +421,12 @@ PostgresStorageConfig resolvePostgresStorageConfig(
   );
   return PostgresStorageConfig(
     db: db,
-    basePath: basePath ??
+    basePath:
+        basePath ??
         Platform.environment['POSTGRES_BASE_PATH'] ??
         config.postgres.basePath,
-    servingBaseUrl: servingBaseUrl ??
+    servingBaseUrl:
+        servingBaseUrl ??
         Platform.environment['POSTGRES_SERVING_BASE_URL'] ??
         config.postgres.servingBaseUrl,
   );
@@ -465,14 +468,14 @@ class CloudflareConfigJson {
   final String? r2BasePath;
 
   Map<String, dynamic> toJson() => {
-        if (accountId != null) 'accountId': accountId,
-        if (d1DatabaseId != null) 'd1DatabaseId': d1DatabaseId,
-        if (apiToken != null) 'apiToken': apiToken,
-        if (r2Bucket != null) 'r2Bucket': r2Bucket,
-        if (r2AccessKeyId != null) 'r2AccessKeyId': r2AccessKeyId,
-        if (r2SecretAccessKey != null) 'r2SecretAccessKey': r2SecretAccessKey,
-        if (r2BasePath != null) 'r2BasePath': r2BasePath,
-      };
+    if (accountId != null) 'accountId': accountId,
+    if (d1DatabaseId != null) 'd1DatabaseId': d1DatabaseId,
+    if (apiToken != null) 'apiToken': apiToken,
+    if (r2Bucket != null) 'r2Bucket': r2Bucket,
+    if (r2AccessKeyId != null) 'r2AccessKeyId': r2AccessKeyId,
+    if (r2SecretAccessKey != null) 'r2SecretAccessKey': r2SecretAccessKey,
+    if (r2BasePath != null) 'r2BasePath': r2BasePath,
+  };
 }
 
 /// Resolve the Cloudflare D1 database config.
@@ -486,15 +489,14 @@ D1DatabaseConfig resolveCloudflareDatabaseConfig(
   final env = Platform.environment;
   final resolvedAccount =
       accountId ?? env['CLOUDFLARE_ACCOUNT_ID'] ?? config.cloudflare.accountId;
-  final resolvedDb = d1DatabaseId ??
+  final resolvedDb =
+      d1DatabaseId ??
       env['CLOUDFLARE_D1_DATABASE_ID'] ??
       config.cloudflare.d1DatabaseId;
   final resolvedToken =
       apiToken ?? env['CLOUDFLARE_API_TOKEN'] ?? config.cloudflare.apiToken;
 
-  if (resolvedAccount == null ||
-      resolvedDb == null ||
-      resolvedToken == null) {
+  if (resolvedAccount == null || resolvedDb == null || resolvedToken == null) {
     throw StateError(
       'Cloudflare requires accountId, d1DatabaseId and apiToken. Set them via '
       'flags, CLOUDFLARE_* env vars, or `flutter_ota_kit config set cloudflare.*`.',
@@ -520,16 +522,17 @@ R2S3StorageConfig resolveCloudflareStorageConfig(
   R2S3ClientFactory? clientFactory,
 }) {
   final env = Platform.environment;
-  final resolvedAccount = accountId ??
+  final resolvedAccount =
+      accountId ??
       env['CLOUDFLARE_ACCOUNT_ID'] ??
       env['R2_ACCOUNT_ID'] ??
       config.cloudflare.accountId;
   final resolvedBucket =
       bucket ?? env['R2_BUCKET'] ?? config.cloudflare.r2Bucket ?? 'bundles';
-  final resolvedKey = accessKeyId ??
-      env['R2_ACCESS_KEY_ID'] ??
-      config.cloudflare.r2AccessKeyId;
-  final resolvedSecret = secretAccessKey ??
+  final resolvedKey =
+      accessKeyId ?? env['R2_ACCESS_KEY_ID'] ?? config.cloudflare.r2AccessKeyId;
+  final resolvedSecret =
+      secretAccessKey ??
       env['R2_SECRET_ACCESS_KEY'] ??
       config.cloudflare.r2SecretAccessKey;
 
@@ -569,14 +572,14 @@ class AwsConfigJson {
   });
 
   factory AwsConfigJson.fromJson(Map<String, dynamic> json) => AwsConfigJson(
-        bucket: json['bucket'] as String?,
-        region: json['region'] as String?,
-        accessKeyId: json['accessKeyId'] as String?,
-        secretAccessKey: json['secretAccessKey'] as String?,
-        endpoint: json['endpoint'] as String?,
-        basePath: json['basePath'] as String?,
-        sessionToken: json['sessionToken'] as String?,
-      );
+    bucket: json['bucket'] as String?,
+    region: json['region'] as String?,
+    accessKeyId: json['accessKeyId'] as String?,
+    secretAccessKey: json['secretAccessKey'] as String?,
+    endpoint: json['endpoint'] as String?,
+    basePath: json['basePath'] as String?,
+    sessionToken: json['sessionToken'] as String?,
+  );
 
   final String? bucket;
   final String? region;
@@ -587,14 +590,14 @@ class AwsConfigJson {
   final String? sessionToken;
 
   Map<String, dynamic> toJson() => {
-        if (bucket != null) 'bucket': bucket,
-        if (region != null) 'region': region,
-        if (accessKeyId != null) 'accessKeyId': accessKeyId,
-        if (secretAccessKey != null) 'secretAccessKey': secretAccessKey,
-        if (endpoint != null) 'endpoint': endpoint,
-        if (basePath != null) 'basePath': basePath,
-        if (sessionToken != null) 'sessionToken': sessionToken,
-      };
+    if (bucket != null) 'bucket': bucket,
+    if (region != null) 'region': region,
+    if (accessKeyId != null) 'accessKeyId': accessKeyId,
+    if (secretAccessKey != null) 'secretAccessKey': secretAccessKey,
+    if (endpoint != null) 'endpoint': endpoint,
+    if (basePath != null) 'basePath': basePath,
+    if (sessionToken != null) 'sessionToken': sessionToken,
+  };
 }
 
 /// Resolve the AWS S3 database config.
@@ -608,7 +611,8 @@ S3DatabaseConfig resolveAwsDatabaseConfig(
   String? endpoint,
   String? sessionToken,
   AwsS3ClientLike Function(S3DatabaseConfig config)? clientFactory,
-  AwsCloudFrontClientLike Function(S3DatabaseConfig config)? cloudfrontClientFactory,
+  AwsCloudFrontClientLike Function(S3DatabaseConfig config)?
+  cloudfrontClientFactory,
 }) {
   final env = Platform.environment;
   final resolvedBucket = bucket ?? env['AWS_BUCKET'] ?? config.aws.bucket;
@@ -616,7 +620,9 @@ S3DatabaseConfig resolveAwsDatabaseConfig(
   final resolvedKey =
       accessKeyId ?? env['AWS_ACCESS_KEY_ID'] ?? config.aws.accessKeyId;
   final resolvedSecret =
-      secretAccessKey ?? env['AWS_SECRET_ACCESS_KEY'] ?? config.aws.secretAccessKey;
+      secretAccessKey ??
+      env['AWS_SECRET_ACCESS_KEY'] ??
+      config.aws.secretAccessKey;
 
   if (resolvedBucket == null ||
       resolvedRegion == null ||
@@ -635,7 +641,8 @@ S3DatabaseConfig resolveAwsDatabaseConfig(
     secretAccessKey: resolvedSecret,
     basePath: basePath ?? env['AWS_BASE_PATH'] ?? config.aws.basePath,
     endpoint: endpoint ?? env['AWS_ENDPOINT'] ?? config.aws.endpoint,
-    sessionToken: sessionToken ?? env['AWS_SESSION_TOKEN'] ?? config.aws.sessionToken,
+    sessionToken:
+        sessionToken ?? env['AWS_SESSION_TOKEN'] ?? config.aws.sessionToken,
     clientFactory: clientFactory ?? defaultAwsS3DatabaseClientFactory,
     cloudfrontClientFactory:
         cloudfrontClientFactory ?? defaultAwsCloudFrontClientFactory,
@@ -660,7 +667,9 @@ AwsS3StorageConfig resolveAwsStorageConfig(
   final resolvedKey =
       accessKeyId ?? env['AWS_ACCESS_KEY_ID'] ?? config.aws.accessKeyId;
   final resolvedSecret =
-      secretAccessKey ?? env['AWS_SECRET_ACCESS_KEY'] ?? config.aws.secretAccessKey;
+      secretAccessKey ??
+      env['AWS_SECRET_ACCESS_KEY'] ??
+      config.aws.secretAccessKey;
 
   if (resolvedBucket == null ||
       resolvedRegion == null ||
@@ -679,7 +688,8 @@ AwsS3StorageConfig resolveAwsStorageConfig(
     secretAccessKey: resolvedSecret,
     basePath: basePath ?? env['AWS_BASE_PATH'] ?? config.aws.basePath,
     endpoint: endpoint ?? env['AWS_ENDPOINT'] ?? config.aws.endpoint,
-    sessionToken: sessionToken ?? env['AWS_SESSION_TOKEN'] ?? config.aws.sessionToken,
+    sessionToken:
+        sessionToken ?? env['AWS_SESSION_TOKEN'] ?? config.aws.sessionToken,
     clientFactory: clientFactory ?? defaultAwsS3ClientFactory,
   );
 }
@@ -718,13 +728,13 @@ class PocketBaseConfigJson {
   final String bundlesBucket;
 
   Map<String, dynamic> toJson() => {
-        if (url != null) 'url': url,
-        if (adminEmail != null) 'adminEmail': adminEmail,
-        if (adminPassword != null) 'adminPassword': adminPassword,
-        'bundlesCollection': bundlesCollection,
-        'channelsCollection': channelsCollection,
-        'bundlesBucket': bundlesBucket,
-      };
+    if (url != null) 'url': url,
+    if (adminEmail != null) 'adminEmail': adminEmail,
+    if (adminPassword != null) 'adminPassword': adminPassword,
+    'bundlesCollection': bundlesCollection,
+    'channelsCollection': channelsCollection,
+    'bundlesBucket': bundlesBucket,
+  };
 }
 
 /// Resolve the PocketBase database config (flag > env > json precedence).
@@ -736,13 +746,13 @@ PocketBaseDatabaseConfig resolvePocketBaseDatabaseConfig(
   PocketBaseClientFactory? clientFactory,
 }) {
   final env = Platform.environment;
-  final resolvedUrl = url ??
-      env['POCKETBASE_URL'] ??
-      config.pocketbase.url;
-  final resolvedEmail = adminEmail ??
+  final resolvedUrl = url ?? env['POCKETBASE_URL'] ?? config.pocketbase.url;
+  final resolvedEmail =
+      adminEmail ??
       env['POCKETBASE_ADMIN_EMAIL'] ??
       config.pocketbase.adminEmail;
-  final resolvedPassword = adminPassword ??
+  final resolvedPassword =
+      adminPassword ??
       env['POCKETBASE_ADMIN_PASSWORD'] ??
       config.pocketbase.adminPassword;
 

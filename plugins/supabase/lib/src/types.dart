@@ -67,24 +67,24 @@ class SupabaseBundleRow {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'channel': channel,
-        'enabled': enabled,
-        'should_force_update': shouldForceUpdate,
-        'file_hash': fileHash,
-        'git_commit_hash': gitCommitHash,
-        'message': message,
-        'platform': platform,
-        'target_app_version': targetAppVersion,
-        'fingerprint_hash': fingerprintHash,
-        'storage_uri': storageUri,
-        'metadata': metadata,
-        'manifest_storage_uri': manifestStorageUri,
-        'manifest_file_hash': manifestFileHash,
-        'asset_base_storage_uri': assetBaseStorageUri,
-        'rollout_cohort_count': rolloutCohortCount,
-        'target_cohorts': targetCohorts,
-      };
+    'id': id,
+    'channel': channel,
+    'enabled': enabled,
+    'should_force_update': shouldForceUpdate,
+    'file_hash': fileHash,
+    'git_commit_hash': gitCommitHash,
+    'message': message,
+    'platform': platform,
+    'target_app_version': targetAppVersion,
+    'fingerprint_hash': fingerprintHash,
+    'storage_uri': storageUri,
+    'metadata': metadata,
+    'manifest_storage_uri': manifestStorageUri,
+    'manifest_file_hash': manifestFileHash,
+    'asset_base_storage_uri': assetBaseStorageUri,
+    'rollout_cohort_count': rolloutCohortCount,
+    'target_cohorts': targetCohorts,
+  };
 }
 
 /// Row type from Supabase `bundle_patches` table.
@@ -119,12 +119,12 @@ class SupabaseBundlePatchRow {
       );
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'bundle_id': bundleId,
-        'base_bundle_id': baseBundleId,
-        'base_file_hash': baseFileHash,
-        'patch_file_hash': patchFileHash,
-        'patch_storage_uri': patchStorageUri,
-        'order_index': orderIndex,
-      };
+    'id': id,
+    'bundle_id': bundleId,
+    'base_bundle_id': baseBundleId,
+    'base_file_hash': baseFileHash,
+    'patch_file_hash': patchFileHash,
+    'patch_storage_uri': patchStorageUri,
+    'order_index': orderIndex,
+  };
 }

@@ -68,25 +68,27 @@ class AppUpdateAvailableInfo extends AppUpdateInfo {
         signature: j['signature'] as String?,
         manifestUrl: j['manifestUrl'] as String?,
         manifestFileHash: j['manifestFileHash'] as String?,
-        changedAssets: (j['changedAssets'] as Map?)?.map((k, v) => MapEntry(
-              k as String,
-              ChangedAsset.fromJson((v as Map).cast<String, dynamic>()),
-            )),
+        changedAssets: (j['changedAssets'] as Map?)?.map(
+          (k, v) => MapEntry(
+            k as String,
+            ChangedAsset.fromJson((v as Map).cast<String, dynamic>()),
+          ),
+        ),
       );
 
   @override
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'shouldForceUpdate': shouldForceUpdate,
-        'message': message,
-        'status': status.value,
-        'fileUrl': fileUrl,
-        'fileHash': fileHash,
-        if (signature != null) 'signature': signature,
-        if (manifestUrl != null) 'manifestUrl': manifestUrl,
-        if (manifestFileHash != null) 'manifestFileHash': manifestFileHash,
-        if (changedAssets != null) 'changedAssets': changedAssets,
-      };
+    'id': id,
+    'shouldForceUpdate': shouldForceUpdate,
+    'message': message,
+    'status': status.value,
+    'fileUrl': fileUrl,
+    'fileHash': fileHash,
+    if (signature != null) 'signature': signature,
+    if (manifestUrl != null) 'manifestUrl': manifestUrl,
+    if (manifestFileHash != null) 'manifestFileHash': manifestFileHash,
+    if (changedAssets != null) 'changedAssets': changedAssets,
+  };
 }
 
 /// Device-facing "nothing to do" — hot-updater `AppUpToDateInfo`.

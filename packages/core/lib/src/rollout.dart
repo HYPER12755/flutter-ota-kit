@@ -26,7 +26,8 @@ int? _parseNumericCohortValue(String cohort) {
   return parsed;
 }
 
-int _positiveMod(int value, int modulus) => ((value % modulus) + modulus) % modulus;
+int _positiveMod(int value, int modulus) =>
+    ((value % modulus) + modulus) % modulus;
 
 /// Java-style 32-bit signed rolling string hash (`(h<<5) - h + c`, truncated).
 int _hashString(String value) {
@@ -75,7 +76,8 @@ int _modularInverse(int value, int modulus) {
 }
 
 ({int multiplier, int offset, int inverseMultiplier}) _rolloutShuffleParameters(
-    String bundleId) {
+  String bundleId,
+) {
   var multiplier = _positiveMod(_hashString('$bundleId:multiplier'), 997);
   if (multiplier == 0) {
     multiplier = 1;
@@ -140,7 +142,8 @@ bool isValidCohort(String cohort) {
 
 /// Default cohort derived from a device identifier (ANDROID_ID etc.).
 String getDefaultNumericCohort(String identifier) {
-  final cohortValue = _positiveMod(_hashString(identifier), numericCohortSize) + 1;
+  final cohortValue =
+      _positiveMod(_hashString(identifier), numericCohortSize) + 1;
   return '$cohortValue';
 }
 
@@ -156,18 +159,17 @@ int getNumericCohortRolloutPosition(String bundleId, int cohortValue) {
   );
 }
 
-List<int> getRolledOutNumericCohorts(
-  String bundleId,
-  int? rolloutCohortCount,
-) {
+List<int> getRolledOutNumericCohorts(String bundleId, int? rolloutCohortCount) {
   final normalized = normalizeRolloutCohortCount(rolloutCohortCount);
   if (normalized <= 0) {
     return [];
   }
   return List.generate(numericCohortSize, (index) => index + 1)
-      .where((cohortValue) =>
-          normalized >= numericCohortSize ||
-          getNumericCohortRolloutPosition(bundleId, cohortValue) < normalized)
+      .where(
+        (cohortValue) =>
+            normalized >= numericCohortSize ||
+            getNumericCohortRolloutPosition(bundleId, cohortValue) < normalized,
+      )
       .toList();
 }
 
@@ -185,7 +187,8 @@ bool isCohortEligibleForUpdate(
   final normalizedTargets =
       targetCohorts?.map(normalizeCohortValue).toList() ?? <String>[];
 
-  if (normalizedCohort != null && normalizedTargets.contains(normalizedCohort)) {
+  if (normalizedCohort != null &&
+      normalizedTargets.contains(normalizedCohort)) {
     return true;
   }
 

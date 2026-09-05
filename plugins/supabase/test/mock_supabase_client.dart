@@ -72,12 +72,7 @@ int _compareValues(Object? left, Object? right) {
 }
 
 class _MockFilterBuilder implements SupabaseFilterBuilderLike {
-  _MockFilterBuilder(
-    this._store,
-    this._table,
-    this._mode, {
-    this.head = false,
-  });
+  _MockFilterBuilder(this._store, this._table, this._mode, {this.head = false});
 
   final Store _store;
   final String _table;
@@ -165,8 +160,8 @@ class _MockFilterBuilder implements SupabaseFilterBuilderLike {
     return this;
   }
 
-  List<Map<String, dynamic>> _rowsForTable() =>
-      _table == 'bundles' ? _store.bundleRows.values.toList()
+  List<Map<String, dynamic>> _rowsForTable() => _table == 'bundles'
+      ? _store.bundleRows.values.toList()
       : _store.bundlePatchRows.values.toList();
 
   List<Map<String, dynamic>> _getFilteredRows() {
@@ -183,8 +178,9 @@ class _MockFilterBuilder implements SupabaseFilterBuilderLike {
               'lte' => _compareValues(row[column], value) <= 0,
               _ => false,
             },
-          _InFilter(:final column, :final values) =>
-            values.contains(row[column]),
+          _InFilter(:final column, :final values) => values.contains(
+            row[column],
+          ),
           _IsFilter(:final column, :final value) => row[column] == value,
           _NotFilter(:final column, :final operator, :final value) =>
             operator == 'is' ? row[column] != value : false,
@@ -210,8 +206,10 @@ class _MockFilterBuilder implements SupabaseFilterBuilderLike {
 
     var filtered = _getFilteredRows();
     filtered = filtered.toList()
-      ..sort((a, b) =>
-          ascending ? a['id'].compareTo(b['id']) : b['id'].compareTo(a['id']));
+      ..sort(
+        (a, b) =>
+            ascending ? a['id'].compareTo(b['id']) : b['id'].compareTo(a['id']),
+      );
     final total = filtered.length;
 
     if (singleRow) {
@@ -355,9 +353,7 @@ class FakeStorageBucket implements SupabaseStorageBucketLike {
     if (existsThrows != null) {
       return Future.error(existsThrows!);
     }
-    return Future.value(
-      _ExistsResult(data: existsData, error: existsError),
-    );
+    return Future.value(_ExistsResult(data: existsData, error: existsError));
   }
 
   @override
@@ -380,10 +376,12 @@ class FakeStorageBucket implements SupabaseStorageBucketLike {
     return Future.value(
       _SignedUrlListResult(
         data: paths
-            .map((p) => _SignedUrlResult(
-                  signedUrl: '$createSignedUrlBase/$expiresIn/$p',
-                  error: signedUrlError,
-                ))
+            .map(
+              (p) => _SignedUrlResult(
+                signedUrl: '$createSignedUrlBase/$expiresIn/$p',
+                error: signedUrlError,
+              ),
+            )
             .toList(),
         error: signedUrlError,
       ),
@@ -399,10 +397,7 @@ class FakeStorageBucket implements SupabaseStorageBucketLike {
   }) {
     uploadCalls.add(path);
     return Future.value(
-      _UploadResult(
-        data: uploadData ?? {'fullPath': path},
-        error: uploadError,
-      ),
+      _UploadResult(data: uploadData ?? {'fullPath': path}, error: uploadError),
     );
   }
 
@@ -451,11 +446,7 @@ class _MockQueryBuilder implements SupabaseQueryBuilderLike {
   final String _table;
 
   @override
-  SupabaseFilterBuilderLike select(
-    String columns, {
-    bool? count,
-    bool? head,
-  }) =>
+  SupabaseFilterBuilderLike select(String columns, {bool? count, bool? head}) =>
       _MockFilterBuilder(_store, _table, 'select', head: head ?? false);
 
   @override
@@ -512,9 +503,8 @@ SupabaseClientLike createMockSupabaseClient({
   Platform platformFrom(String value) =>
       value == 'ios' ? Platform.ios : Platform.android;
 
-  Bundle rowToBundle(Map<String, dynamic> row) => mapRowToBundle(
-        SupabaseBundleRow.fromJson(row),
-      );
+  Bundle rowToBundle(Map<String, dynamic> row) =>
+      mapRowToBundle(SupabaseBundleRow.fromJson(row));
 
   return _MockClient(store, storageClient, platformFrom, rowToBundle);
 }
@@ -557,10 +547,12 @@ class _MockClient implements SupabaseClientLike {
       final platform = params!['app_platform'] as String;
       final minBundleId = params['min_bundle_id'] as String;
       final list = _store.bundleRows.values
-          .where((r) =>
-              r['platform'] == platform &&
-              (r['id'] as String).compareTo(minBundleId) >= 0 &&
-              r['target_app_version'] != null)
+          .where(
+            (r) =>
+                r['platform'] == platform &&
+                (r['id'] as String).compareTo(minBundleId) >= 0 &&
+                r['target_app_version'] != null,
+          )
           .map((r) => r['target_app_version'] as String)
           .toSet()
           .map((v) => {'target_app_version': v})
@@ -574,17 +566,20 @@ class _MockClient implements SupabaseClientLike {
       final bundleId = params['bundle_id'] as String;
       final minBundleId = params['min_bundle_id'] as String;
       final channel = params['target_channel'] as String;
-      final targetAppVersionList =
-          List<String>.from(params['target_app_version_list'] as List? ?? []);
+      final targetAppVersionList = List<String>.from(
+        params['target_app_version_list'] as List? ?? [],
+      );
       final cohort = params['cohort'] as String?;
 
       final bundles = _store.bundleRows.values
-          .where((r) =>
-              r['enabled'] == true &&
-              r['platform'] == platform &&
-              r['channel'] == channel &&
-              (r['id'] as String).compareTo(minBundleId) >= 0 &&
-              (targetAppVersionList.contains(r['target_app_version'])))
+          .where(
+            (r) =>
+                r['enabled'] == true &&
+                r['platform'] == platform &&
+                r['channel'] == channel &&
+                (r['id'] as String).compareTo(minBundleId) >= 0 &&
+                (targetAppVersionList.contains(r['target_app_version'])),
+          )
           .map(_rowToBundle)
           .toList();
 
@@ -614,12 +609,14 @@ class _MockClient implements SupabaseClientLike {
       final cohort = params['cohort'] as String?;
 
       final bundles = _store.bundleRows.values
-          .where((r) =>
-              r['enabled'] == true &&
-              r['platform'] == platform &&
-              r['channel'] == channel &&
-              (r['id'] as String).compareTo(minBundleId) >= 0 &&
-              r['fingerprint_hash'] == fingerprintHash)
+          .where(
+            (r) =>
+                r['enabled'] == true &&
+                r['platform'] == platform &&
+                r['channel'] == channel &&
+                (r['id'] as String).compareTo(minBundleId) >= 0 &&
+                r['fingerprint_hash'] == fingerprintHash,
+          )
           .map(_rowToBundle)
           .toList();
 
@@ -640,15 +637,18 @@ class _MockClient implements SupabaseClientLike {
       );
     }
 
-    return _MockRpcResponse(data: null, error: 'Unsupported RPC: $functionName');
+    return _MockRpcResponse(
+      data: null,
+      error: 'Unsupported RPC: $functionName',
+    );
   }
 }
 
 Map<String, dynamic> _toUpdateInfoRow(UpdateInfo info) => {
-      'id': info.id,
-      'should_force_update': info.shouldForceUpdate,
-      'message': info.message,
-      'status': info.status == UpdateStatus.rollback ? 'ROLLBACK' : 'UPDATE',
-      'storage_uri': info.storageUri,
-      'file_hash': info.fileHash,
-    };
+  'id': info.id,
+  'should_force_update': info.shouldForceUpdate,
+  'message': info.message,
+  'status': info.status == UpdateStatus.rollback ? 'ROLLBACK' : 'UPDATE',
+  'storage_uri': info.storageUri,
+  'file_hash': info.fileHash,
+};

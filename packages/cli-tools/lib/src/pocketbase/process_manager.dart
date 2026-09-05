@@ -12,11 +12,7 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 class PocketBaseProcess {
-  PocketBaseProcess._(
-    this.process,
-    this.dataDir,
-    this.binaryPath,
-  );
+  PocketBaseProcess._(this.process, this.dataDir, this.binaryPath);
 
   final Process process;
   final Directory dataDir;
@@ -103,8 +99,11 @@ class PocketBaseProcessManager {
     final deadline = DateTime.now().add(readyTimeout);
     while (DateTime.now().isBefore(deadline)) {
       try {
-        final socket = await Socket.connect(host, port,
-            timeout: const Duration(milliseconds: 250));
+        final socket = await Socket.connect(
+          host,
+          port,
+          timeout: const Duration(milliseconds: 250),
+        );
         socket.destroy();
         break;
       } catch (_) {

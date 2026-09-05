@@ -31,8 +31,11 @@ void main() {
           // verkit threw on invalid input; we treat as non-match.
           expect(satisfies(parsed, range), isFalse);
         } else {
-          expect(satisfies(parsed, range), expected,
-              reason: '$version vs range "$range"');
+          expect(
+            satisfies(parsed, range),
+            expected,
+            reason: '$version vs range "$range"',
+          );
         }
       });
     }
