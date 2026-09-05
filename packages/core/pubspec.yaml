@@ -1,6 +1,6 @@
 name: flutter_ota_kit_core
 description: Core data model, rollout cohorts, and shared utilities for flutter_ota_kit — Dart translation of hot-updater's packages/core.
-version: 0.1.0
+version: 0.1.1
 homepage: https://github.com/HYPER12755/flutter-ota-kit
 repository: https://github.com/HYPER12755/flutter-ota-kit
 issue_tracker: https://github.com/HYPER12755/flutter-ota-kit/issues

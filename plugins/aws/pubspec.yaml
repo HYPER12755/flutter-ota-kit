@@ -1,6 +1,6 @@
 name: flutter_ota_kit_aws
 description: AWS S3 storage + S3/DynamoDB database plugins for flutter_ota_kit (faithful port of hot-updater plugins/aws).
-version: 0.1.1
+version: 0.1.2
 homepage: https://github.com/HYPER12755/flutter-ota-kit
 repository: https://github.com/HYPER12755/flutter-ota-kit
 issue_tracker: https://github.com/HYPER12755/flutter-ota-kit/issues
@@ -11,8 +11,8 @@ environment:
   sdk: ">=3.13.2 <4.0.0"
 
 dependencies:
-  flutter_ota_kit_core: ^0.1.0
-  flutter_ota_kit_plugin_core: ^0.0.2
+  flutter_ota_kit_core: ^0.1.1
+  flutter_ota_kit_plugin_core: ^0.0.3
   crypto: ^3.0.0
   http: ^1.2.0
   path: ^1.9.0
