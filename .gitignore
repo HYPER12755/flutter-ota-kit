@@ -56,3 +56,18 @@ example/.env
 
 # CLI build artifact (OTA patch output)
 packages/cli-tools/dist/
+
+# Pre-built CLI binaries (downloaded by users via the npm install script
+# in npm/flutter-ota/scripts/postinstall.js). Re-checked-in to the
+# repo would bloat history and break on architectures we don't ship for.
+npm/flutter-ota/bin/
+
+# Binary/large asset artifacts that don't belong in a git repo
+*.zip
+*.gz
+*.tar
+*.tar.xz
+*.gif
+*.wasm
+*.symbols
+*.snap
