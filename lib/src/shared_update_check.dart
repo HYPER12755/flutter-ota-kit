@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show
         AppUpdateStatus,
@@ -20,7 +22,7 @@ final _uuidRe = RegExp(
 );
 
 /// Backend-agnostic update-check orchestration shared by every hosted source
-/// (Supabase / Postgres / Cloudflare / AWS).
+/// (Supabase / Postgres / Cloudflare / AWS / PocketBase).
 ///
 /// The only backend-specific pieces are the already-constructed [DatabasePlugin]
 /// and [StoragePlugin] plus the targeting fields pulled from each source config.
@@ -28,6 +30,11 @@ final _uuidRe = RegExp(
 /// building (with runtime `appVersion` auto-detection), the `getUpdateInfo` call,
 /// download-URL resolution and the `ServerUpdateResult` mapping — is identical
 /// across backends and lives here exactly once.
+///
+/// [timeout] bounds the two HTTP round-trips (DB query + signed-URL mint).
+/// When the timeout fires, the in-flight HTTP request is cancelled via
+/// `Future.timeout`, which propagates a `TimeoutException` that callers can
+/// catch and surface to the user (e.g. "no internet — try again later").
 Future<ServerUpdateResult> performSharedUpdateCheck({
   required DatabasePlugin db,
   required StoragePlugin storage,
@@ -38,6 +45,7 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
   required String? fingerprintHash,
   required String minBundleId,
   String? currentBundleId,
+  Duration timeout = const Duration(seconds: 10),
 }) async {
   final bundleId = (currentBundleId != null && _uuidRe.hasMatch(currentBundleId))
       ? currentBundleId
@@ -63,7 +71,12 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
     );
   }
 
-  final UpdateInfo? info = await db.getUpdateInfo(args);
+  final UpdateInfo? info = await db.getUpdateInfo(args).timeout(
+        timeout,
+        onTimeout: () => throw TimeoutException(
+          'update check timed out after ${timeout.inSeconds}s while querying the backend',
+        ),
+      );
   if (info == null) return ServerUpdateResult.upToDate();
 
   final storageUri = info.storageUri;
@@ -73,7 +86,12 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
 
   final runtime = storage.profiles.runtime;
   if (runtime == null) return ServerUpdateResult.upToDate();
-  final dl = await runtime.getDownloadUrl(storageUri);
+  final dl = await runtime.getDownloadUrl(storageUri).timeout(
+        timeout,
+        onTimeout: () => throw TimeoutException(
+          'update check timed out after ${timeout.inSeconds}s while minting the download URL',
+        ),
+      );
   final fileUrl = dl['fileUrl'];
   if (fileUrl == null || fileUrl.isEmpty) {
     return ServerUpdateResult.upToDate();

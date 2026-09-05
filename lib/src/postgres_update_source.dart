@@ -56,6 +56,7 @@ class PostgresUpdateSource {
   Future<ServerUpdateResult> check(
     PostgresUpdateConfig config, {
     String? currentBundleId,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final dbConfig = PostgresConfig(
       host: config.host,
@@ -83,6 +84,7 @@ class PostgresUpdateSource {
       fingerprintHash: config.fingerprintHash,
       minBundleId: config.minBundleId,
       currentBundleId: currentBundleId,
+      timeout: timeout,
     );
   }
 }

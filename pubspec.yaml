@@ -27,13 +27,14 @@ dependencies:
   flutter_ota_kit_postgres: ^0.1.1
   flutter_ota_kit_cloudflare: ^0.1.1
   flutter_ota_kit_aws: ^0.1.1
+  flutter_ota_kit_pocketbase: ^0.1.0
   flutter_ota_kit_plugin_core: ^0.0.2
   plugin_platform_interface: '>=2.0.2 <3.0.0'
   package_info_plus: ^8.0.0
   restart_app: ^1.9.1
   # The npm `flutter-ota` CLI (`flutter_ota_kit_cli`) is intentionally NOT a pub
   # dependency; `dart run flutter_ota_kit:pack` is implemented in `lib/src/pack`.
-  archive: '>=3.4.10 <5.0.0'
+  archive: ^4.0.0
   args: '>=2.4.0 <3.0.0'
   crypto: '>=3.0.3 <4.0.0'
 
@@ -60,6 +61,8 @@ dependency_overrides:
     path: plugins/cloudflare
   flutter_ota_kit_aws:
     path: plugins/aws
+  flutter_ota_kit_pocketbase:
+    path: plugins/pocketbase
   flutter_ota_kit_plugin_core:
     path: plugins/plugin-core
 

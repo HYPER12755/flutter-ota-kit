@@ -55,6 +55,7 @@ class AwsUpdateSource {
   Future<ServerUpdateResult> check(
     AwsUpdateConfig config, {
     String? currentBundleId,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final dbConfig = S3DatabaseConfig(
       bucketName: config.bucketName,
@@ -89,6 +90,7 @@ class AwsUpdateSource {
       fingerprintHash: config.fingerprintHash,
       minBundleId: config.minBundleId,
       currentBundleId: currentBundleId,
+      timeout: timeout,
     );
   }
 }

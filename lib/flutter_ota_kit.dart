@@ -21,12 +21,15 @@ import 'src/postgres_update_source.dart'
 import 'src/cloudflare_update_source.dart'
     show CloudflareUpdateConfig, CloudflareUpdateSource;
 import 'src/aws_update_source.dart' show AwsUpdateConfig, AwsUpdateSource;
+import 'src/pocketbase_update_source.dart'
+    show PocketBaseUpdateConfig, PocketBaseUpdateSource;
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show Platform, UpdateStrategy;
 
 export 'src/blacklist.dart';
 export 'src/boot_diagnostic.dart';
 export 'src/patch_info.dart';
+export 'src/shared_update_check.dart' show performSharedUpdateCheck;
 export 'src/supabase_update_source.dart'
     show SupabaseUpdateConfig, SupabaseUpdateSource;
 export 'src/postgres_update_source.dart'
@@ -34,6 +37,8 @@ export 'src/postgres_update_source.dart'
 export 'src/cloudflare_update_source.dart'
     show CloudflareUpdateConfig, CloudflareUpdateSource;
 export 'src/aws_update_source.dart' show AwsUpdateConfig, AwsUpdateSource;
+export 'src/pocketbase_update_source.dart'
+    show PocketBaseUpdateConfig, PocketBaseUpdateSource;
 export 'src/flutter_ota_app.dart' show FlutterOtaApp;
 export 'src/ota_progress_overlay.dart'
     show OtaOverlayManager, OtaOverlayState, OtaProgressOverlay, OtaOverlayHandle;
@@ -74,6 +79,7 @@ class FlutterPatcher {
   static PostgresUpdateConfig? _postgresConfig;
   static CloudflareUpdateConfig? _cloudflareConfig;
   static AwsUpdateConfig? _awsConfig;
+  static PocketBaseUpdateConfig? _pocketbaseConfig;
   static bool _bootReported = false;
   static bool _bootErrorReported = false;
   static bool _nonAndroidWarned = false;
@@ -223,13 +229,24 @@ class FlutterPatcher {
     if (_supabaseConfig != null ||
         _postgresConfig != null ||
         _cloudflareConfig != null ||
-        _awsConfig != null) {
+        _awsConfig != null ||
+        _pocketbaseConfig != null) {
       return; // already configured (e.g. generated setup ran first)
+    }
+
+    // Optional explicit backend picker. When the user has multiple backends in
+    // their .env (e.g. switching from supabase to pocketbase), this var
+    // disambiguates which one wins. Without it, first-match-wins order is:
+    // supabase → postgres → cloudflare → aws → pocketbase.
+    const backendHint = String.fromEnvironment('FLUTTER_OTA_BACKEND', defaultValue: '');
+    bool isMatching(String name) {
+      if (backendHint.isEmpty) return true;
+      return backendHint.toLowerCase() == name;
     }
 
     const supabaseUrl =
         String.fromEnvironment('SUPABASE_URL', defaultValue: '');
-    if (supabaseUrl.isNotEmpty) {
+    if (supabaseUrl.isNotEmpty && isMatching('supabase')) {
       _supabaseConfig = SupabaseUpdateConfig(
         supabaseUrl: supabaseUrl,
         anonKey:
@@ -251,7 +268,8 @@ class FlutterPatcher {
     const pgHost = String.fromEnvironment('POSTGRES_HOST', defaultValue: '');
     const pgDatabaseUrl =
         String.fromEnvironment('DATABASE_URL', defaultValue: '');
-    if (pgHost.isNotEmpty || pgDatabaseUrl.isNotEmpty) {
+    if ((pgHost.isNotEmpty || pgDatabaseUrl.isNotEmpty) &&
+        isMatching('postgres')) {
       _postgresConfig = PostgresUpdateConfig(
         host: pgHost,
         port: int.tryParse(const String.fromEnvironment('POSTGRES_PORT',
@@ -277,7 +295,7 @@ class FlutterPatcher {
 
     const cfAccount =
         String.fromEnvironment('CLOUDFLARE_ACCOUNT_ID', defaultValue: '');
-    if (cfAccount.isNotEmpty) {
+    if (cfAccount.isNotEmpty && isMatching('cloudflare')) {
       _cloudflareConfig = CloudflareUpdateConfig(
         accountId: cfAccount,
         databaseId: const String.fromEnvironment(
@@ -306,7 +324,7 @@ class FlutterPatcher {
     }
 
     const awsBucket = String.fromEnvironment('AWS_BUCKET', defaultValue: '');
-    if (awsBucket.isNotEmpty) {
+    if (awsBucket.isNotEmpty && isMatching('aws')) {
       _awsConfig = AwsUpdateConfig(
         bucketName: awsBucket,
         region:
@@ -322,6 +340,30 @@ class FlutterPatcher {
             const String.fromEnvironment('AWS_ENDPOINT', defaultValue: ''),
         channel:
             const String.fromEnvironment('CHANNEL', defaultValue: 'production'),
+        platform: Platform.android,
+        updateStrategy: UpdateStrategy.appVersion,
+        appVersion: const String.fromEnvironment('APP_VERSION',
+            defaultValue: '1.0.0'),
+      );
+      return;
+    }
+
+    const pbUrl = String.fromEnvironment('POCKETBASE_URL', defaultValue: '');
+    if (pbUrl.isNotEmpty && isMatching('pocketbase')) {
+      _pocketbaseConfig = PocketBaseUpdateConfig(
+        url: pbUrl,
+        adminEmail: const String.fromEnvironment('POCKETBASE_ADMIN_EMAIL',
+            defaultValue: ''),
+        adminPassword: const String.fromEnvironment(
+            'POCKETBASE_ADMIN_PASSWORD',
+            defaultValue: ''),
+        bundlesCollection: const String.fromEnvironment(
+            'POCKETBASE_BUNDLES_COLLECTION',
+            defaultValue: 'bundles'),
+        bundlesBucket: const String.fromEnvironment('POCKETBASE_BUCKET',
+            defaultValue: 'bundles'),
+        channel: const String.fromEnvironment('CHANNEL',
+            defaultValue: 'production'),
         platform: Platform.android,
         updateStrategy: UpdateStrategy.appVersion,
         appVersion: const String.fromEnvironment('APP_VERSION',
@@ -424,8 +466,21 @@ class FlutterPatcher {
     _awsConfig = config;
   }
 
+  /// Configures the **PocketBase** update source (self-hosted, single binary).
+  ///
+  /// Talks to a PocketBase instance directly over its REST API. PocketBase is a
+  /// single-binary Go backend with SQLite + auth + file storage + an admin UI
+  /// (~15MB). The schema is installed via `flutter_ota_kit pocketbase serve`.
+  ///
+  /// PocketBase is the recommended option for small teams that want a
+  /// Supabase-like experience without a cloud account — single binary, no
+  /// Docker, no external database.
+  static void configurePocketBase(PocketBaseUpdateConfig config) {
+    _pocketbaseConfig = config;
+  }
+
   /// Performs an update check against the configured backend (Supabase,
-  /// Postgres, Cloudflare, or AWS).
+  /// Postgres, Cloudflare, AWS, or PocketBase).
   ///
   /// Returns a [ServerUpdateResult]; when [ServerUpdateResult.hasUpdate] is
   /// true, install it with `FlutterPatcher.applyPatch(result.patch!)`.
@@ -439,6 +494,7 @@ class FlutterPatcher {
       return SupabaseUpdateSource().check(
         supabaseConfig,
         currentBundleId: currentBundleId,
+        timeout: timeout,
       );
     }
     final postgresConfig = _postgresConfig;
@@ -446,6 +502,7 @@ class FlutterPatcher {
       return PostgresUpdateSource().check(
         postgresConfig,
         currentBundleId: currentBundleId,
+        timeout: timeout,
       );
     }
     final cloudflareConfig = _cloudflareConfig;
@@ -453,6 +510,7 @@ class FlutterPatcher {
       return CloudflareUpdateSource().check(
         cloudflareConfig,
         currentBundleId: currentBundleId,
+        timeout: timeout,
       );
     }
     final awsConfig = _awsConfig;
@@ -460,11 +518,21 @@ class FlutterPatcher {
       return AwsUpdateSource().check(
         awsConfig,
         currentBundleId: currentBundleId,
+        timeout: timeout,
+      );
+    }
+    final pocketbaseConfig = _pocketbaseConfig;
+    if (pocketbaseConfig != null) {
+      return PocketBaseUpdateSource().check(
+        pocketbaseConfig,
+        currentBundleId: currentBundleId,
+        timeout: timeout,
       );
     }
     throw PatcherException(
       'No update source configured. Call FlutterPatcher.configureSupabase(...), '
-      'configurePostgres(...), configureCloudflare(...), or configureAws(...) first.',
+      'configurePostgres(...), configureCloudflare(...), configureAws(...), or '
+      'configurePocketBase(...) first.',
     );
   }
 
@@ -622,8 +690,13 @@ class FlutterPatcher {
     }
 
     final showOverlay = showUpdateUi && result.shouldForceUpdate;
+    final fromVersion = await currentVersion;
     final handle = showOverlay
-        ? OtaOverlayManager.instance.begin(message: result.message)
+        ? OtaOverlayManager.instance.begin(
+            message: result.message,
+            targetVersion: result.id,
+            currentVersion: fromVersion,
+          )
         : null;
 
     final applied = await applyPatch(

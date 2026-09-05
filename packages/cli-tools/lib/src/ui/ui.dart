@@ -67,6 +67,8 @@ void banner(String name) {
 
 void step(String msg) => _echo('  ${green('✓')} $msg');
 
+void warn(String msg) => _echo('  ${yellow('!')} ${yellow(msg)}');
+
 void err(String msg) =>
     _echo('  ${red('✗')} ${red(msg)}');
 

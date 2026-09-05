@@ -60,6 +60,7 @@ class CloudflareUpdateSource {
   Future<ServerUpdateResult> check(
     CloudflareUpdateConfig config, {
     String? currentBundleId,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final dbConfig = D1DatabaseConfig(
       databaseId: config.databaseId,
@@ -89,6 +90,7 @@ class CloudflareUpdateSource {
       fingerprintHash: config.fingerprintHash,
       minBundleId: config.minBundleId,
       currentBundleId: currentBundleId,
+      timeout: timeout,
     );
   }
 }

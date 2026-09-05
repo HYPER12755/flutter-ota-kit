@@ -203,10 +203,9 @@ PackResult _writePatchPackage({
     }
   }
 
-  // archive 3.x returns List<int>?, 4.x returns List<int>; the `??` keeps this
-  // safe if a 3.x archive is ever resolved (dead under 4.x, hence the ignore).
-  // ignore: dead_code, dead_null_aware_expression
-  final List<int> packageBytes = ZipEncoder().encode(package) ?? const <int>[];
+  // archive 3.x returns List<int>?, 4.x returns List<int>; drop the null-coalesce
+  // because we resolve archive >= 4 in the lockfile (and the constraint below).
+  final List<int> packageBytes = ZipEncoder().encode(package);
   final outZip = File('${outDir.path}/patch.zip');
   outZip.writeAsBytesSync(packageBytes);
   onProgress?.call(progressTotal, progressTotal, 'patch.zip');

@@ -175,6 +175,13 @@ class _PostgresRuntimeProfile implements RuntimeStorageProfile {
 
   @override
   Future<Map<String, String>> getDownloadUrl(String storageUri) async {
+    if (_servingBaseUrl == null || _servingBaseUrl.isEmpty) {
+      throw StateError(
+        'Postgres storage requires a servingBaseUrl to expose bytes over HTTP. '
+        'Set `postgres.servingBaseUrl` in your config to a thin proxy that reads '
+        'from the `flutter_ota_kit_storage` table.',
+      );
+    }
     return {'fileUrl': _storageUri(_strip(storageUri, _servingBaseUrl), _servingBaseUrl)};
   }
 

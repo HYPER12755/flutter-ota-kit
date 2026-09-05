@@ -13,7 +13,7 @@ dependencies:
   args: '>=2.4.0 <3.0.0'
   crypto: '>=3.0.3 <4.0.0'
   path: ^1.9.0
-  archive: '>=3.4.10 <5.0.0'
+  archive: ^4.0.0
   collection: ^1.18.0
   cryptography: ^2.7.0
   postgres: ^3.4.0
@@ -23,7 +23,9 @@ dependencies:
   flutter_ota_kit_postgres: ^0.1.1
   flutter_ota_kit_cloudflare: ^0.1.1
   flutter_ota_kit_aws: ^0.1.1
+  flutter_ota_kit_pocketbase: ^0.1.0
   http: ^1.2.0
+  shelf: ^1.4.0
 
 dev_dependencies:
   test: ^1.25.0
@@ -41,3 +43,5 @@ dependency_overrides:
     path: ../../plugins/cloudflare
   flutter_ota_kit_aws:
     path: ../../plugins/aws
+  flutter_ota_kit_pocketbase:
+    path: ../../plugins/pocketbase

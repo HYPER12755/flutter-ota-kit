@@ -29,7 +29,7 @@ class InitCommand extends FlutterPatcherCommand {
   @override
   String get description =>
       'Scaffold flutter_ota_kit integration files + .flutter_ota_kit config for the current '
-      'Flutter project. Usage: flutter_ota_kit init <supabase|postgres|cloudflare|aws>';
+      'Flutter project. Usage: flutter_ota_kit init <supabase|postgres|cloudflare|aws|pocketbase>';
 
   @override
   ArgParser get argParser => ArgParser()
@@ -58,6 +58,7 @@ class InitCommand extends FlutterPatcherCommand {
     'postgres',
     'cloudflare',
     'aws',
+    'pocketbase',
   ];
 
   /// Interactive backend picker. Returns the chosen provider, defaulting to
@@ -180,6 +181,21 @@ class InitCommand extends FlutterPatcherCommand {
                     _p('AWS session token', env['AWS_SESSION_TOKEN']),
               ),
             );
+          case 'pocketbase':
+            cfg = FlutterPatcherConfig(
+              provider: provider,
+              channel: channel,
+              platform: platform,
+              source: source,
+              supabase: const SupabaseConfigJson(),
+              pocketbase: PocketBaseConfigJson(
+                url: _p('PocketBase URL', env['POCKETBASE_URL']),
+                adminEmail: _p(
+                    'PocketBase admin email', env['POCKETBASE_ADMIN_EMAIL']),
+                adminPassword: _p('PocketBase admin password',
+                    env['POCKETBASE_ADMIN_PASSWORD']),
+              ),
+            );
           case 'supabase':
           default:
             cfg = FlutterPatcherConfig(
@@ -233,6 +249,11 @@ class InitCommand extends FlutterPatcherCommand {
         } else if (provider == 'postgres') {
           stdout.writeln(
               '  3. Provision the backend: ${dim('flutter_ota_kit migrate postgres')}');
+        } else if (provider == 'pocketbase') {
+          stdout.writeln(
+              '  3. Install PocketBase + provision the schema: '
+              '${dim('flutter_ota_kit pocketbase install')} then '
+              '${dim('flutter_ota_kit pocketbase serve')}.');
         }
         stdout.writeln(
             '  4. Build a patch: ${dim('flutter_ota_kit build --name 1.0.1')} '
@@ -360,6 +381,15 @@ class InitCommand extends FlutterPatcherCommand {
         entries['AWS_SESSION_TOKEN'] = c.sessionToken ?? '';
         entries['CHANNEL'] = cfg.channel;
         entries['APP_VERSION'] = '';
+      case 'pocketbase':
+        final c = cfg.pocketbase;
+        entries['POCKETBASE_URL'] = c.url ?? '';
+        entries['POCKETBASE_ADMIN_EMAIL'] = c.adminEmail ?? '';
+        entries['POCKETBASE_ADMIN_PASSWORD'] = c.adminPassword ?? '';
+        entries['POCKETBASE_BUNDLES_COLLECTION'] = c.bundlesCollection;
+        entries['POCKETBASE_BUCKET'] = c.bundlesBucket;
+        entries['CHANNEL'] = cfg.channel;
+        entries['APP_VERSION'] = '';
       case 'supabase':
       default:
         final c = cfg.supabase;
@@ -459,6 +489,20 @@ class InitCommand extends FlutterPatcherCommand {
     secretAccessKey: const String.fromEnvironment('AWS_SECRET_ACCESS_KEY', defaultValue: ''),
     basePath: const String.fromEnvironment('AWS_BASE_PATH', defaultValue: ${_q(c.basePath ?? '')}),
     endpoint: const String.fromEnvironment('AWS_ENDPOINT', defaultValue: ${_q(c.endpoint ?? '')}),
+    channel: const String.fromEnvironment('CHANNEL', defaultValue: $channel),
+    platform: Platform.android,
+    updateStrategy: UpdateStrategy.appVersion,
+    appVersion: $appVersionExpr,
+  ));''';
+      case 'pocketbase':
+        final c = cfg.pocketbase;
+        configure = '''
+  FlutterPatcher.configurePocketBase(PocketBaseUpdateConfig(
+    url: const String.fromEnvironment('POCKETBASE_URL', defaultValue: ${_q(c.url ?? '')}),
+    adminEmail: const String.fromEnvironment('POCKETBASE_ADMIN_EMAIL', defaultValue: ''),
+    adminPassword: const String.fromEnvironment('POCKETBASE_ADMIN_PASSWORD', defaultValue: ''),
+    bundlesCollection: const String.fromEnvironment('POCKETBASE_BUNDLES_COLLECTION', defaultValue: ${_q(c.bundlesCollection)}),
+    bundlesBucket: const String.fromEnvironment('POCKETBASE_BUCKET', defaultValue: ${_q(c.bundlesBucket)}),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: $channel),
     platform: Platform.android,
     updateStrategy: UpdateStrategy.appVersion,

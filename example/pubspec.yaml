@@ -43,6 +43,13 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^6.0.0
 
+# Monorepo dev: the parent plugin resolves its intra-monorepo packages via
+# `dependency_overrides` against local paths. Mirror those here so the example
+# resolves consistently.
+dependency_overrides:
+  flutter_ota_kit_pocketbase:
+    path: ../plugins/pocketbase
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 

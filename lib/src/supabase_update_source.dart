@@ -59,6 +59,7 @@ class SupabaseUpdateSource {
   Future<ServerUpdateResult> check(
     SupabaseUpdateConfig config, {
     String? currentBundleId,
+    Duration timeout = const Duration(seconds: 10),
   }) async {
     final dbConfig = SupabaseServiceRoleConfig(
       supabaseUrl: config.supabaseUrl,
@@ -85,6 +86,7 @@ class SupabaseUpdateSource {
       fingerprintHash: config.fingerprintHash,
       minBundleId: config.minBundleId,
       currentBundleId: currentBundleId,
+      timeout: timeout,
     );
   }
 }

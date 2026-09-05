@@ -95,18 +95,10 @@ DatabasePlugin Function() Function(
     add('enabled = ?', where.enabled);
   }
   if (where.fingerprintHash != null) {
-    if (where.fingerprintHash == null) {
-      conditions.add('fingerprint_hash IS NULL');
-    } else {
-      add('fingerprint_hash = ?', where.fingerprintHash);
-    }
+    add('fingerprint_hash = ?', where.fingerprintHash);
   }
   if (where.targetAppVersion != null) {
-    if (where.targetAppVersion == null) {
-      conditions.add('target_app_version IS NULL');
-    } else {
-      add('target_app_version = ?', where.targetAppVersion);
-    }
+    add('target_app_version = ?', where.targetAppVersion);
   }
   if (where.targetAppVersionIn != null) {
     add('target_app_version = ANY(?)', where.targetAppVersionIn);

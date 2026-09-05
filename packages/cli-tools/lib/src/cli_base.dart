@@ -60,6 +60,7 @@ FlutterPatcherConfig? effectiveConfig(
         postgres: const PostgresConfigJson(),
         cloudflare: const CloudflareConfigJson(),
         aws: const AwsConfigJson(),
+        pocketbase: const PocketBaseConfigJson(),
       );
   return base.copyWith(provider: backend);
 }

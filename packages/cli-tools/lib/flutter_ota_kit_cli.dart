@@ -13,8 +13,17 @@ export 'src/cli_base.dart';
 export 'src/config.dart';
 export 'src/operations.dart';
 export 'src/pack.dart';
+export 'src/pocketbase/installer.dart';
+export 'src/pocketbase/process_manager.dart';
+export 'src/pocketbase/schema_installer.dart';
+export 'src/pocketbase/data_bootstrap.dart';
 export 'src/sign.dart';
 export 'src/util.dart';
+
+// Re-export the PocketBase client so CLI commands can probe PB health
+// without pulling the plugin in separately.
+export 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart'
+    show PocketBaseClient;
 
 export 'src/commands/init.dart';
 export 'src/commands/config_command.dart';
@@ -28,6 +37,7 @@ export 'src/commands/rollback.dart';
 export 'src/commands/channel.dart';
 export 'src/commands/migrate.dart';
 export 'src/commands/console.dart';
+export 'src/commands/pocketbase.dart';
 
 import 'src/commands/build.dart';
 import 'src/commands/bundle.dart';
@@ -41,6 +51,7 @@ import 'src/commands/fingerprint.dart';
 import 'src/commands/init.dart';
 import 'src/commands/keys.dart';
 import 'src/commands/migrate.dart';
+import 'src/commands/pocketbase.dart';
 import 'src/commands/rollback.dart';
 import 'src/commands/storage.dart';
 
@@ -62,7 +73,8 @@ Future<int> run(List<String> args) async {
     ..addCommand(ChannelCommand())
     ..addCommand(StorageCommand())
     ..addCommand(MigrateCommand())
-    ..addCommand(ConsoleCommand());
+    ..addCommand(ConsoleCommand())
+    ..addCommand(PocketBaseCommand());
 
   try {
     final result = await runner.run(args);

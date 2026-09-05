@@ -205,6 +205,13 @@ packages:
       relative: true
     source: path
     version: "0.0.2"
+  flutter_ota_kit_pocketbase:
+    dependency: "direct main"
+    description:
+      path: "../../plugins/pocketbase"
+      relative: true
+    source: path
+    version: "0.1.0"
   flutter_ota_kit_postgres:
     dependency: "direct main"
     description:
@@ -428,7 +435,7 @@ packages:
     source: hosted
     version: "0.28.0"
   shelf:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: shelf
       sha256: e7dd780a7ffb623c57850b33f43309312fc863fb6aa3d276a754bb299839ef12
@@ -628,4 +635,4 @@ packages:
     source: hosted
     version: "2.1.1"
 sdks:
-  dart: ">=3.11.0 <4.0.0"
+  dart: ">=3.13.2 <4.0.0"

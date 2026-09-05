@@ -1,6 +1,7 @@
 import 'package:flutter_ota_kit_aws/flutter_ota_kit_aws.dart';
 import 'package:flutter_ota_kit_cloudflare/flutter_ota_kit_cloudflare.dart';
 import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart';
+import 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart';
 import 'package:flutter_ota_kit_postgres/flutter_ota_kit_postgres.dart';
 import 'package:flutter_ota_kit_supabase/flutter_ota_kit_supabase.dart';
 
@@ -33,10 +34,10 @@ class Backend {
 
 /// Construct a [Backend] for the configured provider.
 ///
-/// Supports `supabase`, `postgres`, `cloudflare`, and `aws`. Credential
-/// precedence is: explicit factory/flag > environment variable > JSON config
-/// (see the `resolve*Config` helpers in `config.dart`). Test seams let callers
-/// inject mock clients (e.g. `postgresClientFactory`).
+/// Supports `supabase`, `postgres`, `cloudflare`, `aws`, and `pocketbase`.
+/// Credential precedence is: explicit factory/flag > environment variable >
+/// JSON config (see the `resolve*Config` helpers in `config.dart`). Test seams
+/// let callers inject mock clients (e.g. `postgresClientFactory`).
 Backend resolveBackend(
   FlutterPatcherConfig config, {
   SupabaseClientFactory? supabaseClientFactory,
@@ -47,6 +48,7 @@ Backend resolveBackend(
   AwsCloudFrontClientLike Function(S3DatabaseConfig config)?
       awsCloudFrontClientFactory,
   AwsS3ClientLike Function(AwsS3StorageConfig config)? awsStorageClientFactory,
+  PocketBaseClientFactory? pocketbaseClientFactory,
 }) {
   switch (config.provider) {
     case 'supabase':
@@ -134,10 +136,31 @@ Backend resolveBackend(
         basePath: storageConfig.basePath,
       );
 
+    case 'pocketbase':
+      final dbConfig = resolvePocketBaseDatabaseConfig(
+        config,
+        clientFactory: pocketbaseClientFactory,
+      );
+      final storageConfig = resolvePocketBaseStorageConfig(
+        config,
+        clientFactory: pocketbaseClientFactory,
+      );
+      final db = pocketbaseDatabase(dbConfig)();
+      final storage = pocketbaseStorage(storageConfig);
+      final node = storage.profiles.node;
+      if (node == null) {
+        throw StateError('PocketBase storage plugin exposes no node profile.');
+      }
+      return Backend(
+        db: db,
+        storage: node,
+        basePath: storageConfig.basePath,
+      );
+
     default:
       throw UnsupportedError(
         'Provider "${config.provider}" is not supported. '
-        'Supported: supabase, postgres, cloudflare, aws.',
+        'Supported: supabase, postgres, cloudflare, aws, pocketbase.',
       );
   }
 }

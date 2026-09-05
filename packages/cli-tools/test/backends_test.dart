@@ -8,6 +8,7 @@ import 'package:test/test.dart';
 
 import 'mocks/mock_aws_s3_client.dart' as aws;
 import 'mocks/mock_d1_client.dart' as d1;
+import 'mocks/mock_pocketbase_client.dart' as pb;
 import 'mocks/mock_postgres_client.dart' as pg;
 
 // --- R2 (cloudflare storage) mock ------------------------------------------
@@ -88,6 +89,11 @@ FlutterPatcherConfig cfgFor(String provider) => FlutterPatcherConfig(
         region: 'us-east-1',
         accessKeyId: 'k',
         secretAccessKey: 's',
+      ),
+      pocketbase: const PocketBaseConfigJson(
+        url: 'http://mock',
+        adminEmail: 'admin@example.com',
+        adminPassword: 'secret',
       ),
       channel: 'production',
       platform: 'android',
@@ -195,6 +201,16 @@ void main() {
         awsStorageClientFactory: (_) => aws.MockAwsS3Client(storageStore),
       );
       await runBackendLifecycle('aws', backend);
+    });
+
+    test('pocketbase backend (pocketbaseDatabase + pocketbaseStorage)', () async {
+      final store = pb.PocketBaseStore();
+      final backend = resolveBackend(
+        cfgFor('pocketbase'),
+        pocketbaseClientFactory: (url, email, password) =>
+            pb.MockPocketBaseClient(store),
+      );
+      await runBackendLifecycle('pocketbase', backend);
     });
 
     test('resolveBackend rejects unknown provider', () {

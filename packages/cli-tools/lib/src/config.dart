@@ -4,6 +4,7 @@ import 'dart:io';
 import 'package:flutter_ota_kit_aws/flutter_ota_kit_aws.dart';
 import 'package:postgres/postgres.dart';
 import 'package:flutter_ota_kit_cloudflare/flutter_ota_kit_cloudflare.dart';
+import 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart';
 import 'package:flutter_ota_kit_postgres/flutter_ota_kit_postgres.dart';
 
 import 'package:flutter_ota_kit_supabase/flutter_ota_kit_supabase.dart';
@@ -22,6 +23,7 @@ class FlutterPatcherConfig {
     this.postgres = const PostgresConfigJson(),
     this.cloudflare = const CloudflareConfigJson(),
     this.aws = const AwsConfigJson(),
+    this.pocketbase = const PocketBaseConfigJson(),
     this.channel = 'production',
     this.platform = 'android',
     this.source = './dist',
@@ -43,6 +45,9 @@ class FlutterPatcherConfig {
         aws: AwsConfigJson.fromJson(
           (json['aws'] as Map?)?.cast<String, dynamic>() ?? {},
         ),
+        pocketbase: PocketBaseConfigJson.fromJson(
+          (json['pocketbase'] as Map?)?.cast<String, dynamic>() ?? {},
+        ),
         channel: json['channel'] as String? ?? 'production',
         platform: json['platform'] as String? ?? 'android',
         source: json['source'] as String? ?? './dist',
@@ -54,6 +59,7 @@ class FlutterPatcherConfig {
   final PostgresConfigJson postgres;
   final CloudflareConfigJson cloudflare;
   final AwsConfigJson aws;
+  final PocketBaseConfigJson pocketbase;
   final String channel;
   final String platform;
   final String source;
@@ -65,6 +71,7 @@ class FlutterPatcherConfig {
         'postgres': postgres.toJson(),
         'cloudflare': cloudflare.toJson(),
         'aws': aws.toJson(),
+        'pocketbase': pocketbase.toJson(),
         'channel': channel,
         'platform': platform,
         'source': source,
@@ -77,6 +84,7 @@ class FlutterPatcherConfig {
     PostgresConfigJson? postgres,
     CloudflareConfigJson? cloudflare,
     AwsConfigJson? aws,
+    PocketBaseConfigJson? pocketbase,
     String? channel,
     String? platform,
     String? source,
@@ -88,6 +96,7 @@ class FlutterPatcherConfig {
         postgres: postgres ?? this.postgres,
         cloudflare: cloudflare ?? this.cloudflare,
         aws: aws ?? this.aws,
+        pocketbase: pocketbase ?? this.pocketbase,
         channel: channel ?? this.channel,
         platform: platform ?? this.platform,
         source: source ?? this.source,
@@ -672,5 +681,120 @@ AwsS3StorageConfig resolveAwsStorageConfig(
     endpoint: endpoint ?? env['AWS_ENDPOINT'] ?? config.aws.endpoint,
     sessionToken: sessionToken ?? env['AWS_SESSION_TOKEN'] ?? config.aws.sessionToken,
     clientFactory: clientFactory ?? defaultAwsS3ClientFactory,
+  );
+}
+
+// ---------------------------------------------------------------------------
+// PocketBase backend config
+// ---------------------------------------------------------------------------
+
+/// PocketBase section of [FlutterPatcherConfig].
+class PocketBaseConfigJson {
+  const PocketBaseConfigJson({
+    this.url,
+    this.adminEmail,
+    this.adminPassword,
+    this.bundlesCollection = 'bundles',
+    this.channelsCollection = 'channels',
+    this.bundlesBucket = 'bundles',
+  });
+
+  factory PocketBaseConfigJson.fromJson(Map<String, dynamic> json) =>
+      PocketBaseConfigJson(
+        url: json['url'] as String?,
+        adminEmail: json['adminEmail'] as String?,
+        adminPassword: json['adminPassword'] as String?,
+        bundlesCollection: (json['bundlesCollection'] as String?) ?? 'bundles',
+        channelsCollection:
+            (json['channelsCollection'] as String?) ?? 'channels',
+        bundlesBucket: (json['bundlesBucket'] as String?) ?? 'bundles',
+      );
+
+  final String? url;
+  final String? adminEmail;
+  final String? adminPassword;
+  final String bundlesCollection;
+  final String channelsCollection;
+  final String bundlesBucket;
+
+  Map<String, dynamic> toJson() => {
+        if (url != null) 'url': url,
+        if (adminEmail != null) 'adminEmail': adminEmail,
+        if (adminPassword != null) 'adminPassword': adminPassword,
+        'bundlesCollection': bundlesCollection,
+        'channelsCollection': channelsCollection,
+        'bundlesBucket': bundlesBucket,
+      };
+}
+
+/// Resolve the PocketBase database config (flag > env > json precedence).
+PocketBaseDatabaseConfig resolvePocketBaseDatabaseConfig(
+  FlutterPatcherConfig config, {
+  String? url,
+  String? adminEmail,
+  String? adminPassword,
+  PocketBaseClientFactory? clientFactory,
+}) {
+  final env = Platform.environment;
+  final resolvedUrl = url ??
+      env['POCKETBASE_URL'] ??
+      config.pocketbase.url;
+  final resolvedEmail = adminEmail ??
+      env['POCKETBASE_ADMIN_EMAIL'] ??
+      config.pocketbase.adminEmail;
+  final resolvedPassword = adminPassword ??
+      env['POCKETBASE_ADMIN_PASSWORD'] ??
+      config.pocketbase.adminPassword;
+
+  if (resolvedUrl == null || resolvedUrl.isEmpty) {
+    throw StateError(
+      'PocketBase URL is required. Set --pb-url, POCKETBASE_URL, or '
+      '`flutter_ota_kit config set pocketbase.url <url>`.',
+    );
+  }
+  if (resolvedEmail == null || resolvedPassword == null) {
+    throw StateError(
+      'PocketBase admin credentials are required. Set --pb-email, '
+      '--pb-password, POCKETBASE_ADMIN_EMAIL/PASSWORD, or '
+      '`flutter_ota_kit config set pocketbase.*`.',
+    );
+  }
+
+  return PocketBaseDatabaseConfig(
+    url: resolvedUrl.replaceAll(RegExp(r'/$'), ''),
+    adminEmail: resolvedEmail,
+    adminPassword: resolvedPassword,
+    bundlesCollection: config.pocketbase.bundlesCollection,
+    channelsCollection: config.pocketbase.channelsCollection,
+    bundlesBucket: config.pocketbase.bundlesBucket,
+    clientFactory: clientFactory,
+  );
+}
+
+/// Resolve the PocketBase storage config (shares the database connection).
+PocketBaseStorageConfig resolvePocketBaseStorageConfig(
+  FlutterPatcherConfig config, {
+  String? url,
+  String? adminEmail,
+  String? adminPassword,
+  String? bundlesBucket,
+  String? basePath,
+  PocketBaseClientFactory? clientFactory,
+}) {
+  final db = resolvePocketBaseDatabaseConfig(
+    config,
+    url: url,
+    adminEmail: adminEmail,
+    adminPassword: adminPassword,
+    clientFactory: clientFactory,
+  );
+  return PocketBaseStorageConfig(
+    url: db.url,
+    adminEmail: db.adminEmail,
+    adminPassword: db.adminPassword,
+    bundlesCollection: db.bundlesCollection,
+    bundlesBucket: bundlesBucket ?? db.bundlesBucket,
+    basePath: basePath,
+    clientFactory: clientFactory,
   );
 }

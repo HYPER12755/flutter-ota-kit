@@ -204,8 +204,7 @@ PackResult _writePatchPackage({
   }
 
   // archive 3.x returns List<int>?, 4.x returns List<int>; coerce to bytes.
-  // ignore: unnecessary_nullable_for_final_variable_declarations, dead_null_aware_expression
-  final List<int> packageBytes = ZipEncoder().encode(package) ?? const <int>[];
+  final List<int> packageBytes = ZipEncoder().encode(package);
   final outZip = File('${outDir.path}/patch.zip');
   outZip.writeAsBytesSync(packageBytes);
   onProgress?.call(progressTotal, progressTotal, 'patch.zip');
