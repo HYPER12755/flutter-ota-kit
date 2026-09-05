@@ -156,47 +156,47 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.1.11"
+    version: "0.1.12"
   flutter_ota_kit_aws:
     dependency: transitive
     description:
       name: flutter_ota_kit_aws
-      sha256: "31e72077e3ab318139511e3ad34a666c2d2885653e847f0ff1fd1e043e50431d"
+      sha256: "7418d9723b490b845a890140a634191cf96a9a865e9fc51acf84ad7c2734d487"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.2"
+    version: "0.1.3"
   flutter_ota_kit_client:
     dependency: transitive
     description:
       name: flutter_ota_kit_client
-      sha256: "4f0b5b581a47eb18bc195f56af4f190154e0f8b7f1df337f561c281a3dba64aa"
+      sha256: "97ecf5e1510eb41a35615353d53efaa822897c13ee89e47f1106f870b47c5f99"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.1"
+    version: "0.1.2"
   flutter_ota_kit_cloudflare:
     dependency: transitive
     description:
       name: flutter_ota_kit_cloudflare
-      sha256: "9909c856e2af986c299d491eab61551286095110f73e7062c7bf766ad6771eba"
+      sha256: "156d7c499ae7dc2b11552b09ec08cffb5eb4478b9a5457d4d872ee248a348bc7"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.2"
+    version: "0.1.3"
   flutter_ota_kit_core:
     dependency: transitive
     description:
       name: flutter_ota_kit_core
-      sha256: "693d6cdf517fa5ce8249f819d5b093b17c2a45df6d11fa031fcdb1f5047e24c6"
+      sha256: "05fd804175462581d5cef0dceba4c4c6406aa3becaf9bacde4b5ef5976657b79"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.1"
+    version: "0.1.2"
   flutter_ota_kit_plugin_core:
     dependency: transitive
     description:
       name: flutter_ota_kit_plugin_core
-      sha256: a909a22bc2aa0c9ba3fd81bcbc9bc948f573905a9342cf26badc65d6254bd79e
+      sha256: "79df14d3c9ae1963015161c0daa2e51b49d854c0acc55ef582ddce3f178020f9"
       url: "https://pub.dev"
     source: hosted
-    version: "0.0.3"
+    version: "0.0.4"
   flutter_ota_kit_pocketbase:
     dependency: "direct overridden"
     description:
@@ -208,18 +208,18 @@ packages:
     dependency: transitive
     description:
       name: flutter_ota_kit_postgres
-      sha256: d40cf1c0d281ba629ed299c06b9bb12be7b0dc3092f9ba85d0202f26f251645e
+      sha256: "5dae859a4518a0d5505a08b60eda74e61493a6aa1f580abb732004e0ada30a34"
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.2"
+    version: "0.1.3"
   flutter_ota_kit_supabase:
     dependency: transitive
     description:
       name: flutter_ota_kit_supabase
-      sha256: "2083de8e87e4748b8ddcf285172510e03cc794d447382b7e6007ce69a9c9016f"
+      sha256: da0e15bbb438f56b00b2708154e613d91101eedf0f895f422bceafad7d210916
       url: "https://pub.dev"
     source: hosted
-    version: "0.1.3"
+    version: "0.1.4"
   flutter_test:
     dependency: "direct dev"
     description: flutter
