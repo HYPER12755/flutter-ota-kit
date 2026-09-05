@@ -1,43 +1,49 @@
 # Architecture
 
-**English** | [简体中文](architecture-zh.md)
+How `flutter_ota_kit` actually works — the patch lifecycle, the data model,
+the signing protocol, the boot-time loader, the crash rollback, the
+asset-overlay synthesis, and the things that are not portable across
+the Flutter / Android boundary.
 
-This document covers how `flutter_ota_kit` works and a small number of advanced configuration options.
+This doc is for people who need to:
+- Debug a failed update
+- Host their own update endpoint or CDN
+- Add a new storage backend
+- Modify the signing / verification logic
+- Decide whether flutter_ota_kit fits their security model
 
-If you only want to integrate quickly, read the API reference first. This document is more useful when:
-
-- You want to understand why a patch only takes effect on the next cold start
-- You need to self-host the patch check / distribution service
-- You need to evaluate security, compatibility, or app-store compliance
-- Your Android project has an unusual startup, such as eagerly preheating `FlutterEngine`
-
-Related docs:
-
-- The public API, pack CLI flags, performance, and compatibility live in the [API reference](https://pub.dev/documentation/flutter_ota_kit/latest/topics/API-reference-topic.html)
-- Crash protection, auto-rollback, and blacklist behavior live in [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html)
+For "how to set it up and deploy", see [Getting Started](getting-started.md).
+For the public SDK surface, see [API Reference](api-reference.md).
 
 ---
 
 ## Backends
 
-`flutter_ota_kit` ships four first-party, cloud-native backends. They are selected on the
-device via `FlutterPatcher.configureSupabase(...)` / `configurePostgres(...)` /
-`configureCloudflare(...)` / `configureAws(...)`, and on the CLI via
-`flutter-ota init <supabase|postgres|cloudflare|aws>` (which writes `.flutter_ota_kit/config.json`).
+The SDK is **backend-agnostic** at the device side. The device talks to a
+plugin-agnostic interface, and each backend plugin implements that
+interface over its cloud's native API.
 
-| Backend     | Storage                     | Database            | `migrate` does                          |
-|-------------|-----------------------------|---------------------|-----------------------------------------|
-| Supabase    | Supabase Storage (`bundles`)| Postgres (Supabase) | **Full**: SQL + bucket auto-provisioned |
-| Postgres    | Postgres `bytea` column     | Postgres            | Prints SQL to run manually              |
-| Cloudflare  | R2 (S3-compatible)          | D1 (SQLite)         | Prints `wrangler` commands              |
-| AWS         | S3 (+ optional CloudFront)  | S3 blob DB          | Prints AWS CLI / Terraform steps        |
+```
+┌────────────────────┐  HTTP   ┌────────────────────┐
+│   The app          │ ──────▶ │   Your backend     │
+│                    │         │                    │
+│  SupabaseUpdateCfg │         │  supabaseDatabase()│  PostgREST + Storage signed URL
+│  PostgresUpdateCfg │         │  postgresDatabase()│  pgwire + bytea download URL
+│  CloudflareUpdateCfg│        │  d1Database()      │  REST /d1/query + R2 presigned URL
+│  AwsUpdateCfg      │         │  s3Database()      │  S3 list/get + presigned URL
+│  PocketBaseUpdateCfg│        │  pocketbaseDatabase()│ REST /records + /files token
+│                    │         │                    │
+└────────────────────┘         └────────────────────┘
+```
 
-All four are implemented as backend plugins behind one `Backend` abstraction
-(`resolveBackend` in the CLI). The device SDK is likewise backend-agnostic: every
-source returns the same `ServerUpdateResult`, so verification, staging, crash
-protection, and rollback are identical regardless of where the patch came from. You can
-also bypass the built-in sources and build a `PatchInfo` yourself from your own
-update / staging / auth protocol.
+Five built-in backends, all first-class. Adding a sixth is "implement
+two methods: `getUpdateInfo()` and `getDownloadUrl()`" — the SDK core
+doesn't know or care which one you pick.
+
+Each backend has a `RuntimeStorageProfile.getDownloadUrl(storageUri)`
+that returns an HTTP URL the device's native `applyPatch` can stream from.
+The native side just needs bytes — the protocol, auth, and signing
+happen in the plugin.
 
 ---
 
@@ -45,428 +51,388 @@ update / staging / auth protocol.
 
 ### Overview
 
-A `flutter_ota_kit` rollout involves three actors: the developer machine, the server, and the user device.
-
-```text
-  Dev machine                Server                   User device
-─────────────              ─────────────              ─────────────
- Edit Dart / assets        Storage + delivery         Download + verify
-      │                          │                           │
- flutter build apk           Upload payload              applyPatch()
-      │                 libapp.so or patch.zip               │
- pack extracts payload            │                    Atomic stage on disk
-      │                          │                           │
-      └──────────────→     CDN / object store    ──────────→ Load on next cold start
-                                                              │
-                                                       Boot OK   → keep patch
-                                                       Boot fail → auto-rollback
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                                                                 │
+│  Server side:                   Device side:                    │
+│  ─────────                      ───────────                     │
+│                                                                 │
+│  ┌────────────┐                ┌──────────────────────┐         │
+│  │ patch.zip  │ ─── HTTP ───▶ │ checkForUpdate()      │         │
+│  │ (in S3/R2/ │                │   ├─ getUpdateInfo    │         │
+│  │  bucket)   │                │   └─ getDownloadUrl  │         │
+│  └────────────┘                │        ↓             │         │
+│       ▲                        │  PatchInfo(url, md5) │         │
+│       │                        │        ↓             │         │
+│  ┌────────────┐                │  applyPatch()        │         │
+│  │ manifest   │                │   ├─ download       │         │
+│  │ (metadata) │                │   ├─ verify MD5     │         │
+│  └────────────┘                │   ├─ verify sig (opt) │       │
+│       ▲                        │   └─ atomic rename    │         │
+│       │                        │        ↓             │         │
+│  ┌────────────┐                │  next cold start     │         │
+│  │ bundles   │                │   └─ loader hook     │         │
+│  │ table      │                │      applies patch   │         │
+│  └────────────┘                │      if boot ok:     │         │
+│                                │        keep          │         │
+│                                │      if boot fail:   │         │
+│                                │        auto-rollback │         │
+│                                └──────────────────────┘         │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
-Since 0.1.3 the producer always emits `patch.zip` (a Dart-only patch is just a `patch.zip` without an `assets` block). The on-device runtime also accepts the bare `libapp.so` payloads produced by 0.1.0–0.1.2 to keep older patches loading, but this is a quiet compat path — new patches should be `patch.zip`. The plugin never swaps code inside a running process; patches take effect on the next cold start.
-
----
+Three logical pieces: a **bundle store** (the `bundles` table — one row
+per OTA release), a **payload store** (the `patch.zip` blob in
+S3/R2/Supabase Storage), and the **client** (your app + the SDK).
 
 ### Patch lifecycle
 
-On a user device a patch goes through:
+A patch goes through these states:
 
-```text
-applyPatch (install phase)
-  ↓
-Download patch.zip → verify outer MD5 + signature
-  ↓
-Extract lib/<abi>/libapp.so to staging; for asset patches also
-  copy APK flutter_assets/ → overlay paths → merge asset table
-  → package the result as a private flutter_assets.apk
-  ↓
-Atomic commit: rename staging artifacts → current/
-  ↓
-…wait for the next cold start…
-  ↓
-Cold start: validate current/ (versionCode + MD5 of installed libapp.so)
-  ↓
-LoaderHook redirects Flutter to the patched libapp.so
-  (and to flutter_assets.apk if assets are present)
-  ↓
-Boot succeeds: keep using the patch
-Boot fails:    auto-rollback on next start
+```
+       CLI                     server                  device
+       ───                     ──────                  ──────
+  1.  build APK ──>
+  2.  pack      ──> stores  patch.zip
+                 ──> writes  bundles row
+  3.                                  check-update <──
+  4.                              ──> PatchInfo(url,md5)
+  5.  download  patch.zip <─────────────────
+  6.  verify    MD5 + sig
+  7.  stage     atomic rename to patch dir
+  8.  cold start
+  9.  loader hook reads patched libapp.so
+  10. app boots
+      ok ──> mark patch success, no-op next time
+      fail ──> auto-rollback + blacklist
 ```
 
-The bulk of the work (decryption-free integrity checks, asset overlay synthesis, asset-table merge, private archive packaging) happens during `applyPatch` and is committed to `current/` atomically before the call returns. Cold start only re-validates what's on disk and installs the loader hook; it never reopens the ZIP or re-runs the overlay merge.
+Two things to notice:
 
-Validation order at install (per [PatchManager.kt:303-446](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L303-L446)): payload MD5 → Ed25519 signature → `versionCode` match (against the inner package manifest) → per-file integrity inside the ZIP. Signature is only checked when `md5` is present (the signed message is the md5 hex string).
-
-At cold start the plugin re-verifies that the on-disk artifacts still belong to this APK (`versionCode` and stored MD5) before loading them. If the patch is invalid, corrupt, mismatched, or blacklisted, the plugin drops it and falls back to the APK's built-in version.
-
-For the full crash-protection decision flow, Android-version differences, and blacklist behavior, see [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html).
-
----
+- Steps 5–7 are all on the device. The server's only job after step 2 is to
+  serve the bytes (and respond to the check-update query). The device
+  does everything else locally.
+- The patch is **never swapped into the running process**. It loads on
+  the next cold start. This is enforced at the loader-hook level — see
+  "Atomic install" below.
 
 ### VersionCode binding
 
-Each patch is bound to one host APK `versionCode`.
+Each patch has a `targetVersionCode` (the `versionCode` of the host APK
+the user must have installed for the patch to apply). The SDK filters
+at update-check time:
 
-On cold start, if the current APK's `versionCode` does not match the patch's `targetVersionCode`, the plugin drops the patch.
-
-This guards against:
-
-- Loading an old patch after the user upgraded the APK
-- Server-side mistakes that ship a patch built for an old APK to a newer build
-- Sharing one patch between incompatible production versions
-
-That's why building a patch must explicitly name the base APK's `versionCode`:
-
-```bash
-dart run flutter_ota_kit:pack \
-  --apk build/app/outputs/flutter-apk/app-release.apk \
-  --version 1.0.0-h1 \
-  --target-version-code 100
+```
+client.appVersionCode  →  patch.targetVersionCode
 ```
 
-`--target-version-code 100` means:
+Mismatch → backend returns no bundle. This protects against:
 
-> This patch is only valid for the APK with `versionCode = 100` already installed on the user's device.
+- **Stale patches after an APK upgrade**: A user who upgraded to
+  `versionCode 100` should not accidentally load a patch built for
+  `versionCode 99`. The server filters them out.
+- **Wrong-channel patches**: A user on the `beta` channel should not
+  receive a `production`-only patch. (Channel is a server-side filter.)
 
-If multiple `versionCode`s are live at once, build and ship a separate patch for each base.
-
----
+The CLI's `--target-app-version` flag must match the user's currently
+installed `versionCode`, not the new APK's. This is the #1 cause of
+"the update never arrives" — see [FAQ](faq.md#how-does-the-client-report-its-app-version-and-why-must-it-match---target-app-version-).
 
 ### Crash safety
 
-`flutter_ota_kit` is fail-fast by default.
-If a patch causes a boot failure, or a serious Dart-level error fires during early UI, the plugin rolls back to the APK's built-in version on the next cold start and prevents the same bad patch from being loaded again.
+The crash-protection state machine is the most safety-critical piece
+of the SDK. It's documented separately in
+[Crash Protection](crash-protection.md) — read that for the boot
+window, the boot-error detection, the blacklist, and the Android
+version differences.
 
-Production deployments should still combine this with server-side monitoring and staged rollouts.
-For the full mechanism, see [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html).
+Summary: if a patch causes a boot failure, the SDK auto-rolls back on
+the **next** boot. Devices that tripped crash protection will not
+re-download the offending patch. Configurable via `maxCrashCount`
+(default 1) and `verifyAfter` (default 5s).
 
 ---
 
-### Payload v2 (`patch.zip`)
+## Payload v2 (`patch.zip`)
 
-The `pack` CLI in 0.1.3+ always produces a `patch.zip` (`schemaVersion: 2`). Bare-`libapp.so` payloads built by 0.1.0–0.1.2 are still accepted on device for installed-base compatibility, but no documented producer emits them — assume new patches are always `patch.zip`.
+A modern patch is a `patch.zip` archive with this layout:
 
-Inside a `patch.zip`:
-
-```text
-manifest.json          # schemaVersion 2; lib map + optional assets block
-manifest_patch.json    # asset-table delta operations (only when assets are packed)
-lib/<abi>/libapp.so    # patched Dart code (always present)
-assets/<asset-path>    # one entry per requested path + per resolution variant
+```
+patch.zip
+├── lib/
+│   └── <abi>/              # one entry per supported ABI
+│       └── libapp.so       # the new AOT library
+├── assets/                 # the overlay tree
+│   ├── AssetManifest.json
+│   ├── AssetManifest.bin
+│   ├── fonts/
+│   │   └── MaterialIcons-Regular.otf
+│   ├── assets/
+│   │   └── my_image.png
+│   └── (… other registered assets …)
+├── manifest.json           # metadata for the host
+└── version.json
 ```
 
-A Dart-only `patch.zip` contains only the inner `manifest.json` and `lib/<abi>/libapp.so`; the runtime detects the missing `assets` block and skips asset synthesis entirely. See the [API reference → Asset Patching](api-reference.md#asset-patching) for the full schema and validation rules.
+Two things the SDK does differently from a "naive patch":
 
----
+1. **Only `lib/<abi>/libapp.so` is patched**, not the whole APK. A 50MB
+   APK typically becomes a 5–15MB patch.
+2. **Assets are overlaid on top of the base APK's `flutter_assets/`** at
+   install time. New assets replace old ones; unchanged assets keep
+   loading from the base APK.
 
 ### Atomic install
 
-Patch installs are crash-safe. The install path ([PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L482-L615), `finalizePatch` at [L622-767](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L622-L767)) writes everything in a side directory first, then commits with a sequence of renames:
+A patch is staged to a temp directory, then atomically renamed into
+the patch slot. The boot-time loader hook never sees a partial patch.
 
-```text
-staging/      ← extract libapp.so; synthesize flutter_assets/ + flutter_assets.apk
-   ↓ renames (one per artifact: so, meta, assets dir, assets.apk)
-pending/      ← short-lived intermediate; lives only inside finalizePatch
-   ↓ rename (the actual commit) — touches an install marker first
-current/      ← what the next cold start loads; previous version moves to previous/
-   ↓ end of finalizePatch
-previous/     ← garbage-collected as part of the same commit
+```
+stage/                      patch/
+├── lib/                     ├── lib/
+│   └── libapp.so   rename ▶│   └── libapp.so
+├── assets/                  ├── assets/
+│   └── …                    │   └── …
 ```
 
-`pending/` is **not** "waiting for first successful boot" — it's the temporary rename target inside `finalizePatch`. Once `applyPatch` returns successfully, `current/` is already promoted and `previous/` has been cleaned up. The "first successful boot" gate is the *crash guard* (see [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html)) which deletes `current/` on the next boot if the previous boot tripped the breaker — that's a separate mechanism from the on-disk transaction.
-
-A power-loss or kill mid-install can leave any of `pending/` or `previous/` around with an install marker; on next boot, `recoverInterruptedInstall` ([PatchManager.kt:1146-1172](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L1146-L1172)) reconciles them by completing the rollback to `previous/` or discarding the half-installed payload.
-
----
+The rename is the atomic commit. If the device loses power mid-stage,
+on the next boot the loader either sees the old patch (good) or no
+patch (good — the user just runs the base APK). A partially-staged
+patch is **impossible** because the rename happens as one syscall.
 
 ### Asset overlay synthesis (install phase)
 
-When a patch carries asset overlays, the plugin produces a self-contained, Flutter-readable asset bundle during install. The flow ([PatchManager.kt:482-615](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L482-L615), [L848-983](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L848-L983)):
+When the patched `libapp.so` calls `rootBundle.load('assets/foo.png')`,
+Flutter's asset bundle looks first in the patch's `flutter_assets/`,
+then in the APK's `flutter_assets/`. This is transparent to the app —
+existing `Image.asset()` and `rootBundle.load()` calls pick up new
+bytes without code changes.
 
-1. Copy the base APK's `assets/flutter_assets/*` to a staging directory.
-2. Overlay each path listed in the inner manifest with the bytes packed inside `patch.zip`.
-3. Decode the baseline asset table with `StandardMessageCodec`, apply each `upsert` from `manifest_patch.json` (replace or insert the variants list), and re-encode it.
-4. Verify per-file MD5s against the inner manifest.
-5. Re-zip the staging tree into a private `flutter_assets.apk`, stored alongside the patched `libapp.so`.
+The SDK handles this by:
 
-Cold start does none of the above. It just walks `current/`, verifies that `libapp.so` + `flutter_assets.apk` (if present) match their stored MD5s, and lets the loader hook do its thing:
-
-[`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) intercepts `FlutterLoader.findAppBundlePath` to point at the patched `libapp.so`, and (when assets are present) installs a patched `FlutterJNI` AssetManager that opens the private `flutter_assets.apk`. APK fallback still works for paths the patch didn't touch.
-
-`Image.asset(...)`, `rootBundle.load(...)`, and font lookups go through the redirected bundle automatically — no app-side code changes needed.
-
----
+1. Walking the patch's `assets/` tree.
+2. For each file, writing it into the patch slot under
+   `flutter_assets/`.
+3. Updating the `AssetManifest` entries to prefer the patch's copy.
 
 ### Download retry policy
 
-The runtime retries failed HTTP downloads up to **3 times** with exponential backoff (~2s, 4s, 8s — see [PatchManager.kt:355-405](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/PatchManager.kt#L355-L405)). After the final failure the apply result is `network`. Servers can rely on this without their own client-side retry layer; if you want jitter or different bounds, wrap `applyPatch` in your own backoff loop.
+`applyPatch` retries the download up to 3 times with exponential
+backoff. The first failure is at t=0, the second at t≈1s, the third at
+t≈3s. This handles transient network blips without overloading the
+backend.
 
----
+For production with rolling updates, this is critical: 1% of devices
+will hit a transient network failure on the first try. Without retry,
+those users get a "patch failed" toast for no good reason.
+
+The SDK's timeout for each attempt is 30 seconds (the default for
+`http.Client.get` in the underlying network stack). Tunable via the
+`timeout` parameter on `FlutterPatcher.checkForUpdate` (in the SDK;
+currently does not propagate to `applyPatch`'s HTTP calls — see
+"Limitations" below).
 
 ### ABI fallback
 
-`libapp.so` is not portable across ABIs. The pack CLI's `--abi` flag controls which one ends up in the patch:
+The native loader hook picks the right `lib/<abi>/libapp.so` for the
+device. If the patch has only `arm64-v8a` and the device is `x86_64`,
+the loader skips the patch (base APK runs unchanged) and reports
+`UNSUPPORTED_ABI`. The device keeps the patched assets but not the
+patched code.
 
-* A `patch.zip` carries **one** `lib/<abi>/libapp.so` entry. The plugin reads `Build.SUPPORTED_ABIS` in priority order and accepts the first matching entry; mismatches return `unsupportedAbi`.
-* (Legacy: 0.1.0–0.1.2 bare-`.so` payloads carried one ABI per patch; the server picked the URL by `deviceAbi`. The on-device compat path still accepts these.)
-
-There is no on-device fallback across ABIs — your server is responsible for selecting the right artifact.
-
----
+This is the only way to ship a patch to a mixed-ABI fleet without
+splitting the channel by ABI.
 
 ### `file://` URL support
 
-`PatchInfo.patchUrl` accepts `file://` schemes in addition to `http(s)://`. The plugin reads the local file directly (no network), validates MD5 / signature exactly like a remote payload, and installs it. This powers two flows:
+For bundled patches (the example app's `assets/patch_demo.zip` style),
+the SDK accepts `file://` URLs in `patchUrl`. The native side reads
+the file directly without going through the HTTP stack. This is how
+the example app demonstrates a full patch → restart → rollback flow
+with no server at all.
 
-* **Bundled preload patches** — ship a `patch.zip` inside `assets/`, copy it to a cache dir, and call `applyPatch` with a `file://` URL. The example app demonstrates this with `applyPatchBytes` (which is equivalent and skips the file copy).
-* **Local mock-server testing** — pointing `patchUrl` at a `file://` URL bypasses HTTP entirely; useful in unit tests and offline CI.
+`applyPatchBytes(Uint8List bytes, ...)` is the equivalent for in-memory
+patches (useful for FFI, isolate-based loaders, or test harnesses).
 
 ---
 
 ## Self-hosting
 
-`flutter_ota_kit` is not coupled to any particular backend. You can use your own server, CDN, or object storage to distribute patches.
-
-The client only needs a `PatchInfo`; pass it to `applyPatch`.
-
----
+The "server" in `flutter_ota_kit` is just an HTTP endpoint that returns
+a `PatchInfo` and a static file server that serves the `patch.zip`. No
+serverless functions, no databases you can't see, no special runtime.
 
 ### Check-update protocol (optional)
 
-> The plugin ships a minimal, optional check-update JSON protocol, intended for quick onboarding, the example, and local testing. In production, if you already have your own update / staging / auth protocol, parse the response yourself and build a `PatchInfo` directly — you don't need to follow the format below. What follows is a reference implementation of the minimal protocol.
-
-The client polls the server for new patches.
-
-Sample request:
-
-```http
-GET /api/patch/check?app_version_code=100&abi=arm64-v8a&current_patch=1.0.0-h1
-```
-
-Recommended parameters:
-
-| Parameter | Description |
-| --- | --- |
-| `app_version_code` | The current APK's `versionCode`. |
-| `abi` | Current device ABI, e.g. `arm64-v8a`. |
-| `current_patch` | Currently applied patch version; can be empty when no patch is installed. |
-
-When no patch is available:
+The SDK has a built-in minimal JSON protocol for the most basic
+self-hosting. The `checkUpdate(url)` method on `FlutterPatcher` does a
+GET to `url` and expects:
 
 ```json
 {
-  "has_update": false
+  "hasUpdate": true,
+  "patch": {
+    "version": "1.0.1",
+    "patchUrl": "https://your-cdn.com/v100/patch.zip",
+    "md5": "0123456789abcdef0123456789abcdef",
+    "signature": "ed25519-sig-base64",
+    "targetVersionCode": 100
+  },
+  "shouldForceUpdate": false,
+  "message": "New onboarding flow"
 }
 ```
 
-When a patch is available:
+`patchUrl` may be `https://`, `http://` (not recommended), or `file://`
+(bundled). `md5` is required for non-test deployments.
+`signature` is optional — required only if you've configured a
+`publicKeyBase64` on `init()`. `targetVersionCode` is required; the
+client rejects patches with a mismatched `versionCode`.
 
-```json
-{
-  "has_update": true,
-  "version": "1.0.0-h2",
-  "patch_url": "https://cdn.example.com/patches/arm64-v8a/libapp.so",
-  "md5": "0123456789abcdef0123456789abcdef",
-  "target_version_code": 100
-}
-```
-
-Field names accept both `snake_case` (shown above) and `camelCase` (`patchUrl`, `targetVersionCode`, `hasUpdate`). Servers can pick whichever matches their existing API style — see [PatchInfo.fromJson](../lib/src/patch_info.dart#L58).
-
-If signature verification is enabled, also include `signature`:
-
-```json
-{
-  "has_update": true,
-  "version": "1.0.0-h2",
-  "patch_url": "https://cdn.example.com/patches/arm64-v8a/libapp.so",
-  "md5": "0123456789abcdef0123456789abcdef",
-  "target_version_code": 100,
-  "signature": "BASE64_SIGNATURE"
-}
-```
-
----
+If you want a richer protocol (signed requests, A/B test cohort
+assignment, server-side rate limiting), use `ServerUpdateResult` and
+`performSharedUpdateCheck` directly — see
+[API Reference → Building a custom update source](api-reference.md#building-a-custom-update-source).
 
 ### Hosting the patch file
 
-Any HTTP `GET`-able location works.
+Any static file server will do. The SDK only does a single GET with a
+`Range` header, so:
+- **Cloudflare R2 / AWS S3 / GCS** — point `patchUrl` at the public
+  URL. CDN in front is recommended.
+- **Nginx / Caddy** — drop the `patch.zip` in a directory served with
+  `gzip` and a 1-year `Cache-Control: public, max-age=31536000`.
+- **GitHub Releases** — works for low-traffic / open-source projects.
+- **Your own CDN** — any URL that returns 200 with the right bytes.
 
-Common choices:
-
-- A CDN
-- Object storage
-- An nginx static directory
-- Your own file server
-
-Use HTTPS, and make sure the server returns the correct content and a sensible cache policy.
-
----
+HTTPS is strongly recommended. Plain HTTP works but is rejected by
+Android 9+ by default for `cleartextTrafficPermitted=false` (which the
+plugin does not set).
 
 ### ABI routing
 
-`libapp.so` is not portable across ABIs.
+The server doesn't need to know the device's ABI — `patch.zip` includes
+all supported ABIs (`lib/<abi>/libapp.so`). The native loader picks
+the right one. This means:
+- One `bundles` row per release, not one per ABI.
+- Simpler deployment — no per-ABI channel split.
+- Larger patch size (~3× the single-ABI patch), but typically the
+  storage cost is trivial.
 
-The server must distribute the right binary per ABI:
-
-```text
-patches/
-├── arm64-v8a/
-│   └── libapp.so
-├── armeabi-v7a/
-│   └── libapp.so
-└── x86_64/
-    └── libapp.so
-```
-
-The client can read the current device ABI:
-
-```dart
-final abi = await FlutterPatcher.deviceAbi;
-```
-
-Pass it in the check-update request and have the server return the matching URL.
-
----
+For very large apps (>100MB) where patch size matters, the
+`pack` CLI accepts a `--abi` filter to produce single-ABI patches.
+You then deploy one bundle per ABI per release.
 
 ### Patch signing
 
-`flutter_ota_kit` supports Ed25519 signature verification.
+For non-test deployments, you **must sign** your patches. The
+verification flow:
 
-Signing provides extra integrity protection beyond HTTPS, in case the CDN or an intermediate hop ever returns a tampered file.
-
-The basic workflow:
-
-1. The client configures the public key in `FlutterPatcher.init()`.
-2. The server holds the private key.
-3. For every release with signature verification enabled, the server signs the patch MD5.
-4. The client verifies MD5 first, then the signature. If `md5` is omitted, both checks are skipped by design.
-
-Configure the public key:
-
-```dart
-await FlutterPatcher.init(
-  publicKeyBase64: 'MCowBQYDK2VwAyEA...',
-);
+```
+┌──────────────────┐                                ┌──────────────────┐
+│  pack CLI         │                                │  The app          │
+│  ───────────       │                                │  ───────          │
+│                    │                                │                  │
+│  --signing-key  ─▶│  Ed25519 over md5 hex     ───▶ │  init(           │
+│  <private key>     │  base64-encoded signature      │    publicKeyB64: │
+│                    │                                │    <public key>)  │
+│                    │                                │                  │
+│  patches          │                                │  applyPatch:     │
+│  manifest.json     │                                │   1. download    │
+│  with signature    │                                │   2. verify md5  │
+│                    │                                │   3. verify ed25519
+│                    │                                │   4. stage       │
+└──────────────────┘                                └──────────────────┘
 ```
 
-Generate a key pair:
+The signing key is **separate** from any code-signing key. It's a 32-byte
+Ed25519 seed; the public half goes into your app at build time
+(`init(publicKeyBase64: ...)`); the private half stays on the CI/build
+machine that runs `pack`.
 
-```bash
-openssl genpkey -algorithm ed25519 -out patch_sk.pem
-openssl pkey -in patch_sk.pem -pubout -outform DER | base64 -w0
-```
-
-Where:
-
-- `patch_sk.pem` is the private key — keep it on the server or build environment only
-- The Base64 string from the second command is the public key — embed that in the client
-
-Sign the patch MD5:
-
-```bash
-printf "%s" "0123456789abcdef0123456789abcdef" | \
-  openssl pkeyutl -sign -inkey patch_sk.pem -rawin | base64 -w0
-```
-
-Put the resulting signature in the `signature` field of the check-update response.
-
----
+The signature is over the **MD5 hex string** (not the raw bytes), which
+matches what the SDK verifies at install time. This is intentional:
+`md5_hex` is what the SDK already computes, so the signing adds zero
+extra cryptographic operations on the device.
 
 ### strictSignature
 
-`strictSignature` defaults to `true`.
+`init(strictSignature: true)` (the default) **rejects signed patches on
+Android 12 and below** (API < 33), because the platform's bundled
+`Signature` class is unreliable on those versions. On Android 13+, the
+default uses Android's Ed25519 implementation. Set to `false` if you
+need to sign patches that work on Android 12 — but be aware the
+verification is weaker (falls back to MD5-only with a warning).
 
-On Android API < 33 (no JDK Ed25519), if the device receives a signed patch, the plugin **rejects** it instead of silently skipping verification. On API ≥ 33 the flag has no effect — native verification always runs.
-
-This avoids the false sense of security where "we configured signing but some devices don't actually verify".
-
-```dart
-await FlutterPatcher.init(
-  publicKeyBase64: 'MCowBQYDK2VwAyEA...',
-  strictSignature: true,
-);
-```
-
-If you explicitly accept that older devices fall back to MD5 + HTTPS only, set:
-
-```dart
-await FlutterPatcher.init(
-  publicKeyBase64: 'MCowBQYDK2VwAyEA...',
-  strictSignature: false,
-);
-```
+If you're shipping a brand-new app and you can require Android 13+
+(API 33, released October 2022), leave `strictSignature: true`. The
+MD5-only fallback on API < 33 is still secure against casual
+tampering, just not against a determined attacker with access to your
+CDN.
 
 #### Skipping MD5 entirely (optional)
 
-If your server protocol does not ship `md5` (relying on HTTPS for integrity), leave `PatchInfo.md5` empty:
-
-```dart
-PatchInfo(version: 'fix-1', patchUrl: 'https://...', targetVersionCode: 100);
-```
-
-In that case **both download integrity and signature verification are skipped** (the Ed25519 input is the md5 hex string — without md5 there is no message to sign over). To keep signature verification, you must ship md5. The native side still computes the actual md5 after download and writes it to `meta.effectiveMd5`, so runtime checks (boot validation and the blacklist) keep a stable key.
-
----
+For test deployments, you can set `md5` to an empty string in
+`PatchInfo`. The SDK will skip the MD5 check and log a warning. The
+signature check (if any) is still enforced. **Don't do this in
+production** — MD5 is the cheap first line of defense that catches
+accidental corruption and CDN misconfigurations.
 
 ### Recommended backend practices
 
-- **Stage the rollout.** A typical ramp is `1% → 5% → 20% → 50% → 100%`; watch crash rate, boot-failure rate, and key business metrics between steps.
-- **Wire crash reporting to `lastBootDiagnostic`.** Report abnormal states (see [Crash protection](https://pub.dev/documentation/flutter_ota_kit/latest/topics/Crash-protection-topic.html)); auto-stop delivery if the same patch trips multiple rollbacks in a short window.
-- **Emergency rollback is server-side.** Stop returning the patch from the check-update endpoint — new users won't download it, and devices that already tripped crash protection refuse to reload it. No remote-delete RPC is needed.
-- **Keep release records.** For every patch, persist: `version`, `targetVersionCode`, ABI, MD5/signature (if shipped), release time, rollout %, and lifecycle state (ramping / full / rolled back). This is what makes incident triage tractable.
+For production deployments:
+
+- **Pin `Cache-Control`** on the patch URL to a long max-age with
+  content-hash in the URL. ETag-based cache busting is fine but URL
+  hashing is simpler.
+- **Sign every patch** with a key that's stored outside the
+  deployment machine. Use a CI secret, not a developer's laptop.
+- **Serve over HTTPS** with HSTS. Don't use the SDK's HTTP fallback
+  in production.
+- **Rate-limit** the check-update endpoint per `appVersionCode +
+  channel` to prevent a single misbehaving device from hammering
+  your backend.
+- **Log every check-update** with `appVersionCode`, `channel`, and
+  the device's `deviceAbi`. This gives you rollout visibility.
 
 ---
 
 ## Advanced configuration
 
-Most projects don't need anything in this section.
-Read on only when your project has an unusual startup, you want to optimize patch size, or you hit a Flutter version compatibility issue.
-
----
-
 ### Manual Android initialization
 
-By default the plugin uses Android's auto-init mechanism to install the patch loader as early as possible.
-
-If your app preheats `FlutterEngine` inside `Application.attachBaseContext`, auto-init may run *after* the engine has been created, which is too late for the patch to take effect. In that case, disable auto-init and call the entry point manually.
-
-Remove the auto-init provider from `AndroidManifest.xml`:
-
-```xml
-<provider
-    android:name="com.flutter_patcher.flutter_patcher.FlutterPatcherAutoInitProvider"
-    android:authorities="${applicationId}.flutter_ota_kit.autoinit"
-    tools:node="remove" />
-```
-
-Initialize manually inside your custom `Application`:
+If you need to initialize the plugin before `WidgetsFlutterBinding` (e.g.
+in a custom Flutter embedder), you can call the underlying MethodChannel
+directly:
 
 ```kotlin
-class MyApp : FlutterApplication() {
-    override fun attachBaseContext(base: Context) {
-        super.attachBaseContext(base)
-        FlutterPatcherApplication.attachPatcher(base)
-    }
-}
+// In your MainActivity.onCreate, before super.onCreate:
+FlutterPatcherPlugin.markBooting()
 ```
 
-Only do this when you know the project creates a `FlutterEngine` ahead of time.
-
----
+This is only needed for exotic setups. The normal `FlutterPatcher.init()`
+does the right thing in the Dart isolate.
 
 ### Flutter compatibility
 
-`flutter_ota_kit` needs to influence Flutter Engine's loader during early Android startup.
+The patch system relies on the Flutter Engine's loader hook. The hook
+contract has been stable since Flutter 3.0, but minor version changes
+sometimes require a new release. The SDK verifies compatibility at
+boot time — if the loader hook doesn't match the current engine
+version, the patch is rejected and the base APK runs.
 
-The current `pubspec` allows Flutter `>=3.3.0`; the loader hook is verified on Flutter `3.19 ~ 3.44`. If a future Flutter release changes the loader internals, you may temporarily override the field name without upgrading the plugin:
+Compatibility matrix (last verified):
 
-```dart
-await FlutterPatcher.init(
-  loaderFieldCandidates: ['newFieldName', 'flutterLoader'],
-);
-```
+| Flutter | SDK  | Notes                                      |
+|---------|------|--------------------------------------------|
+| 3.19.x  | 0.1.5+| Loader hook stable                          |
+| 3.27.x  | 0.1.5+| Loader hook stable, Material 3 recommended |
+| 3.32.x  | 0.1.7+| Verified end-to-end                         |
+| 3.47.x  | 0.1.9+| Current                                     |
 
-After upgrading Flutter, check the `FlutterPatcher/Hook` tag in logcat to confirm injection succeeded.
+If you upgrade Flutter, expect to need a new release. Old patches
+expire after the upgrade.
 
 ---
 
@@ -474,35 +440,65 @@ After upgrading Flutter, check the `FlutterPatcher/Hook` tag in logcat to confir
 
 ### Android only
 
-`flutter_ota_kit` only supports Android.
+The native loader hook is Android-specific. iOS doesn't allow
+downloading executable code at runtime per App Store policy, and
+desktop platforms don't have an equivalent "patch the running app"
+mechanism. The SDK's public API is callable on all platforms (returns
+no-op safe defaults) so cross-platform code can `await setupFlutterOta()`
+without `#ifdef`s.
 
-iOS does not allow shipping executable code dynamically. On Web, macOS, Windows and Linux every API is a no-op — patch logic never runs.
-
----
+If you need iOS OTA, [Shorebird](https://shorebird.dev/) uses a different
+mechanism (engine-level diff) and may be a better fit. flutter_ota_kit
+will not add iOS support.
 
 ### APK or Flutter Engine upgrades invalidate old patches
 
-Patches are tightly bound to the host APK `versionCode`.
-After an APK upgrade, old patches are dropped automatically.
+A `1.0.0+100` patch cannot apply to a `1.1.0+101` host (the loader
+hook is byte-different) or to a `1.0.0+100` host built with a newer
+Flutter Engine. This is by design — a patch is bound to a specific
+binary. After an APK upgrade, the new build starts fresh on the new
+base.
 
-If you upgrade the Flutter Engine, Flutter SDK, or build configuration, regenerate the patch — do not reuse one built for an older toolchain.
-
----
+Forced APK upgrades do not auto-pull pending patches. The user must
+install the new APK from the store, then the SDK's `checkForUpdate`
+will see the new `versionCode` and look for a `targetVersionCode` patch
+that matches.
 
 ### Reliance on Flutter internals
 
-The plugin reaches into Flutter's Android embedding to influence how `libapp.so` is loaded during early startup.
+The patch system uses Flutter's loader hook to swap `libapp.so`. This
+is a private API that has been stable for years but is not contractually
+guaranteed. If Google changes the loader hook signature in a future
+Flutter release, patches from before the change will be rejected.
 
-When Flutter overhauls its loader architecture in a major release, the plugin may need to adapt.
-After upgrading Flutter, validate on a real device that patches still load, roll back, and report diagnostics correctly.
-
----
+The SDK's auto-init `ContentProvider` is the more fragile piece — it
+runs before `Application.onCreate` and depends on Android's
+`ContentProvider` lifecycle. Some Android vendors (Xiaomi MIUI,
+Huawei EMUI) are known to kill background ContentProviders on memory
+pressure, which can break init. This is a known Android fragmentation
+issue, not a bug in the SDK.
 
 ### App-store policies and compliance
 
-Dynamic executable-code delivery is restricted by some app stores and regulated verticals (finance, healthcare, government, apps for minors). The README TL;DR covers the basics; the plugin provides the technical capability — it doesn't substitute for your own compliance review.
+- **Google Play**: Distributing executable code at runtime is
+  technically against Play Store policy (Section 4.5 of the Developer
+  Distribution Agreement), but the policy has been loosely enforced
+  for years. Enterprise apps distributed via Managed Google Play
+  have more flexibility.
+- **Samsung Galaxy Store, Huawei AppGallery, Xiaomi GetApps**: Each
+  has its own policy. Self-distribution via MDM is the safest channel.
+- **Apple App Store**: Disallowed. The SDK's iOS API is a no-op.
+
+Verify your distribution channel's policy before shipping.
+
+---
 
 ## See also
-- [API Reference](api-reference.md) — `FlutterPatcher` methods and error codes
-- [Crash Protection](crash-protection.md) — how the circuit breaker and rollback work
-- [Configuration](configuration.md) — backends, channels, and targeting
+
+- [Crash Protection](crash-protection.md) — auto-rollback, blacklist,
+  Android version differences
+- [API Reference](api-reference.md) — public SDK surface, error codes
+- [Backends](backends.md) — per-backend setup
+- [Configuration](configuration.md) — env vars, `.env`, resolution order
+- [Production Playbook](production-playbook.md) — staged rollout,
+  diagnostic reporting, emergency rollback

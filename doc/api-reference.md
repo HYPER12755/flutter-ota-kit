@@ -2,148 +2,296 @@
 
 **English** | [简体中文](api-reference-zh.md)
 
-Every public API in `flutter_ota_kit` is exposed as a static member on the `FlutterPatcher` class.
+Every public API in `flutter_ota_kit` is exposed as a static member on
+the `FlutterPatcher` class. The plugin only executes patch logic on
+Android. On iOS, Web, macOS, Windows, and Linux, calling these APIs is
+a **no-op** — they don't throw, they print a one-time warning on first
+call, and they return safe defaults.
 
-The plugin only executes patch logic on Android.
-On iOS, Web, macOS, Windows, and Linux, calling these APIs is a no-op — they don't throw, they print a one-time warning on first call, and they return safe defaults.
+This is the reference for the **public SDK surface**. For internals
+(how a patch actually loads, the signing protocol, the boot-time
+loader hook), see [Architecture](architecture.md). For setup, see
+[Getting Started](getting-started.md).
+
+---
+
+## Table of contents
+
+- [Initialization](#initialization)
+- [Check for updates](#check-for-updates)
+- [Apply a patch](#apply-a-patch)
+- [Apply update (full server-driven flow)](#apply-update-full-server-driven-flow)
+- [Handle the result](#handle-the-result)
+- [Error codes](#error-codes)
+- [Listen to progress](#listen-to-progress)
+- [Roll back](#roll-back)
+- [Boot diagnostics](#boot-diagnostics)
+- [Query state](#query-state)
+- [Blacklist](#blacklist)
+- [Asset patching](#asset-patching)
+- [Custom update source](#custom-update-source)
+- [PatchInfo](#patchinfo)
+- [Version compatibility](#version-compatibility)
 
 ---
 
 ## Initialization
 
-Call before `runApp()`:
+### `FlutterPatcher.init`
+
+Configure patch loader, crash protection, and boot diagnostics.
+**Call this once before `runApp()`**. Idempotent — repeated calls are
+safe no-ops.
 
 ```dart
-void main() async {
+Future<void> init({
+  String publicKeyBase64 = '',
+  int maxCrashCount = 1,
+  bool strictSignature = true,
+  List<String> loaderFieldCandidates = const ['flutterLoader'],
+  bool loaderFallbackHeuristic = false,
+  Duration verifyAfter = const Duration(seconds: 5),
+  bool autoApplyUpdates = false,
+})
+```
+
+| Parameter | Default | What it does |
+|-----------|---------|--------------|
+| `publicKeyBase64` | `''` | Ed25519 public key (X.509 SubjectPublicKeyInfo, base64) for patch signature verification. Empty disables signing. |
+| `maxCrashCount` | `1` | Fail-fast: after this many early boot failures with a patch, auto-rollback. Set to `0` to disable. |
+| `strictSignature` | `true` | Reject signed patches on Android API < 33 (the platform Ed25519 implementation is unreliable there). Set `false` to allow signed patches on older Android. |
+| `loaderFieldCandidates` | `['flutterLoader']` | Field names the native loader looks for when restoring. **Don't change** unless adapting a new Flutter version. |
+| `loaderFallbackHeuristic` | `false` | Enable a fallback loader path for unusual Flutter embedders. **Don't enable** unless instructed. |
+| `verifyAfter` | `5s` | Post-first-frame Dart error watch window. Errors during this window trigger crash rollback. |
+| `autoApplyUpdates` | `false` | Zero-click forced updates: after boot protection, run `checkAndApplyUpdates` in the background. A forced update downloads, stages, and the process restarts automatically. |
+
+```dart
+import 'package:flutter_ota_kit/flutter_ota_kit.dart';
+
+Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-
   await FlutterPatcher.init();
-
   runApp(const MyApp());
 }
 ```
 
-Most projects need no parameters. `init()` prepares the patch loader, the
-crash-protection state machine, and the boot diagnostic recorder, and — if no
-backend was explicitly configured — auto-detects one from the environment
-(`SUPABASE_URL` / `SUPABASE_ANON_KEY` / `CHANNEL`, or the Postgres / Cloudflare /
-AWS equivalents). Repeated calls are safe.
-
-Pass `autoApplyUpdates: true` to make `init()` download + apply a forced update
-and restart the app automatically (zero clicks):
+For zero-click forced updates, also set `autoApplyUpdates: true` and wrap
+your app in `FlutterOtaApp`:
 
 ```dart
 await FlutterPatcher.init(autoApplyUpdates: true);
+runApp(const FlutterOtaApp(child: MyApp()));
 ```
 
-The full set of environment variables and the resolution order is in
-[Configuration](configuration.md).
-
-If you want to enable signature verification, change the circuit-breaker threshold, or work around an unusual Flutter build, override the defaults:
-
-```dart
-await FlutterPatcher.init(
-  publicKeyBase64: 'MFkwEwYH...==',
-  maxCrashCount: 1,
-  strictSignature: true,
-  loaderFieldCandidates: ['flutterLoader'],
-  loaderFallbackHeuristic: false,
-  verifyAfter: const Duration(seconds: 5),
-);
-```
-
-| Parameter | Description |
-| ---  | --- |
-| `publicKeyBase64` | Ed25519 public key. When `PatchInfo.signature` is empty, signature verification is skipped. A patch that ships with a signature but is loaded on a client without a configured public key is rejected. |
-| `maxCrashCount` | Number of consecutive crashes that trips the patch. Default `1`. |
-| `strictSignature` | On API < 33 (no JDK Ed25519 support), reject signed patches instead of silently skipping verification. On API ≥ 33 the flag has no effect — native verification always runs. |
-| `loaderFieldCandidates` | Candidate field names used to locate `FlutterLoader`. Rarely needs changing. |
-| `loaderFallbackHeuristic` | If the candidates fail, use a heuristic last-resort scan. Off by default. |
-| `verifyAfter` | Window after launch during which the patch is still considered "under verification". |
-| `autoApplyUpdates` | When `true`, `init()` checks for a forced update in the background and, if found, downloads, stages, and restarts the process automatically (zero clicks). Default `false`. |
+The backend must be configured (via `configureSupabase(...)` etc., or
+auto-detected from env vars) before `init()` is called for
+`autoApplyUpdates` to work.
 
 ---
 
-## Check for updates (optional)
+## Check for updates
 
-> The plugin ships a minimal, optional check-update JSON protocol intended for quick onboarding, the example, and local debugging. In production you almost certainly already have your own update / staging / auth protocol — parse the response yourself, build a `PatchInfo`, and skip this section.
+### `FlutterPatcher.checkUpdate(url)`
 
-If you do want to use the built-in protocol, call `checkUpdate`:
+Built-in minimal HTTP check for the simplest deployments. Returns a
+`PatchCheckResult` you parse yourself.
 
 ```dart
-try {
-  final check = await FlutterPatcher.checkUpdate(
-    'https://api.example.com/patch/check',
-    headers: {'Authorization': 'Bearer $token'},
-    timeout: const Duration(seconds: 10),
-  );
+Future<PatchCheckResult> checkUpdate(
+  String url, {
+  Map<String, String>? headers,
+  Duration timeout = const Duration(seconds: 10),
+})
+```
 
-  if (check.hasUpdate) {
-    await FlutterPatcher.applyPatch(check.patch!);
-  }
-} on PatcherException catch (e) {
-  log.warning('check update failed: ${e.message}');
+```dart
+final result = await FlutterPatcher.checkUpdate(
+  'https://your-cdn.com/api/check-update?v=1.0.0',
+  headers: {'Authorization': 'Bearer <token>'},
+);
+
+if (result.hasUpdate && result.patch != null) {
+  await FlutterPatcher.applyPatch(result.patch!);
 }
 ```
 
-`checkUpdate` returns a `PatchCheckResult`:
+The endpoint must return this JSON:
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `hasUpdate` | `bool` | Whether a patch is available. |
-| `patch` | `PatchInfo?` | The patch info; `null` when no update is available. |
+```json
+{
+  "hasUpdate": true,
+  "patch": {
+    "version": "1.0.1",
+    "patchUrl": "https://your-cdn.com/v100/patch.zip",
+    "md5": "0123456789abcdef0123456789abcdef",
+    "signature": "ed25519-sig-base64",
+    "targetVersionCode": 100
+  },
+  "shouldForceUpdate": false,
+  "message": "New onboarding flow"
+}
+```
 
-If your server already speaks its own update protocol, skip `checkUpdate` and build a `PatchInfo` directly before calling `applyPatch`.
+The SDK accepts both `hasUpdate` and `has_update` (snake_case). The
+`patch` object may be a top-level map or nested under a `patch` key.
+
+### `FlutterPatcher.checkForUpdate({timeout})`
+
+The richer check. Uses whichever backend you configured via
+`configureSupabase` / `configurePostgres` / etc. (or auto-detected
+from env vars).
+
+```dart
+Future<ServerUpdateResult> checkForUpdate({
+  Duration timeout = const Duration(seconds: 10),
+})
+```
+
+```dart
+final result = await FlutterPatcher.checkForUpdate();
+
+if (result.hasUpdate) {
+  // result.patch is non-null when hasUpdate is true
+  await FlutterPatcher.applyPatch(result.patch!);
+}
+```
+
+The `timeout` parameter bounds the two HTTP round-trips (DB query + signed-URL
+mint). On timeout, a `TimeoutException` with a clear message is thrown
+and the in-flight HTTP request is cancelled.
+
+`ServerUpdateResult` fields:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `hasUpdate` | `bool` | `true` if a patch is available |
+| `patch` | `PatchInfo?` | The downloadable patch (null when `!hasUpdate`) |
+| `status` | `AppUpdateStatus` | `update`, `rollback`, or `upToDate` |
+| `shouldForceUpdate` | `bool` | Server wants the patch applied even on a normal cold start |
+| `id` | `String?` | The bundle id (often the version string) |
+| `message` | `String?` | Human-readable "what's new" text — shown in the forced-update overlay |
+| `raw` | `Map<String, dynamic>` | The original backend response, in case you need extra fields |
 
 ---
 
 ## Apply a patch
 
-There are two ways to apply a patch:
+### Option 1: let the SDK download the patch
 
-* `applyPatch`: pass a URL and let the plugin download and verify it (recommended for most apps).
-* `applyPatchBytes`: pass the patch bytes directly — useful for custom downloaders, asset-bundled patches, or isolate-based loading.
-
-A successful apply takes effect on the **next cold start**. The current process is never modified in place.
-
-### Option 1: let the plugin download the patch
+```dart
+Future<PatchApplyResult> applyPatch(
+  PatchInfo patchInfo, {
+  void Function(PatchApplyProgress)? onProgress,
+})
+```
 
 ```dart
 final result = await FlutterPatcher.applyPatch(
   PatchInfo(
-    version: '1.0.0-h1',
-    patchUrl: 'https://cdn.example.com/libapp.so',
+    version: '1.0.1',
+    patchUrl: 'https://your-cdn.com/v100/patch.zip',
     md5: '0123456789abcdef0123456789abcdef',
+    signature: 'ed25519-sig-base64',   // optional
     targetVersionCode: 100,
   ),
   onProgress: (p) {
-    print('${p.phase.name}: ${p.fraction ?? "..."}');
+    print('${p.phase.name}: ${(p.fraction ?? 0) * 100}%');
   },
 );
 
 if (result.ok) {
-  showRestartHint();
+  // Patch is staged. Takes effect on next cold start.
+  // For forced updates, FlutterPatcher.restart() is called automatically
+  // when you used applyUpdate() instead.
 }
 ```
 
-`targetVersionCode` is the host APK `versionCode` the patch was built for — **not** the patch version. If your live APK is `versionCode = 100`, every patch built for that APK should set `targetVersionCode: 100`.
-
-If multiple APK versions are live at the same time, build and ship a separate patch per `versionCode`.
+`patchUrl` may be:
+- `https://your-cdn.com/...` — standard, recommended
+- `http://...` — works but not recommended (Android 9+ blocks cleartext
+  by default)
+- `file:///data/data/<pkg>/files/patch.zip` — for bundled patches
+  (e.g. the example app's `assets/patch_demo.zip` style)
 
 ### Option 2: apply patch bytes directly
 
 ```dart
-final bytes = await loadPatchFromYourSource();
+Future<PatchApplyResult> applyPatchBytes(
+  Uint8List bytes, {
+  required String version,
+  String signature = '',
+  int? targetVersionCode,
+  void Function(PatchApplyProgress)? onProgress,
+})
+```
 
+```dart
+// For example, fetch the bytes yourself and apply them.
+final bytes = await loadPatchFromIsolate();
 final result = await FlutterPatcher.applyPatchBytes(
   bytes,
-  version: '1.0.0-h1',
+  version: '1.0.1',
   targetVersionCode: 100,
-  onProgress: (p) => print(p.phase.name),
 );
 ```
 
-`applyPatchBytes` automatically computes the MD5, manages the temporary file, and reuses the same flow as `applyPatch`.
+Use this when:
+- You've already downloaded the bytes (for example, in a FFI isolate)
+- The patch comes from a non-HTTP source (asset bundle, secure element,
+  in-memory cache)
+- You need full control over the IO
+
+---
+
+## Apply update (full server-driven flow)
+
+The most common path: check, apply, auto-restart if forced.
+
+```dart
+Future<PatchApplyResult> applyUpdate(
+  ServerUpdateResult result, {
+  void Function(PatchApplyProgress)? onProgress,
+})
+```
+
+```dart
+final result = await FlutterPatcher.checkForUpdate();
+if (result.hasUpdate && result.patch != null) {
+  await FlutterPatcher.applyUpdate(result, onProgress: (p) {
+    print('${p.phase.name}: ${(p.fraction ?? 0) * 100}%');
+  });
+}
+```
+
+Behavior:
+
+- If `result.shouldForceUpdate` is `true` and `FlutterPatcher.showUpdateUi`
+  is `true` (the default), the SDK shows the built-in progress overlay
+  during the install.
+- If `result.shouldForceUpdate` is `true`, the SDK calls `FlutterPatcher.restart()`
+  after a successful install. This restarts the process so the new code
+  loads immediately.
+- If the install fails, the SDK shows the error in the overlay for 6
+  seconds, then the overlay is removed. The app keeps running on the
+  old code.
+
+The convenience wrapper:
+
+```dart
+Future<PatchApplyResult?> checkAndApplyUpdates({
+  void Function(PatchApplyProgress)? onProgress,
+})
+```
+
+does `checkForUpdate() + applyUpdate()` with one extra guard: if the
+device is already on the same version as the new patch, it skips the
+install (no infinite restart loops). This is the method `init(autoApplyUpdates: true)`
+fires in the background.
+
+```dart
+// From your background task or a "Check for updates" button:
+await FlutterPatcher.checkAndApplyUpdates();
+```
 
 ---
 
@@ -152,441 +300,419 @@ final result = await FlutterPatcher.applyPatchBytes(
 Both `applyPatch` and `applyPatchBytes` return a `PatchApplyResult`:
 
 ```dart
-if (result.ok) {
-  // Patch persisted; takes effect on the next cold start.
-  showRestartHint();
-} else {
-  switch (result.error!) {
-    case PatchApplyError.blacklisted:
-      // This patch previously caused a crash; stop delivering it.
-      break;
-
-    case PatchApplyError.network:
-    case PatchApplyError.ioError:
-      // Transient — retry later.
-      break;
-
-    case PatchApplyError.md5Mismatch:
-      // CDN content or server-side md5 may be inconsistent.
-      break;
-
-    case PatchApplyError.signatureInvalid:
-      // Treat as a security event.
-      break;
-
-    default:
-      log.warning('patch failed: ${result.error?.name} / ${result.message}');
-  }
+class PatchApplyResult {
+  final bool ok;
+  final PatchApplyError? error;
+  final String? message;
 }
 ```
 
-`result.message` is for developers — don't surface it to end users.
-
-Re-applying the same patch is safe; if it is already installed, the call returns `ok = true`.
+| Field | Meaning |
+|-------|---------|
+| `ok` | `true` if the patch is staged and ready for the next cold start. |
+| `error` | A `PatchApplyError` enum value when `ok` is `false`. |
+| `message` | Developer-facing error description. Don't show directly to users. |
 
 ---
 
 ## Error codes
 
-| Code | Meaning | Suggested handling |
-| --- | --- | --- |
-| `invalidArgs` | Missing or malformed arguments | Inspect the server response |
-| `blacklisted` | Patch hit the local blacklist | Stop delivering this patch |
-| `network` | Download failed | Retry later |
-| `md5Mismatch` | Downloaded MD5 does not match (only triggered when md5 is provided) | Check CDN / server-side md5 |
-| `signatureInvalid` | Signature verification failed | Treat as a security event; do not retry |
-| `unsupportedAbi` | The `patch.zip` has no `libapp.so` for the device's ABI | Ship per-ABI patches or filter server-side |
-| `assetPackageInvalid` | `patch.zip` contents are malformed or stale (bad schema, unsafe path, overlay file missing inside the ZIP, base APK's Flutter asset table couldn't be read, unsupported op) | Rebuild the release APK on the same Flutter toolchain, then re-pack with the current `pack` CLI; see [Asset Patching](#asset-patching) |
-| `ioError` | Disk write, rename, or permission failure | Retry later |
-| `unknown` | Unclassified error | Inspect `result.message` |
+`PatchApplyError` is an exhaustive enum:
+
+| Value | When |
+|-------|------|
+| `invalidArgs` | Missing version/URL, malformed MD5, target version mismatch, unsupported mode. |
+| `blacklisted` | The same `(version, md5)` payload is in the local bad-patch blacklist. Auto-recovered by crash protection. |
+| `network` | Download failed after 3 retries with exponential backoff. |
+| `md5Mismatch` | The downloaded bytes' MD5 didn't match `PatchInfo.md5`. Possible CDN corruption or tampering. |
+| `signatureInvalid` | Ed25519 signature check failed. Possible tampering or wrong public key. |
+| `unsupportedAbi` | The patch has no `libapp.so` for this device's ABI. |
+| `assetPackageInvalid` | Bad zip/schema/manifest, unsafe path, missing asset entry. |
+| `ioError` | Filesystem, disk space, copy, fsync, or rename failure. |
+| `unknown` | Unclassified native / channel error. Check `logcat`. |
+
+```dart
+if (!result.ok && result.error == PatchApplyError.network) {
+  // The user's network is bad. Tell them to retry on Wi-Fi.
+}
+```
 
 ---
 
-## Listening to progress
+## Listen to progress
 
-Besides `onProgress`, you can subscribe to the global broadcast stream:
+### `FlutterPatcher.applyProgress`
+
+A broadcast `Stream<PatchApplyProgress>` that emits during `applyPatch`
+and `applyPatchBytes`. Subscribe before calling apply to receive
+events.
 
 ```dart
-FlutterPatcher.applyProgress.listen((p) {
-  print('${p.phase.name}: ${p.fraction}');
-});
+Stream<PatchApplyProgress> get applyProgress
 ```
 
-| Field | Description |
-| --- | --- |
-| `phase` | Current phase: `downloading`, `verifying`, `finalizing`. |
-| `bytesReceived` | Bytes received so far; only meaningful while downloading. |
-| `totalBytes` | Total bytes; `-1` when the server omits `Content-Length`. |
-| `fraction` | Download progress in `0.0 ~ 1.0`; `null` when unknown. |
+`PatchApplyProgress` fields:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `phase` | `PatchApplyPhase` | `downloading`, `verifying`, or `finalizing` |
+| `bytesReceived` | `int` | Bytes downloaded (only meaningful during `downloading`) |
+| `totalBytes` | `int` | Content-Length from the server; `-1` if not provided |
+| `fraction` | `double?` | Download progress 0.0–1.0, or `null` if unknown |
+
+```dart
+final sub = FlutterPatcher.applyProgress.listen((p) {
+  if (p.phase == PatchApplyPhase.downloading && p.fraction != null) {
+    // update your custom progress bar
+  }
+});
+
+try {
+  await FlutterPatcher.applyPatch(patch);
+} finally {
+  await sub.cancel();
+}
+```
+
+Or use the convenience `onProgress` parameter on `applyPatch` /
+`applyUpdate` / `checkAndApplyUpdates` for a one-off callback.
 
 ---
 
 ## Roll back
 
 ```dart
-await FlutterPatcher.rollback();
+Future<void> rollback()
 ```
 
-Rollback deletes the current patch. On the next cold start the app falls back to the version baked into the APK.
+Deletes the current patch. The app reverts to the base APK on the next
+cold start. Does **not** clear the blacklist — blacklisted patches
+stay blacklisted until you explicitly call `clearBlacklist()`.
 
-A manual rollback does **not** add the patch to the blacklist.
+```dart
+// Emergency: kill the patch and force a restart
+await FlutterPatcher.rollback();
+// The user reopens the app — they get the base APK's code.
+```
+
+This is a **local** operation. It does not change your backend. The
+server still has the bad bundle; the device just stops trying to apply
+it. To also remove the bundle from the server, run
+`flutter-ota bundle delete <id>` on the CLI.
 
 ---
 
-## Manually report a successful boot
+## Boot diagnostics
+
+### `FlutterPatcher.lastBootDiagnostic`
 
 ```dart
-await FlutterPatcher.reportBootSuccess();
+Future<PatchBootDiagnostic?> get lastBootDiagnostic async
 ```
 
-You usually don't need to call this. `init()` automatically reports a successful boot once the first frame has rendered.
-
-Call it explicitly only when you want to confirm the patch is healthy with custom logic before the first frame:
+Returns a `PatchBootDiagnostic?` describing what happened on the most
+recent cold start. Send this to your analytics pipeline to spot a bad
+patch before users hit the app.
 
 ```dart
-await runLightweightSelfCheck();
-await FlutterPatcher.reportBootSuccess();
+class PatchBootDiagnostic {
+  final String? version;            // patch version that was loaded
+  final BootOutcome outcome;         // success | md5Mismatch | signatureFailure | crashRollback | loaderFailure | unknown
+  final DateTime? timestamp;
+}
 ```
 
-Once the first frame has rendered, additional calls are no-ops.
+`outcome` values:
+
+| Value | Meaning |
+|-------|---------|
+| `success` | Patched `libapp.so` loaded cleanly. |
+| `md5Mismatch` | The loader found the patch but its MD5 didn't match. The patch was auto-rolled back. |
+| `signatureFailure` | The signature didn't match. Auto-rolled back. |
+| `crashRollback` | The patch loaded but the app crashed within `verifyAfter`. Auto-rolled back. |
+| `loaderFailure` | The Flutter loader hook couldn't load the patch. Auto-rolled back. |
+| `unknown` | The diagnostic wasn't recorded (e.g. no patch was installed). |
+
+---
+
+### `FlutterPatcher.reportBootSuccess()`
+
+Normally called automatically by the SDK after the first frame. If
+you want to call it earlier (e.g. after a critical async init), you can:
+
+```dart
+Future<void> reportBootSuccess()
+```
+
+Once the SDK has called this, the boot window closes. Subsequent
+crashes don't trigger auto-rollback. If your app's first frame is
+delayed (e.g. a splash screen that takes 10s), call this from a
+`postFrameCallback` to short-circuit the boot window.
 
 ---
 
 ## Query state
 
 ```dart
-final int? code = await FlutterPatcher.appVersionCode;
-final String? version = await FlutterPatcher.currentVersion;
-final String abi = await FlutterPatcher.deviceAbi;
+static Future<int?>    get appVersionCode async   // current APK versionCode
+static Future<String>  get deviceAbi async         // current device ABI
+static Future<String?> get currentVersion async    // installed patch version
+static Future<List<BlacklistEntry>> get blacklist async
+static Future<void>     clearBlacklist()            // for tests / ops
 ```
 
-| API | Description |
-| --- | --- |
-| `appVersionCode` | The current APK's `versionCode`. Uses `longVersionCode` on API 28+. |
-| `currentVersion` | The patch version currently on disk (read from `meta.json`). Becomes readable immediately after a successful `applyPatch`, but the Flutter Engine only loads it on the next cold start. `null` when there is no patch. |
-| `deviceAbi` | The current device ABI; useful for check-update requests. |
-
----
-
-## Boot diagnostics
-
-After every cold start the native side records a single patch-load result. Read it via `lastBootDiagnostic` and report it:
+Example: ship a debug overlay that shows the current state:
 
 ```dart
-final diag = await FlutterPatcher.lastBootDiagnostic;
-
-if (diag != null && !diag.isHealthy) {
-  analytics.report('patch_dropped', {
-    'status': diag.status.name,
-    'patch_version': diag.patchVersion,
-    'crash_count': diag.crashCount,
-    'message': diag.message,
-  });
-}
+final v = await FlutterPatcher.currentVersion;
+final code = await FlutterPatcher.appVersionCode;
+final abi = await FlutterPatcher.deviceAbi;
+print('patch=$v versionCode=$code abi=$abi');
 ```
-
-`PatchBootDiagnostic` fields:
-
-| Field | Type | Description |
-| --- | --- | --- |
-| `status` | `PatchBootStatus` | The boot result. |
-| `recordedAt` | `DateTime` | When the diagnostic was recorded. |
-| `patchVersion` | `String?` | The patch version involved. |
-| `patchTargetVersionCode` | `int?` | The `versionCode` the patch was built for. |
-| `appVersionCode` | `int?` | The current APK's `versionCode`. |
-| `crashCount` | `int?` | Cumulative crash count. |
-| `attemptedLoaderFields` | `List<String>?` | Field names tried when the loader hook failed. |
-| `message` | `String?` | Developer-facing diagnostic text. |
-| `isHealthy` | `bool` | `true` when the status is `patched` or `noPatch`. |
-
-`PatchBootStatus` values:
-
-| Value | Meaning | Suggested handling |
-| --- | --- | --- |
-| `patched` | Patch loaded successfully | Normal |
-| `noPatch` | No patch; running APK built-in version | Normal |
-| `droppedVersionCodeMismatch` | APK was upgraded; the old patch is no longer valid | Usually no alert needed |
-| `droppedCircuitBreaker` | Patch caused repeated crashes and was tripped | Strong alert; stop delivering |
-| `droppedSignatureInvalid` | Signature verification failed | Alert; investigate the source |
-| `droppedMd5Mismatch` | Local file MD5 does not match the recorded MD5 | Report and investigate |
-| `droppedMetaCorrupted` | Patch metadata is corrupt | Report and investigate |
-| `hookInstallFailed` | FlutterLoader hook failed to install | Check Flutter version / `loaderFieldCandidates` |
-| `unknown` | Unclassified error | Inspect `message` |
-
-For interactive debugging, see `example/lib/diag_card.dart` — it renders the diagnostic on-device.
 
 ---
 
 ## Blacklist
 
-When a patch causes a boot crash or a verification failure, the plugin adds it to a local blacklist so the same bad patch is not retried.
+A local list of patch versions the SDK has refused to retry. Caused
+by:
+
+- **Cold-start MD5 mismatch** — the patch was installed but its bytes
+  on disk don't match the expected MD5. This usually means disk
+  corruption, not tampering.
+- **Cold-start signature failure** — the signature didn't match.
+  Either a wrong public key in the build, or a tampered patch.
+- **Boot crash** — the patch loaded but the app crashed within
+  `verifyAfter`. The most common cause is an actually-broken patch.
+
+Each entry has a `version`, an `md5`, a `reason` (one of
+`md5Mismatch`, `signatureFailure`, `crashRollback`), and a
+`timestamp`. The SDK reads this list at update-check time and
+excludes matching bundles.
 
 ```dart
-final entries = await FlutterPatcher.blacklist;
-
-for (final e in entries) {
-  print('${e.version} / ${e.md5} / ${e.reason} / ${e.blacklistedAt}');
+// In a debug overlay:
+for (final entry in await FlutterPatcher.blacklist) {
+  print('${entry.version} blacklisted: ${entry.reason}');
 }
 ```
 
-To clear the blacklist (debug only):
+To clear (for tests or after fixing the root cause):
 
 ```dart
 await FlutterPatcher.clearBlacklist();
 ```
 
-`BlacklistEntry` fields:
+---
 
-| Field | Type | Description |
-| --- | --- | --- |
-| `version` | `String` | Patch version. |
-| `md5` | `String` | Patch file MD5. |
-| `reason` | `String` | Why the patch was blacklisted. |
-| `blacklistedAt` | `DateTime` | When the entry was recorded. |
+## Asset patching
 
-Common `reason` values:
+Since 0.1.3, you can include Flutter assets in your patch. The
+workflow is:
 
-| Value | Description |
-| --- | --- |
-| `BOOT_CRASH` | Patch caused a boot crash. |
-| `MD5_MISMATCH` | MD5 verification failed. |
-| `SIGNATURE_INVALID` | Signature verification failed. |
+```bash
+# 1. Rebuild your APK with the NEW assets registered
+flutter build apk --release
+
+# 2. Pack with --assets. Each path is relative to the project root.
+flutter-ota build --name 1.0.1 --platform android --arch x86_64 \
+  --assets assets/hero.png,assets/strings/zh.json
+```
+
+The patch's `assets/` tree is overlaid on the base APK's
+`flutter_assets/` at install time. Existing `Image.asset()` and
+`rootBundle.load()` calls in the new Dart code pick up the new bytes
+**without any code changes**.
+
+### Payload layout (`patch.zip`, v2)
+
+```
+patch.zip
+├── lib/<abi>/libapp.so
+├── assets/AssetManifest.json
+├── assets/AssetManifest.bin
+├── assets/<your-file-1>
+├── assets/<your-file-2>
+├── manifest.json
+└── version.json
+```
+
+The two manifests are required by Flutter's asset bundle loader. They
+describe which assets the new APK declares. The SDK writes both from
+the new APK's `flutter_assets/` automatically.
+
+### Asset path requirements
+
+| Path format | OK? |
+|-------------|-----|
+| `assets/hero.png` | ✅ Relative to project root |
+| `assets/icons/home.svg` | ✅ Nested |
+| `/Users/me/project/assets/x.png` | ❌ Absolute |
+| `*.png` | ❌ Glob (you must list each file) |
+| `assets/*` | ❌ Glob (use `@file` syntax) |
+
+To list a file from a separate file:
+
+```bash
+flutter-ota build --assets @asset_list.txt
+# asset_list.txt:
+#   assets/hero.png
+#   assets/icons/home.svg
+#   assets/strings/zh.json
+```
+
+### ABI handling
+
+The patch contains `lib/<abi>/libapp.so` for every ABI you built
+(default: `arm64-v8a`, `armeabi-v7a`, `x86_64`). Each ABI is patched
+independently. If you ship to a single ABI only:
+
+```bash
+flutter-ota build --abi arm64-v8a
+```
+
+the resulting patch is ~3× smaller and applies only to ARM64 devices.
+Mixed-ABI fleets need to deploy one bundle per ABI per release.
+
+### Validation errors
+
+The pack command fails fast on these:
+
+- **Asset not in the new APK**: The path you passed to `--assets`
+  doesn't exist in `build/app/outputs/flutter-apk/app-release.apk`'s
+  `flutter_assets/`. Re-run `flutter build apk` after adding the asset.
+- **Path outside the project root**: rejected with a clear error.
+- **Asset not registered in pubspec.yaml**: Flutter will silently
+  exclude the asset from the bundle. The patch installs but the asset
+  is still loaded from the base APK.
+
+### Security
+
+Asset patches inherit the patch's MD5 + Ed25519 signature verification.
+A tampered `patch.zip` is rejected at install time the same way a
+tampered `libapp.so` is.
+
+---
+
+## Custom update source
+
+The five built-in backends (Supabase / Postgres / Cloudflare / AWS /
+PocketBase) cover most production needs. For anything else, you can
+either:
+
+1. **Adapt the built-in `XxxUpdateSource`** by passing a custom client
+   to its `config.clientFactory`. For example, a `MockSupabaseClient`
+   for tests, or a custom `S3Client` for S3-compatible storage.
+2. **Implement your own** by calling `performSharedUpdateCheck`
+   directly:
+
+```dart
+import 'package:flutter_ota_kit/flutter_ota_kit.dart';
+import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart';
+
+final result = await performSharedUpdateCheck(
+  db: myCustomDb,
+  storage: myCustomStorage,
+  channel: 'production',
+  platform: Platform.android,
+  updateStrategy: UpdateStrategy.appVersion,
+  appVersion: '1.0.0',
+  fingerprintHash: null,
+  minBundleId: nilUuid,
+);
+```
+
+You supply any `DatabasePlugin` and `StoragePlugin` that implement the
+plugin-core interfaces. See
+[Plugin core](https://pub.dev/packages/flutter_ota_kit_plugin_core) for
+the contract.
+
+3. **Skip the SDK's check entirely** and parse the response yourself
+   into a `ServerUpdateResult`, then call `applyUpdate(result)`:
+
+```dart
+final response = await myCustomHttpGet(...);
+final result = ServerUpdateResult(
+  isUpToDate: response.upToDate,
+  patch: response.hasPatch
+      ? PatchInfo(version: response.version, patchUrl: response.url, md5: response.md5)
+      : null,
+  shouldForceUpdate: response.forceUpdate,
+  message: response.message,
+);
+if (result.hasUpdate) {
+  await FlutterPatcher.applyUpdate(result);
+}
+```
 
 ---
 
 ## PatchInfo
 
-`PatchInfo` describes a patch ready to apply.
-
 ```dart
-final patch = PatchInfo(
-  version: '1.0.0-h1',
-  patchUrl: 'https://cdn.example.com/libapp.so',
-  md5: '0123456789abcdef0123456789abcdef',
-  targetVersionCode: 100,
-);
-```
+class PatchInfo {
+  final String version;          // unique id, e.g. "1.0.1" or "fix-2024-01-15"
+  final String patchUrl;         // https://, http://, or file://
+  final String md5;              // hex; "" disables MD5 check (test only)
+  final String signature;        // Ed25519 sig, base64; "" disables sig check
+  final int? targetVersionCode;  // host APK versionCode; null = any
+  final String? message;         // human-readable "what's new"
 
-You can also build it from a server response:
-
-```dart
-final patch = PatchInfo.fromJson(json);
-final map = patch.toJson();
-```
-
-`fromJson` accepts both camelCase and snake_case field names; unknown fields are kept in `raw`.
-
-| Field | Type | Required | Description |
-| --- | --- | --- | --- |
-| `version` | `String` | Yes | Patch identifier, an arbitrary string. |
-| `patchUrl` | `String` | Yes | Patch download URL. |
-| `md5` | `String` | No | Patch MD5 (lower-case 32-hex). An empty string skips MD5 verification (and signature verification along with it). |
-| `signature` | `String` | No | Ed25519 signature, base64. Empty disables signature verification. Only effective when `md5` is non-empty. |
-| `targetVersionCode` | `int?` | Recommended | Host APK `versionCode` the patch is built for. |
-| `raw` | `Map<String, dynamic>` | No | Original fields preserved by `fromJson`. |
-
----
-
-## Exception behavior
-
-Only `checkUpdate` throws `PatcherException`, typically for network failures or unparsable JSON.
-
-Every other API reports outcomes through return values rather than exceptions.
-
-```dart
-try {
-  final check = await FlutterPatcher.checkUpdate(url);
-} on PatcherException catch (e) {
-  log.warning(e.message);
+  factory PatchInfo.fromJson(Map<String, dynamic> json);
+  Map<String, dynamic> toJson();
 }
 ```
 
----
+`fromJson` accepts both `patchUrl` (camelCase) and `patch_url`
+(snake_case) for cross-language backend compatibility. Same for
+`targetVersionCode` / `target_version_code`.
 
-## pack CLI
+`md5` must be lowercase hex, 32 chars (128 bits). The empty string is
+allowed for test deployments but produces a warning at runtime.
 
-`flutter_ota_kit:pack` extracts `libapp.so` (and, optionally, Flutter asset overlays) from a release APK and emits the patch metadata.
+`signature` must be a base64-encoded Ed25519 signature (88 chars
+unpadded, or 88 with padding). The signature is over the **MD5 hex
+string**, not the raw bytes — this is what the SDK computes at
+verification time.
 
-```bash
-dart run flutter_ota_kit:pack \
-  --apk build/app/outputs/flutter-apk/app-release.apk \
-  --version 1.0.0-h1 \
-  --target-version-code 100
-```
-
-| Flag | Description |
-| --- | --- |
-| `--apk <path>` | Required. Path to the release APK. |
-| `--version <string>` | Required. Patch identifier. |
-| `--target-version-code <int>` | Required. Host APK `versionCode` the patch targets. |
-| `--abi <string>` | Optional. Defaults to the first match among `arm64-v8a`, `armeabi-v7a`, `x86_64`. |
-| `--assets <KEY[,KEY...]>` | Optional. Comma-separated Flutter asset keys to overlay. Use `@path/to/list.txt` to read keys from a UTF-8 file (one per line, `#` starts a comment). Inline keys and `@file` references can be mixed, e.g. `--assets @list.txt,assets/extra.png`. See [Asset Patching](#asset-patching). |
-| `--out <dir>` | Optional. Output directory; defaults to `dist/`. |
-
-`--target-version-code` binds the patch to a specific base APK already installed on the user's device. For example:
-
-* The live APK is `versionCode = 100`
-* You are publishing patch `1.0.0-h1` for that APK
-* `--target-version-code` should be `100`
-
-If the APK is upgraded to a new `versionCode`, old patches expire automatically.
-If multiple `versionCode`s are live at the same time, build and ship a separate patch per base.
-
-Output (always `schemaVersion: 2`, `payload: patch.zip`):
-
-```text
-dist/
-├── patch.zip
-└── manifest.json
-```
-
-Upload both files to your CDN and return `manifest.json` from your update endpoint. The plugin reads `manifest.payload` and downloads `patch.zip`. A `patch.zip` packed without `--assets` contains only `manifest.json` + `lib/<abi>/libapp.so` (the inner manifest omits the `assets` block); with `--assets` it additionally embeds `manifest_patch.json` and per-key overlay files. See [Asset Patching](#asset-patching).
-
----
-
-## Asset Patching
-
-Since 0.1.3, Flutter assets (images, fonts, JSON, etc.) can be hot-patched together with Dart code via the v2 `patch.zip` payload. Call sites don't change — `Image.asset('assets/hero.png')` and `rootBundle.load('assets/strings/zh.json')` keep working; the patch overlays new bytes under the same keys on the next cold start.
-
-### Workflow
-
-1. Rebuild a release APK with the changed assets (and any Dart code that references them) declared in `pubspec.yaml`.
-2. Pack with `--assets` listing the asset keys to overlay:
-
-   ```bash
-   dart run flutter_ota_kit:pack \
-     --apk path/to/patched-release.apk \
-     --version 1.0.1 \
-     --target-version-code 2 \
-     --assets assets/hero.png,assets/strings/zh.json
-   ```
-
-   For long key lists, point `--assets` at a text file with `@` (one key per line, `#` for comments). Inline keys and `@file` can be mixed in the same flag:
-
-   ```bash
-   dart run flutter_ota_kit:pack \
-     --apk path/to/patched-release.apk \
-     --version 1.0.1 \
-     --target-version-code 2 \
-     --assets @patch-assets.txt,assets/last-minute.png
-   ```
-
-3. Ship `dist/patch.zip` from your CDN. `dist/manifest.json` is a sidecar that tells **your update backend** the version, MD5, target `versionCode`, and which file is the payload (`payload: patch.zip`). The plugin itself only sees what your backend hands it inside `PatchInfo` — make sure `PatchInfo.patchUrl` points at the hosted `patch.zip`.
-
-### Payload layout (`patch.zip`, v2)
-
-```text
-manifest.json          # inner manifest, schemaVersion 2 (lib map + optional assets block)
-manifest_patch.json    # asset-table delta operations (only present when assets are packed)
-lib/<abi>/libapp.so    # patched Dart code (always present)
-assets/<asset-path>    # overlay bytes, one entry per requested path (and per resolution variant)
-```
-
-A Dart-only `patch.zip` (no `--assets`) contains only the first and third entries; the inner manifest omits the `assets` block and `manifest_patch.json` is absent.
-
-The outer `manifest.json` (consumed by your update backend in production) carries `schemaVersion`, `version`, `targetVersionCode`, `abi`, `payload: patch.zip`, and the package-payload MD5. The inner `manifest.json` (inside the ZIP) lists per-file MD5s for `libapp.so` and every overlay file. The plugin only consumes the inner one; the outer one never reaches the device by itself.
-
-### `manifest_patch.json` schema
-
-```json
-{
-  "schemaVersion": 1,
-  "manifestFormat": "bin",
-  "baseManifestSize": 322,
-  "operations": [
-    {
-      "op": "upsert",
-      "key": "assets/hero.png",
-      "variants": [
-        { "asset": "assets/hero.png" },
-        { "asset": "assets/2.0x/hero.png" }
-      ]
-    }
-  ]
-}
-```
-
-| Field | Meaning |
-| --- | --- |
-| `op` | Currently only `upsert` is supported. |
-| `key` | Flutter asset path as registered under `assets:` in `pubspec.yaml`. |
-| `variants` | Resolution-aware variants (`1.0x`, `2.0x`, etc.) auto-discovered from the patched APK's Flutter asset table. |
-
-During install (not cold start) the runtime merges these operations into the APK's baseline asset table, writes the merged table plus overlay files into the patch's private directory, and packages the result as a private `flutter_assets.apk`. At cold start [`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) installs a patched `FlutterLoader` + `FlutterJNI` AssetManager that resolves Flutter asset reads to the patched directory; APK fallback still works for paths the patch didn't touch.
-
-### Asset path requirements
-
-* Every path passed to `--assets` must already be declared under `assets:` in the **patched APK's** `pubspec.yaml`. `pack` looks each path up against the APK's Flutter asset table; paths that Flutter didn't compile into the APK produce an error.
-* You can add brand-new assets via a patch as long as you declare them in `pubspec.yaml`, ship a new release APK that contains them, and then pack against that APK.
-* You **cannot remove** an asset that exists in the base APK — the overlay only replaces bytes under an existing path.
-* The on-device asset bundle resolves variants the standard Flutter way; you don't need to enumerate every `2.0x/`, `3.0x/`, etc. — the packer expands them automatically.
-
-### ABI handling
-
-A single `patch.zip` carries `libapp.so` for **one** ABI. The plugin rejects mismatches with `unsupportedAbi`. Either:
-
-* pack one ZIP per ABI (`--abi arm64-v8a`, `--abi armeabi-v7a`, ...) and route by `deviceAbi` server-side, or
-* if your app ships only `arm64-v8a` and `armeabi-v7a`, accept the small per-ABI distribution cost.
-
-### Validation errors
-
-The plugin returns `assetPackageInvalid` when the ZIP fails any of these checks at install time:
-
-* Inner `schemaVersion` unknown
-* Unsupported asset `mode` (only `overlay` is recognized)
-* Unsafe entry path inside the ZIP (absolute, contains `..`, or NUL byte)
-* The base APK is missing the Flutter asset table that the overlay needs to merge against (rebuild the APK on the same Flutter toolchain)
-* An overlay file declared in the inner manifest is missing from the ZIP
-* Per-file MD5 mismatch between the inner manifest and the actual bytes
-
-### Security
-
-The outer MD5 / signature in the server's update response cover the whole `patch.zip`. Inner per-file MD5s are integrity checks during extraction, not a separate security surface — keep the outer signature mandatory in production.
-
-### When work happens
-
-`applyPatch` does the heavy lifting; cold start just validates and loads. Concretely:
-
-**During `applyPatch` (install time):**
-
-1. Download `patch.zip` to a temp file; verify outer MD5 + Ed25519 signature against the value carried in `PatchInfo`.
-2. Open the ZIP, validate inner `schemaVersion` and per-file MD5s.
-3. Extract `lib/<abi>/libapp.so` to staging.
-4. If the patch carries assets: copy the APK's `flutter_assets/` to staging, overlay each path listed in the inner manifest, merge the overlay operations into the asset table, and pack the result into a private `flutter_assets.apk`.
-5. Atomically commit the staged artifacts to `current/` (see [Architecture → Atomic install](architecture.md#atomic-install)).
-
-**On the next cold start:**
-
-1. Verify `current/` matches the host APK's `versionCode` and that the on-disk `libapp.so` still matches its meta MD5.
-2. [`LoaderHook`](../android/src/main/kotlin/com/flutter_ota_kit/flutter_ota_kit/LoaderHook.kt) installs a patched `FlutterLoader` + `FlutterJNI` AssetManager that points Flutter at the patched `libapp.so` and (if assets are present) at the private `flutter_assets.apk`.
-
-If validation fails, or the in-process crash guard trips, the patch is dropped and the next cold start falls back to the APK's built-in version.
-
----
-
-## Performance and supported range
-
-### Performance impact
-
-| Metric | Impact |
-| --- | --- |
-| APK size delta | ~80–120 KB |
-| Cold-start delta | ~5–15 ms |
-| Runtime memory | No additional resident footprint after patch load |
-| Patch file size | Typically 5–15 MB |
-
-> Numbers measured on Pixel 6 / Flutter 3.24. Real-world results vary with device, Flutter version, and build configuration.
-
-### Supported range
-
-See [Requirements](../README.md#requirements) for the full compatibility table.
-
-On non-Android platforms every API is a no-op: a one-time warning is logged and safe defaults are returned. No exceptions are thrown.
+`targetVersionCode` is required when you want to prevent a patch
+from applying to the wrong host APK. The backend should set it, but
+the client also rejects mismatches as a defense-in-depth measure.
 
 ---
 
 ## Version compatibility
 
-* During the `0.x` series the API may still change; pin a version in `pubspec.yaml`.
-* `PatchBootStatus` and blacklist `reason` values are forward-compatible: new values are mapped to `unknown` by older SDKs.
-* `PatchInfo.fromJson` accepts both camelCase and snake_case names; unknown fields are preserved in `raw` and don't break parsing.
+`flutter_ota_kit` follows [semver](https://semver.org/). Compatibility
+matrix (last verified):
+
+| flutter_ota_kit | Dart SDK | Flutter  | Status                                  |
+|----------------|----------|----------|-----------------------------------------|
+| 0.1.10         | ≥ 3.13.0 | ≥ 3.47.0 | Current; recommended                   |
+| 0.1.9          | ≥ 3.13.0 | ≥ 3.32.0 | Previous release; auto-update safe     |
+| 0.1.5          | ≥ 3.0.0  | ≥ 3.19.0 | Legacy; loader hook stable              |
+| 0.1.0 – 0.1.4  | ≥ 3.0.0  | ≥ 3.0.0  | Pre-`autoApplyUpdates`; no UI          |
+
+If you upgrade flutter_ota_kit, expect to need a new app release (the
+loader hook is part of the native plugin and the patch is bound to
+the host binary).
+
+If you upgrade Flutter itself, **you must ship a new app release**
+before shipping more patches. Old patches are byte-coupled to the
+old Flutter Engine.
+
+---
+
+## See also
+
+- [Architecture](architecture.md) — internals, server protocol,
+  signing, advanced config
+- [Crash Protection](crash-protection.md) — auto-rollback, blacklist,
+  Android version differences
+- [Configuration](configuration.md) — env vars, `.env`, resolution order
+- [Backends](backends.md) — per-backend setup, env vars, CLI snippets
+- [Production Playbook](production-playbook.md) — staged rollout,
+  diagnostic reporting, emergency rollback
+- [Golden Testing](golden-testing.md) — how Flutter's pixel-perfect
+  test system works (and how this project uses it for the forced-update
+  overlay)
