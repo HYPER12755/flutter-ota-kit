@@ -78,4 +78,4 @@ if (diag != null && !diag.isHealthy) {
 
 ## 实战经验
 
-_本节收录来自生产用户的实战 tips。如果你有经验可以分享，欢迎 [提 issue](https://github.com/HYPER12755/flutter_ota_kit/issues)，我们会加到这里。_
+_本节收录来自生产用户的实战 tips。如果你有经验可以分享，欢迎 [提 issue](https://github.com/HYPER12755/flutter-ota-kit/issues)，我们会加到这里。_

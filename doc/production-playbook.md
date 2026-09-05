@@ -78,7 +78,7 @@ Different flavors typically have different configs, package names, resources, an
 
 ## Field notes
 
-_This section collects real-world tips from production users. If you have experience to share, [open an issue](https://github.com/HYPER12755/flutter_ota_kit/issues) — we'll add it here._
+_This section collects real-world tips from production users. If you have experience to share, [open an issue](https://github.com/HYPER12755/flutter-ota-kit/issues) — we'll add it here._
 
 ## See also
 - [CLI Reference](cli-reference.md) — `bundle`, `rollback`, `keys` for ops

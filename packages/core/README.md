@@ -1,6 +1,6 @@
 # flutter_ota_kit_core
 
-Pure-Dart core of the [flutter_ota_kit](https://github.com/HYPER12755/flutter_ota_kit) OTA toolkit. It has **no Flutter dependency** and is shared by every other package (client, plugin-core, and all four backends).
+Pure-Dart core of the [flutter_ota_kit](https://github.com/HYPER12755/flutter-ota-kit) OTA toolkit. It has **no Flutter dependency** and is shared by every other package (client, plugin-core, and all four backends).
 
 ## What's inside
 
@@ -20,4 +20,4 @@ final ok = semverSatisfies('1.0.0', '>=1.0.0 <2.0.0'); // true
 
 ## License
 
-MIT — see the [project LICENSE](https://github.com/HYPER12755/flutter_ota_kit/blob/main/LICENSE).
+MIT — see the [project LICENSE](https://github.com/HYPER12755/flutter-ota-kit/blob/main/LICENSE).

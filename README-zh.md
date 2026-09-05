@@ -50,7 +50,7 @@
 不需要服务器。克隆仓库即可体验完整的 补丁 → 重启 → 回滚 流程：
 
 ```bash
-git clone https://github.com/HYPER12755/flutter_ota_kit.git
+git clone https://github.com/HYPER12755/flutter-ota-kit.git
 cd flutter_ota_kit/example
 flutter build apk --release
 flutter install
@@ -102,7 +102,7 @@ dependencies:
 dependencies:
   flutter_ota_kit:
     git:
-      url: https://github.com/HYPER12755/flutter_ota_kit.git
+      url: https://github.com/HYPER12755/flutter-ota-kit.git
 ```
 
 ### 2. 初始化
@@ -284,7 +284,7 @@ English: [README.md](README.md)
 
 ## 谁在使用？
 
-如果你在生产环境使用了 flutter_ota_kit，欢迎 [提 issue](https://github.com/HYPER12755/flutter_ota_kit/issues) 告诉我们你的用法 —— 我们很乐意在此展示。
+如果你在生产环境使用了 flutter_ota_kit，欢迎 [提 issue](https://github.com/HYPER12755/flutter-ota-kit/issues) 告诉我们你的用法 —— 我们很乐意在此展示。
 
 ---
 

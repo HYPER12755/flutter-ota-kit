@@ -1,6 +1,6 @@
 # flutter-ota (flutter-ota CLI)
 
-Command-line interface for [flutter_ota_kit](https://github.com/HYPER12755/flutter_ota_kit) — a multi-backend OTA ("code push") toolkit for Flutter Android, hot-updater compatible.
+Command-line interface for [flutter_ota_kit](https://github.com/HYPER12755/flutter-ota-kit) — a multi-backend OTA ("code push") toolkit for Flutter Android, hot-updater compatible.
 
 ## Install
 

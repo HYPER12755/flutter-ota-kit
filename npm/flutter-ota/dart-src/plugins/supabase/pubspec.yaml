@@ -2,10 +2,10 @@ name: flutter_ota_kit_supabase
 description: Supabase plugin for flutter_ota_kit — database + storage backends.
 version: 0.1.1
 publish_to: https://pub.dev
-homepage: https://github.com/HYPER12755/flutter_ota_kit
-repository: https://github.com/HYPER12755/flutter_ota_kit
-issue_tracker: https://github.com/HYPER12755/flutter_ota_kit/issues
-documentation: https://github.com/HYPER12755/flutter_ota_kit#readme
+homepage: https://github.com/HYPER12755/flutter-ota-kit
+repository: https://github.com/HYPER12755/flutter-ota-kit
+issue_tracker: https://github.com/HYPER12755/flutter-ota-kit/issues
+documentation: https://github.com/HYPER12755/flutter-ota-kit#readme
 license: MIT
 
 environment:

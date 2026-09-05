@@ -75,7 +75,7 @@ distribution channels. Bring your own backend, your own CDN, your own auth.
 ## Try it in 5 minutes (no server needed)
 
 ```bash
-git clone https://github.com/HYPER12755/flutter_ota_kit.git
+git clone https://github.com/HYPER12755/flutter-ota-kit.git
 cd flutter_ota_kit/example
 flutter pub get
 flutter build apk --release
@@ -372,7 +372,7 @@ More questions: [Full FAQ](doc/faq.md).
 
 ## Who's using it?
 
-If you run flutter_ota_kit in production, [open an issue](https://github.com/HYPER12755/flutter_ota_kit/issues) and tell us about your use case — we'd love to list you here.
+If you run flutter_ota_kit in production, [open an issue](https://github.com/HYPER12755/flutter-ota-kit/issues) and tell us about your use case — we'd love to list you here.
 
 ---
 

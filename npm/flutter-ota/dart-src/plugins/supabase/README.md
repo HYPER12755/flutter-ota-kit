@@ -1,6 +1,6 @@
 # flutter_ota_kit_supabase
 
-Supabase backend for [flutter_ota_kit](https://github.com/HYPER12755/flutter_ota_kit).
+Supabase backend for [flutter_ota_kit](https://github.com/HYPER12755/flutter-ota-kit).
 Implements the bundle **database** (PostgREST `bundles` table) and **storage**
 (signed URLs) used both by the `flutter-ota` CLI and by the Flutter SDK's
 `FlutterPatcher.configureSupabase(...)`.
@@ -46,7 +46,7 @@ FlutterPatcher.configureSupabase(SupabaseUpdateConfig(
 ));
 ```
 
-See [doc/backends.md](https://github.com/HYPER12755/flutter_ota_kit/blob/main/doc/backends.md).
+See [doc/backends.md](https://github.com/HYPER12755/flutter-ota-kit/blob/main/doc/backends.md).
 
 ## License
 

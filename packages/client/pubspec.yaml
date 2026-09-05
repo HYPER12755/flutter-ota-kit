@@ -1,10 +1,10 @@
 name: flutter_ota_kit_client
 description: Server-API client for flutter_ota_kit — maps the hot-updater-compatible update-check HTTP contract to a PatchInfo the device SDK can install.
 version: 0.1.0
-homepage: https://github.com/HYPER12755/flutter_ota_kit
-repository: https://github.com/HYPER12755/flutter_ota_kit
-issue_tracker: https://github.com/HYPER12755/flutter_ota_kit/issues
-documentation: https://github.com/HYPER12755/flutter_ota_kit#readme
+homepage: https://github.com/HYPER12755/flutter-ota-kit
+repository: https://github.com/HYPER12755/flutter-ota-kit
+issue_tracker: https://github.com/HYPER12755/flutter-ota-kit/issues
+documentation: https://github.com/HYPER12755/flutter-ota-kit#readme
 license: MIT
 
 environment:
