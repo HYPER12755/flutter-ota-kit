@@ -15,7 +15,7 @@ mkdir -p "$DST/packages" "$DST/plugins"
 for p in packages/core packages/cli-tools; do
   cp -R "$SRC/$p" "$DST/$p"
 done
-for p in plugins/cloudflare plugins/plugin-core plugins/postgres plugins/aws plugins/supabase; do
+for p in plugins/cloudflare plugins/plugin-core plugins/postgres plugins/aws plugins/supabase plugins/pocketbase; do
   cp -R "$SRC/$p" "$DST/$p"
 done
 
