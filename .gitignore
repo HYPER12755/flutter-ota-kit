@@ -77,3 +77,4 @@ npm/flutter-ota/dart-src/
 *.wasm
 *.symbols
 *.snap
+.pubignore.bak

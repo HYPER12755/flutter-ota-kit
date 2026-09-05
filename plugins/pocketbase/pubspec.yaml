@@ -11,8 +11,8 @@ environment:
   sdk: ">=3.13.2 <4.0.0"
 
 dependencies:
-  flutter_ota_kit_core: ^0.1.1
-  flutter_ota_kit_plugin_core: ^0.0.3
+  flutter_ota_kit_core: ^0.1.2
+  flutter_ota_kit_plugin_core: ^0.0.4
   http: ^1.2.0
 
 dev_dependencies:

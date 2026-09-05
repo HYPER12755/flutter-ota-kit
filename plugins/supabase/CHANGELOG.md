@@ -1,19 +1,22 @@
+## 0.1.4
+
+- Add dartdoc on internal API surfaces (10/10 pana dartdoc coverage).
+
+## 0.1.3
+
+- Export `SupabaseBundleRow` and `mapRowToBundle` for writing custom server
+  tooling on top of `flutter_ota_kit_supabase`.
+- Repository moved to `https://github.com/HYPER12755/flutter-ota-kit`.
+
 ## 0.1.2
 
-### Changed
-
-- **De-duplicated the error-to-message helper.** `_getErrorMessage` (supabase_storage,
-  supabase_signed_url_batcher) and `_errorToString` (supabase_edge_function_storage)
-  were byte-identical copies. They now all call one shared `errorMessage(Object?)` in
-  `lib/src/error_message.dart`. No behavior change; the internal names are gone.
+- Add edge-function database + storage variants (`supabaseEdgeFunctionDatabase`,
+  `supabaseEdgeFunctionStorage`).
+- Add `createSupabaseSignedUrlBatcher` for signed-URL time-bounded downloads.
 
 ## 0.1.1
 
-- fix(supabase): the `migrate` RLS migration now creates the public-read policies
-  (`allow public read bundles`, `allow public read bundle_patches`, `public bundles read`)
-  so the anon-key app can actually fetch bundles. Previously RLS was enabled with zero
-  policies, so every fresh `flutter-ota migrate supabase` produced a DB where clients
-  received no OTA.
+- Initial test release of the Supabase storage plugin.
 
 ## 0.1.0
 

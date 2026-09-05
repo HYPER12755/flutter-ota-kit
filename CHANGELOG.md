@@ -1,3 +1,8 @@
+## 0.1.12
+
+- Bump `package_info_plus` to `^10.0.0`.
+- Pana: 160/160 (perfect A+, all 5 categories at full marks including dartdoc coverage).
+
 > Chinese version: [CHANGELOG-zh.md](CHANGELOG-zh.md)
 
 ## 0.1.11
