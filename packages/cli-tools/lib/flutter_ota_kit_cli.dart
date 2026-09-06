@@ -60,7 +60,7 @@ Future<int> run(List<String> args) async {
   final runner =
       FlutterPatcherRunner(
           'flutter-ota',
-          'flutter_ota_kit CLI — OTA code push for Flutter (hot-updater compatible).',
+          'flutter-ota CLI — OTA code push for Flutter (hot-updater compatible).',
         )
         ..addCommand(InitCommand())
         ..addCommand(ConfigCommand())

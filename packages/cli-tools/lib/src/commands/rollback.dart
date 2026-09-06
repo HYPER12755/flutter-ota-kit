@@ -3,7 +3,7 @@ import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart';
 
 import '../ui/ui.dart';
 
-/// `flutter_ota_kit rollback` — roll a channel back to a previous bundle.
+/// `flutter-ota rollback` — roll a channel back to a previous bundle.
 class RollbackCommand extends FlutterPatcherCommand {
   RollbackCommand({this.config, this.backendOverride}) {
     argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
@@ -31,7 +31,7 @@ class RollbackCommand extends FlutterPatcherCommand {
     final channel = argResults!['channel'] as String?;
     if (channel == null || channel.isEmpty) {
       throw PackException(
-        'Usage: flutter_ota_kit rollback --channel <channel> [--bundle-id <id>]',
+        'Usage: flutter-ota rollback --channel <channel> [--bundle-id <id>]',
         64,
       );
     }

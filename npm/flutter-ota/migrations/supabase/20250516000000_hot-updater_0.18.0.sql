@@ -8,14 +8,26 @@ UPDATE bundles
 SET storage_uri = 'supabase-storage://%%BUCKET_NAME%%/' || id || '/bundle.zip'
 WHERE storage_uri IS NULL;
 
-ALTER TABLE bundles ALTER COLUMN storage_uri SET NOT NULL;
-ALTER TABLE bundles ALTER COLUMN target_app_version DROP NOT NULL;
+DO $$ BEGIN
+    ALTER TABLE bundles ALTER COLUMN storage_uri SET NOT NULL;
+EXCEPTION
+    WHEN null_value_not_allowed THEN NULL;
+END $$;
+DO $$ BEGIN
+    ALTER TABLE bundles ALTER COLUMN target_app_version DROP NOT NULL;
+EXCEPTION
+    WHEN null_value_not_allowed THEN NULL;
+END $$;
 
-ALTER TABLE bundles ADD CONSTRAINT check_version_or_fingerprint CHECK (
-    (target_app_version IS NOT NULL) OR (fingerprint_hash IS NOT NULL)
-);
+DO $$ BEGIN
+    ALTER TABLE bundles ADD CONSTRAINT check_version_or_fingerprint CHECK (
+        (target_app_version IS NOT NULL) OR (fingerprint_hash IS NOT NULL)
+    );
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE INDEX bundles_fingerprint_hash_idx ON bundles(fingerprint_hash);
+CREATE INDEX IF NOT EXISTS bundles_fingerprint_hash_idx ON bundles(fingerprint_hash);
 
 DROP FUNCTION IF EXISTS get_update_info;
 

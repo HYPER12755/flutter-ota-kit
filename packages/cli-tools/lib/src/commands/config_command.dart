@@ -60,9 +60,10 @@ class ConfigGetCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-    final key = argResults!['key'] as String?;
+    final key = argResults!['key'] as String? ??
+        (argResults!.rest.isNotEmpty ? argResults!.rest.first : null);
     if (key == null || key.isEmpty) {
-      throw StateError('Usage: flutter_ota_kit config get <key>');
+      throw StateError('Usage: flutter-ota config get <key>');
     }
     final value = readPath(_loadProjectJson(), key);
     if (value == null) {
@@ -89,10 +90,12 @@ class ConfigSetCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-    final key = argResults!['key'] as String?;
-    final value = argResults!['value'] as String?;
+    final key = argResults!['key'] as String? ??
+        (argResults!.rest.isNotEmpty ? argResults!.rest.first : null);
+    final value = argResults!['value'] as String? ??
+        (argResults!.rest.length > 1 ? argResults!.rest[1] : null);
     if (key == null || key.isEmpty || value == null) {
-      throw StateError('Usage: flutter_ota_kit config set <key> <value>');
+      throw StateError('Usage: flutter-ota config set <key> <value>');
     }
     final json = _loadProjectJson();
     writePath(json, key, value);

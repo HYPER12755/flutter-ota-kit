@@ -20,7 +20,7 @@ class ConsoleCommand extends FlutterPatcherCommand {
   String get name => 'console';
 
   @override
-  String get description => 'Open the flutter_ota_kit web console.';
+  String get description => 'Open the flutter-ota web console.';
 
   Directory? _findConsoleDir() {
     var dir = Directory(p.dirname(Platform.script.path));
@@ -52,7 +52,7 @@ class ConsoleCommand extends FlutterPatcherCommand {
       return;
     }
     banner('console');
-    box('flutter_ota_kit console', [
+    box('flutter-ota console', [
       'Open the web console with Flutter:',
       '',
       kv('dir', consoleDir.path),

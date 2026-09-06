@@ -86,7 +86,7 @@ class PocketBaseServeCommand extends FlutterPatcherCommand {
 
   @override
   String get description =>
-      'Start a local PocketBase + install the flutter_ota_kit schema.';
+      'Start a local PocketBase + install the flutter-ota schema.';
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -136,7 +136,7 @@ class PocketBaseServeCommand extends FlutterPatcherCommand {
     step('PocketBase is running (pid ${manager.process!.pid}).');
 
     if (adminEmail != null && adminPassword != null) {
-      step('Installing flutter_ota_kit schema...');
+      step('Installing flutter-ota schema...');
       final schemaInstaller = PocketBaseSchemaInstaller(
         url: 'http://$host:$port',
         adminEmail: adminEmail,
@@ -158,7 +158,7 @@ class PocketBaseServeCommand extends FlutterPatcherCommand {
     }
 
     banner('pocketbase');
-    box('flutter_ota_kit pocketbase serve', [
+    box('flutter-ota pocketbase serve', [
       'Local PocketBase is running:',
       '',
       kv('url', 'http://$host:$port'),
@@ -169,9 +169,13 @@ class PocketBaseServeCommand extends FlutterPatcherCommand {
 
     // Wait for SIGINT/SIGTERM.
     final done = Completer<void>();
-    ProcessSignal.sigint.watch().listen((_) => done.complete());
+    ProcessSignal.sigint.watch().listen((_) {
+      if (!done.isCompleted) done.complete();
+    });
     if (!Platform.isWindows) {
-      ProcessSignal.sigterm.watch().listen((_) => done.complete());
+      ProcessSignal.sigterm.watch().listen((_) {
+        if (!done.isCompleted) done.complete();
+      });
     }
     await done.future;
     step('Shutting down PocketBase...');
@@ -219,7 +223,7 @@ class PocketBaseStatusCommand extends FlutterPatcherCommand {
       );
     } else {
       step(
-        'PocketBase: not installed. Run `flutter_ota_kit pocketbase install`.',
+        'PocketBase: not installed. Run `flutter-ota pocketbase install`.',
       );
     }
     return;

@@ -165,9 +165,16 @@ FlutterPatcherConfig? loadConfig() {
     if (file.existsSync()) {
       final raw = file.readAsStringSync();
       if (raw.trim().isEmpty) continue;
-      return FlutterPatcherConfig.fromJson(
-        jsonDecode(raw) as Map<String, dynamic>,
-      );
+      try {
+        return FlutterPatcherConfig.fromJson(
+          jsonDecode(raw) as Map<String, dynamic>,
+        );
+      } on FormatException {
+        stderr.writeln(
+          'Warning: invalid config at ${file.path} — ignoring.',
+        );
+        return null;
+      }
     }
   }
   return null;

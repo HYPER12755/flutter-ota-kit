@@ -3,7 +3,25 @@ import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
 
 import '../ui/ui.dart';
 
-/// `flutter_ota_kit bundle` — manage bundles entirely from the CLI (no direct
+final _uuidRe = RegExp(
+  r'^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$',
+  caseSensitive: false,
+);
+
+void _requireUuid(String? id, String command) {
+  if (id == null || id.isEmpty) {
+    throw PackException('Usage: flutter-ota bundle $command --id <id>', 64);
+  }
+  if (!_uuidRe.hasMatch(id)) {
+    throw PackException(
+      'Invalid UUID format: "$id". '
+      'Expected: 8-4-4-4-12 hex digits.',
+      64,
+    );
+  }
+}
+
+/// `flutter-ota bundle` — manage bundles entirely from the CLI (no direct
 /// DB access needed; the CLI talks to the backend through its plugins).
 class BundleCommand extends FlutterPatcherCommand {
   BundleCommand({this.config, this.backendOverride}) {
@@ -91,13 +109,18 @@ class BundleListCommand extends FlutterPatcherCommand {
     final enabled = enabledRaw == null
         ? null
         : (enabledRaw == 'true' || enabledRaw == '1');
+    final limitRaw = argResults!['limit'] as String;
+    final limit = int.tryParse(limitRaw);
+    if (limit == null || limit < 1) {
+      throw PackException('--limit must be a positive integer (got "$limitRaw")', 64);
+    }
     final res = await listBundles(
       backend,
       ListOptions(
         channel: argResults!['channel'] as String?,
         platform: argResults!['platform'] as String?,
         enabled: enabled,
-        limit: int.parse(argResults!['limit'] as String),
+        limit: limit,
       ),
     );
     banner('bundle · list');
@@ -145,13 +168,11 @@ class BundleShowCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     final id = argResults!['id'] as String?;
-    if (id == null || id.isEmpty) {
-      throw PackException('Usage: flutter_ota_kit bundle show --id <id>', 64);
-    }
+    _requireUuid(id, 'show');
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · show');
-    final b = await backend.db.getBundleById(id);
+    final b = await backend.db.getBundleById(id!);
     if (b == null) {
       step('(not found)');
       return;
@@ -195,13 +216,11 @@ class BundleDeleteCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     final id = argResults!['id'] as String?;
-    if (id == null || id.isEmpty) {
-      throw PackException('Usage: flutter_ota_kit bundle delete --id <id>', 64);
-    }
+    _requireUuid(id, 'delete');
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · delete');
-    final existing = await backend.db.getBundleById(id);
+    final existing = await backend.db.getBundleById(id!);
     if (existing == null) {
       throw StateError('Bundle "$id" not found.');
     }
@@ -239,18 +258,13 @@ class BundleDisableCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     final id = argResults!['id'] as String?;
-    if (id == null || id.isEmpty) {
-      throw PackException(
-        'Usage: flutter_ota_kit bundle disable --id <id>',
-        64,
-      );
-    }
+    _requireUuid(id, 'disable');
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · disable');
     await spinner(
       () async {
-        await backend.db.updateBundle(id, {'enabled': false});
+        await backend.db.updateBundle(id!, {'enabled': false});
         await backend.db.commitBundle();
       },
       'Disabling bundle $id',
@@ -277,15 +291,13 @@ class BundleEnableCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     final id = argResults!['id'] as String?;
-    if (id == null || id.isEmpty) {
-      throw PackException('Usage: flutter_ota_kit bundle enable --id <id>', 64);
-    }
+    _requireUuid(id, 'enable');
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · enable');
     await spinner(
       () async {
-        await backend.db.updateBundle(id, {'enabled': true});
+        await backend.db.updateBundle(id!, {'enabled': true});
         await backend.db.commitBundle();
       },
       'Enabling bundle $id',
@@ -316,19 +328,14 @@ class BundleForceCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     final id = argResults!['id'] as String?;
-    if (id == null || id.isEmpty) {
-      throw PackException(
-        'Usage: flutter_ota_kit bundle force --id <id> [--off]',
-        64,
-      );
-    }
+    _requireUuid(id, 'force');
     final off = argResults!['off'] as bool;
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · force');
     await spinner(
       () async {
-        await backend.db.updateBundle(id, {
+        await backend.db.updateBundle(id!, {
           'shouldForceUpdate': !off,
           if (!off) 'enabled': true,
         });
@@ -360,9 +367,10 @@ class BundlePromoteCommand extends FlutterPatcherCommand {
   Future<int> run() => runGuarded(() async {
     final id = argResults!['id'] as String?;
     final channel = argResults!['channel'] as String?;
-    if (id == null || id.isEmpty || channel == null || channel.isEmpty) {
+    _requireUuid(id, 'promote');
+    if (channel == null || channel.isEmpty) {
       throw PackException(
-        'Usage: flutter_ota_kit bundle promote --id <id> --channel <channel>',
+        'Usage: flutter-ota bundle promote --id <id> --channel <channel>',
         64,
       );
     }
@@ -370,11 +378,11 @@ class BundlePromoteCommand extends FlutterPatcherCommand {
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · promote');
     await spinner(
-      () => promoteBundle(backend, id, channel),
+      () => promoteBundle(backend, id!, channel),
       'Promoting $id to $channel',
       done: 'Promoted',
     );
-    box('promote', [kv('bundle', cyan(id)), kv('channel', channel)]);
+    box('promote', [kv('bundle', cyan(id!)), kv('channel', channel)]);
   });
 }
 
@@ -401,14 +409,7 @@ class BundleUpdateCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     final id = argResults!['id'] as String?;
-    if (id == null || id.isEmpty) {
-      throw PackException(
-        'Usage: flutter-ota bundle update --id <id> '
-        '[--message <m>] [--target-version <v>] [--enabled true|false] '
-        '[--force true|false]',
-        64,
-      );
-    }
+    _requireUuid(id, 'update');
     final patch = <String, Object?>{};
     final message = argResults!['message'] as String?;
     if (message != null) patch['message'] = message;
@@ -430,13 +431,13 @@ class BundleUpdateCommand extends FlutterPatcherCommand {
     banner('bundle · update');
     await spinner(
       () async {
-        await backend.db.updateBundle(id, patch);
+        await backend.db.updateBundle(id!, patch);
         await backend.db.commitBundle();
       },
       'Updating $id',
       done: 'Updated',
     );
-    final b = await backend.db.getBundleById(id);
+    final b = await backend.db.getBundleById(id!);
     if (b != null) {
       box('bundle', [
         kv('id', cyan(b.id)),

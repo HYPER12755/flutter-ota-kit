@@ -3,7 +3,7 @@ import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
 
 import '../ui/ui.dart';
 
-/// `flutter_ota_kit channel` — manage channels.
+/// `flutter-ota channel` — manage channels.
 class ChannelCommand extends FlutterPatcherCommand {
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -82,20 +82,20 @@ class ChannelGetCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-    final channel = argResults!['channel'] as String?;
+    final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
+    final channel = argResults!['channel'] as String? ?? cfg?.channel;
     if (channel == null || channel.isEmpty) {
       throw PackException(
-        'Usage: flutter_ota_kit channel get --channel <channel>',
+        'Usage: flutter-ota channel get --channel <channel>',
         64,
       );
     }
-    final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('channel · get');
     final bundle = await getChannel(backend, channel);
     if (bundle == null) {
       err('no live bundle on channel "$channel"');
-      return;
+      throw StateError('no live bundle on channel "$channel"');
     }
     box('channel "$channel"', [
       kv('live bundle', cyan(bundle.id)),
@@ -128,18 +128,18 @@ class ChannelSetCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
-    final channel = argResults!['channel'] as String?;
+    final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
+    final channel = argResults!['channel'] as String? ?? cfg?.channel;
     final bundleId = argResults!['bundle-id'] as String?;
     if (channel == null ||
         channel.isEmpty ||
         bundleId == null ||
         bundleId.isEmpty) {
       throw PackException(
-        'Usage: flutter_ota_kit channel set --channel <c> --bundle-id <id>',
+        'Usage: flutter-ota channel set --channel <c> --bundle-id <id>',
         64,
       );
     }
-    final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('channel · set');
     await spinner(

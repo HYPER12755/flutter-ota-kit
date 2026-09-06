@@ -60,7 +60,7 @@ String kv(String k, String v) {
 void banner(String name) {
   _echo('');
   _echo(
-    '  ${cyan('▶')} ${cyan(bold('flutter_ota_kit'))} ${dim('·')} ${bold(name)}',
+    '  ${cyan('▶')} ${cyan(bold('flutter-ota'))} ${dim('·')} ${bold(name)}',
   );
   _echo('  ${dim('─' * math.min(_cols - 4, 60))}');
 }

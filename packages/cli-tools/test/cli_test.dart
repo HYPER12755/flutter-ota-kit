@@ -381,6 +381,7 @@ void main() {
             source: dir.path,
             channel: 'production',
             platform: 'android',
+            targetAppVersion: '1.0.0',
           ),
         );
         expect(bundle.enabled, isTrue);
@@ -402,6 +403,7 @@ void main() {
             source: dir.path,
             channel: 'production',
             platform: 'android',
+            targetAppVersion: '1.0.0',
           ),
         );
         final res = await listBundles(
@@ -429,6 +431,7 @@ void main() {
             source: dir.path,
             channel: 'production',
             platform: 'android',
+            targetAppVersion: '1.0.0',
           ),
         );
         await deleteBundle(backend, deployed.id);
@@ -448,6 +451,7 @@ void main() {
             source: dir.path,
             channel: 'production',
             platform: 'android',
+            targetAppVersion: '1.0.0',
           ),
         );
         final second = await deployBundle(
@@ -456,6 +460,7 @@ void main() {
             source: dir.path,
             channel: 'production',
             platform: 'android',
+            targetAppVersion: '2.0.0',
           ),
         );
         final disabled = await rollbackChannel(backend, 'production');
@@ -477,6 +482,7 @@ void main() {
             source: dir.path,
             channel: 'production',
             platform: 'android',
+            targetAppVersion: '1.0.0',
           ),
         );
         await promoteBundle(backend, b.id, 'staging');

@@ -60,6 +60,11 @@ Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
       'Use only one of target-app-version / fingerprint-hash (DB CHECK).',
     );
   }
+  if (opts.targetAppVersion == null && opts.fingerprintHash == null) {
+    throw StateError(
+      'Provide either --target-app-version or --fingerprint-hash.',
+    );
+  }
   // Resolve the artifact to upload. If the source is already a zip (e.g. the
   // `patch.zip` produced by `flutter_ota_kit build`/`pack`), upload it directly.
   // Otherwise, if the source directory contains a `patch.zip`, use that. As a

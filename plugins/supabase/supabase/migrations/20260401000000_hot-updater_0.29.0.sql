@@ -251,7 +251,8 @@ $$;
 
 -- HotUpdater.get_update_info_by_fingerprint_hash
 
-DROP FUNCTION IF EXISTS get_update_info_by_fingerprint_hash;
+DO $$ BEGIN DROP FUNCTION IF EXISTS get_update_info_by_fingerprint_hash(platforms, uuid, uuid, text, text); EXCEPTION WHEN undefined_function THEN NULL; END $$;
+DO $$ BEGIN DROP FUNCTION IF EXISTS get_update_info_by_fingerprint_hash(platforms, uuid, uuid, text, text, text); EXCEPTION WHEN undefined_function THEN NULL; END $$;
 
 CREATE OR REPLACE FUNCTION get_update_info_by_fingerprint_hash (
     app_platform   platforms,
@@ -377,7 +378,8 @@ $$;
 
 -- HotUpdater.get_update_info_by_app_version
 
-DROP FUNCTION IF EXISTS get_update_info_by_app_version;
+DO $$ BEGIN DROP FUNCTION IF EXISTS get_update_info_by_app_version(platforms, text, uuid, uuid, text, text[]); EXCEPTION WHEN undefined_function THEN NULL; END $$;
+DO $$ BEGIN DROP FUNCTION IF EXISTS get_update_info_by_app_version(platforms, text, uuid, uuid, text, text[], text); EXCEPTION WHEN undefined_function THEN NULL; END $$;
 
 CREATE OR REPLACE FUNCTION get_update_info_by_app_version (
     app_platform   platforms,

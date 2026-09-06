@@ -1,8 +1,12 @@
 -- HotUpdater.bundles
 
-CREATE TYPE platforms AS ENUM ('ios', 'android');
+DO $$ BEGIN
+    CREATE TYPE platforms AS ENUM ('ios', 'android');
+EXCEPTION
+    WHEN duplicate_object THEN NULL;
+END $$;
 
-CREATE TABLE bundles (
+CREATE TABLE IF NOT EXISTS bundles (
     id uuid PRIMARY KEY,
     platform platforms NOT NULL,
     target_app_version text NOT NULL,
@@ -14,7 +18,7 @@ CREATE TABLE bundles (
     message text
 );
 
-CREATE INDEX bundles_target_app_version_idx ON bundles(target_app_version);
+CREATE INDEX IF NOT EXISTS bundles_target_app_version_idx ON bundles(target_app_version);
 
 
 -- HotUpdater.get_update_info

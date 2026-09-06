@@ -33,7 +33,7 @@ class DoctorCommand extends FlutterPatcherCommand {
     ];
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     if (cfg == null) {
-      lines.add(kv('config', yellow('not found — run `flutter_ota_kit init`')));
+      lines.add(kv('config', yellow('not found — run `flutter-ota init`')));
       box('doctor', lines);
       return;
     }
@@ -69,7 +69,7 @@ class DoctorCommand extends FlutterPatcherCommand {
         installed
             ? green('installed at ${paths.binaryPath.path}')
             : yellow(
-                'not installed — run `flutter_ota_kit pocketbase install`',
+                'not installed — run `flutter-ota pocketbase install`',
               ),
       ),
     );

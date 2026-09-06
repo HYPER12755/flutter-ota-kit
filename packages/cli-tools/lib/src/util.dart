@@ -51,9 +51,13 @@ String generateFingerprint(String directory) {
   for (final entity in dir.listSync(recursive: true)) {
     if (entity is! File) continue;
     final relative = p.relative(entity.path, from: dir.path);
-    final content = File(entity.path).readAsBytesSync();
-    final hash = sha256Hex(content);
-    entries.add('$relative:$hash');
+    try {
+      final content = File(entity.path).readAsBytesSync();
+      final hash = sha256Hex(content);
+      entries.add('$relative:$hash');
+    } on FileSystemException {
+      // Skip unreadable files (sockets, pipes, broken symlinks).
+    }
   }
   entries.sort();
   return sha256Hex(utf8.encode(entries.join('\n')));

@@ -88,10 +88,13 @@ $$;
 
 -- HotUpdater.bundles
 ALTER TABLE bundles
-ADD COLUMN channel text NOT NULL DEFAULT 'production';
+ADD COLUMN IF NOT EXISTS channel text NOT NULL DEFAULT 'production';
 
-ALTER TABLE bundles
-DROP COLUMN file_url;
+DO $$ BEGIN
+    ALTER TABLE bundles DROP COLUMN file_url;
+EXCEPTION
+    WHEN undefined_column THEN NULL;
+END $$;
 
 -- HotUpdater.get_target_app_version_list
 
@@ -131,4 +134,4 @@ BEGIN
 END;
 $$;
 
-CREATE INDEX bundles_channel_idx ON bundles(channel);
+CREATE INDEX IF NOT EXISTS bundles_channel_idx ON bundles(channel);
