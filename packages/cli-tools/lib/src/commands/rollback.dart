@@ -6,7 +6,16 @@ import '../ui/ui.dart';
 
 /// `flutter_ota_kit rollback` — roll a channel back to a previous bundle.
 class RollbackCommand extends FlutterPatcherCommand {
-  RollbackCommand({this.config, this.backendOverride});
+  RollbackCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('channel', abbr: 'c', help: 'Channel to roll back.');
+    argParser.addOption(
+      'bundle-id',
+      abbr: 'i',
+      help: 'Roll back to this specific bundle id.',
+    );
+    argParser.addOption('platform', abbr: 'p', help: 'Platform filter (e.g. android).');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -17,17 +26,6 @@ class RollbackCommand extends FlutterPatcherCommand {
   @override
   String get description =>
       'Roll a channel back: disable the latest enabled bundle (or a specific --bundle-id).';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('channel', abbr: 'c', help: 'Channel to roll back.')
-    ..addOption(
-      'bundle-id',
-      abbr: 'i',
-      help: 'Roll back to this specific bundle id.',
-    )
-    ..addOption('platform', abbr: 'p', help: 'Platform filter (e.g. android).');
 
   @override
   Future<int> run() => runGuarded(() async {

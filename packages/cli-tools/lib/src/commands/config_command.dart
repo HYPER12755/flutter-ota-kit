@@ -47,16 +47,16 @@ void _saveProjectJson(Map<String, dynamic> json) {
 }
 
 class ConfigGetCommand extends FlutterPatcherCommand {
+  ConfigGetCommand() {
+    argParser.addOption('key', abbr: 'k', help: 'Dot-path key.');
+  }
+
   @override
   String get name => 'get';
 
   @override
   String get description =>
       'Print a config value by dot-path (e.g. supabase.url).';
-
-  @override
-  ArgParser get argParser =>
-      ArgParser()..addOption('key', abbr: 'k', help: 'Dot-path key.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -76,16 +76,16 @@ class ConfigGetCommand extends FlutterPatcherCommand {
 }
 
 class ConfigSetCommand extends FlutterPatcherCommand {
+  ConfigSetCommand() {
+    argParser.addOption('key', abbr: 'k', help: 'Dot-path key.');
+    argParser.addOption('value', help: 'Value.');
+  }
+
   @override
   String get name => 'set';
 
   @override
   String get description => 'Set a config value by dot-path.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('key', abbr: 'k', help: 'Dot-path key.')
-    ..addOption('value', help: 'Value.');
 
   @override
   Future<int> run() => runGuarded(() async {

@@ -66,7 +66,13 @@ class BundleCommand extends FlutterPatcherCommand {
 }
 
 class BundleListCommand extends FlutterPatcherCommand {
-  BundleListCommand({this.config, this.backendOverride});
+  BundleListCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('channel', abbr: 'c', help: 'Filter by channel.');
+    argParser.addOption('platform', abbr: 'p', help: 'Filter by platform.');
+    argParser.addOption('enabled', help: 'Filter by enabled (true/false).');
+    argParser.addOption('limit', abbr: 'l', defaultsTo: '20', help: 'Page size.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -76,14 +82,6 @@ class BundleListCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'List bundles.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('channel', abbr: 'c', help: 'Filter by channel.')
-    ..addOption('platform', abbr: 'p', help: 'Filter by platform.')
-    ..addOption('enabled', help: 'Filter by enabled (true/false).')
-    ..addOption('limit', abbr: 'l', defaultsTo: '20', help: 'Page size.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -130,7 +128,10 @@ class BundleListCommand extends FlutterPatcherCommand {
 }
 
 class BundleShowCommand extends FlutterPatcherCommand {
-  BundleShowCommand({this.config, this.backendOverride});
+  BundleShowCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('id', help: 'Bundle id.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -140,11 +141,6 @@ class BundleShowCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Show a single bundle\'s details.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('id', help: 'Bundle id.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -177,7 +173,15 @@ class BundleShowCommand extends FlutterPatcherCommand {
 }
 
 class BundleDeleteCommand extends FlutterPatcherCommand {
-  BundleDeleteCommand({this.config, this.backendOverride});
+  BundleDeleteCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addFlag(
+      'keep-storage',
+      help: 'Do not delete the storage object.',
+      negatable: false,
+    );
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -187,16 +191,6 @@ class BundleDeleteCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Delete a bundle by id.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('id', help: 'Bundle id.')
-    ..addFlag(
-      'keep-storage',
-      help: 'Do not delete the storage object.',
-      negatable: false,
-    );
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -228,7 +222,10 @@ class BundleDeleteCommand extends FlutterPatcherCommand {
 }
 
 class BundleDisableCommand extends FlutterPatcherCommand {
-  BundleDisableCommand({this.config, this.backendOverride});
+  BundleDisableCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('id', help: 'Bundle id.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -238,11 +235,6 @@ class BundleDisableCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Disable a bundle (stop serving it).';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('id', help: 'Bundle id.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -268,7 +260,10 @@ class BundleDisableCommand extends FlutterPatcherCommand {
 }
 
 class BundleEnableCommand extends FlutterPatcherCommand {
-  BundleEnableCommand({this.config, this.backendOverride});
+  BundleEnableCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('id', help: 'Bundle id.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -278,11 +273,6 @@ class BundleEnableCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Enable a bundle.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('id', help: 'Bundle id.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -305,7 +295,14 @@ class BundleEnableCommand extends FlutterPatcherCommand {
 }
 
 class BundleForceCommand extends FlutterPatcherCommand {
-  BundleForceCommand({this.config, this.backendOverride});
+  BundleForceCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addFlag(
+      'off',
+      help: 'Clear the force-update flag instead of setting it.',
+    );
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -315,15 +312,6 @@ class BundleForceCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Force an update onto clients (--off to clear).';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('id', help: 'Bundle id.')
-    ..addFlag(
-      'off',
-      help: 'Clear the force-update flag instead of setting it.',
-    );
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -353,7 +341,11 @@ class BundleForceCommand extends FlutterPatcherCommand {
 }
 
 class BundlePromoteCommand extends FlutterPatcherCommand {
-  BundlePromoteCommand({this.config, this.backendOverride});
+  BundlePromoteCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('channel', abbr: 'c', help: 'Target channel.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -363,12 +355,6 @@ class BundlePromoteCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Promote a bundle to a channel.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('id', help: 'Bundle id.')
-    ..addOption('channel', abbr: 'c', help: 'Target channel.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -393,7 +379,14 @@ class BundlePromoteCommand extends FlutterPatcherCommand {
 }
 
 class BundleUpdateCommand extends FlutterPatcherCommand {
-  BundleUpdateCommand({this.config, this.backendOverride});
+  BundleUpdateCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('message', abbr: 'm', help: 'New release message.');
+    argParser.addOption('target-version', help: 'New target app version (e.g. 1.0.0).');
+    argParser.addOption('enabled', help: 'Set enabled (true/false).');
+    argParser.addOption('force', abbr: 'f', help: 'Set force-update (true/false).');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -404,15 +397,6 @@ class BundleUpdateCommand extends FlutterPatcherCommand {
   @override
   String get description =>
       'Edit a bundle\'s metadata (message / target version / enabled / force).';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('id', help: 'Bundle id.')
-    ..addOption('message', abbr: 'm', help: 'New release message.')
-    ..addOption('target-version', help: 'New target app version (e.g. 1.0.0).')
-    ..addOption('enabled', help: 'Set enabled (true/false).')
-    ..addOption('force', abbr: 'f', help: 'Set force-update (true/false).');
 
   @override
   Future<int> run() => runGuarded(() async {

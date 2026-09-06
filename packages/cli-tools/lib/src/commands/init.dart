@@ -18,7 +18,33 @@ import '../ui/ui.dart';
 ///
 /// All CLI working state is stored under `.flutter_ota_kit/`.
 class InitCommand extends FlutterPatcherCommand {
-  InitCommand({this.config, this.backendOverride});
+  InitCommand({this.config, this.backendOverride}) {
+    argParser.addOption(
+      'provider',
+      abbr: 'p',
+      defaultsTo: 'supabase',
+      help:
+          'Backend provider (also accepted as the first positional argument).',
+    );
+    argParser.addOption(
+      'channel',
+      abbr: 'c',
+      defaultsTo: 'production',
+      help: 'Default channel.',
+    );
+    argParser.addOption('platform', defaultsTo: 'android', help: 'Default platform.');
+    argParser.addOption(
+      'source',
+      abbr: 's',
+      defaultsTo: './dist',
+      help: 'Default deploy source.',
+    );
+    argParser.addFlag(
+      'global',
+      help: 'Write to the global ~/.flutter_ota_kit config (no scaffolding).',
+    );
+    argParser.addFlag('force', abbr: 'f', help: 'Overwrite an existing config.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -30,34 +56,6 @@ class InitCommand extends FlutterPatcherCommand {
   String get description =>
       'Scaffold flutter_ota_kit integration files + .flutter_ota_kit config for the current '
       'Flutter project. Usage: flutter_ota_kit init <supabase|postgres|cloudflare|aws|pocketbase>';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption(
-      'provider',
-      abbr: 'p',
-      defaultsTo: 'supabase',
-      help:
-          'Backend provider (also accepted as the first positional argument).',
-    )
-    ..addOption(
-      'channel',
-      abbr: 'c',
-      defaultsTo: 'production',
-      help: 'Default channel.',
-    )
-    ..addOption('platform', defaultsTo: 'android', help: 'Default platform.')
-    ..addOption(
-      'source',
-      abbr: 's',
-      defaultsTo: './dist',
-      help: 'Default deploy source.',
-    )
-    ..addFlag(
-      'global',
-      help: 'Write to the global ~/.flutter_ota_kit config (no scaffolding).',
-    )
-    ..addFlag('force', abbr: 'f', help: 'Overwrite an existing config.');
 
   String? _p(String label, String? current) {
     if (!stdin.hasTerminal) return current;

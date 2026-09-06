@@ -7,7 +7,9 @@ import '../ui/ui.dart';
 
 /// `flutter_ota_kit doctor` — environment + backend connectivity check.
 class DoctorCommand extends FlutterPatcherCommand {
-  DoctorCommand({this.config, this.backendOverride});
+  DoctorCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -18,10 +20,6 @@ class DoctorCommand extends FlutterPatcherCommand {
   @override
   String get description =>
       'Diagnose the local environment and backend connection.';
-
-  @override
-  ArgParser get argParser =>
-      ArgParser()..addOption('backend', abbr: 'b', help: 'Backend provider.');
 
   @override
   Future<int> run() => runGuarded(() async {

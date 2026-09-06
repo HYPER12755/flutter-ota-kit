@@ -8,19 +8,19 @@ import '../ui/ui.dart';
 
 /// `flutter_ota_kit console` — open the web console.
 class ConsoleCommand extends FlutterPatcherCommand {
+  ConsoleCommand() {
+    argParser.addFlag(
+      'open',
+      help:
+          'Launch the console with `flutter run -d chrome` (requires Flutter).',
+    );
+  }
+
   @override
   String get name => 'console';
 
   @override
   String get description => 'Open the flutter_ota_kit web console.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addFlag(
-      'open',
-      help:
-          'Launch the console with `flutter run -d chrome` (requires Flutter).',
-    );
 
   Directory? _findConsoleDir() {
     var dir = Directory(p.dirname(Platform.script.path));

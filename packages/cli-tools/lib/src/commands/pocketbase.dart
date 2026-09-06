@@ -28,27 +28,18 @@ class PocketBaseCommand extends FlutterPatcherCommand {
   @override
   String get description =>
       'Manage a local PocketBase instance (install / serve / stop / status).';
-
-  @override
-  ArgParser get argParser => ArgParser();
-
-  @override
-  Future<int> run() => runGuarded(() async {
-    err('Missing subcommand. Use: install | serve | stop | status');
-    return;
-  });
 }
 
 class PocketBaseInstallCommand extends FlutterPatcherCommand {
+  PocketBaseInstallCommand() {
+    argParser.addOption('version', help: 'PocketBase version to install.');
+  }
+
   @override
   String get name => 'install';
 
   @override
   String get description => 'Download + extract the PocketBase binary.';
-
-  @override
-  ArgParser get argParser =>
-      ArgParser()..addOption('version', help: 'PocketBase version to install.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -77,26 +68,26 @@ class PocketBaseInstallCommand extends FlutterPatcherCommand {
 }
 
 class PocketBaseServeCommand extends FlutterPatcherCommand {
+  PocketBaseServeCommand() {
+    argParser.addOption('version', help: 'PocketBase version.');
+    argParser.addOption('port', help: 'PB HTTP port.', defaultsTo: '8090');
+    argParser.addOption('host', help: 'PB bind address.', defaultsTo: '127.0.0.1');
+    argParser.addOption('data-dir', help: 'PB data directory.');
+    argParser.addOption('admin-email', help: 'Bootstrap admin email.');
+    argParser.addOption('admin-password', help: 'Bootstrap admin password.');
+    argParser.addFlag(
+      'install-hooks',
+      help: 'Copy bundled JS hooks into the data dir on start.',
+      defaultsTo: true,
+    );
+  }
+
   @override
   String get name => 'serve';
 
   @override
   String get description =>
       'Start a local PocketBase + install the flutter_ota_kit schema.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('version', help: 'PocketBase version.')
-    ..addOption('port', help: 'PB HTTP port.', defaultsTo: '8090')
-    ..addOption('host', help: 'PB bind address.', defaultsTo: '127.0.0.1')
-    ..addOption('data-dir', help: 'PB data directory.')
-    ..addOption('admin-email', help: 'Bootstrap admin email.')
-    ..addOption('admin-password', help: 'Bootstrap admin password.')
-    ..addFlag(
-      'install-hooks',
-      help: 'Copy bundled JS hooks into the data dir on start.',
-      defaultsTo: true,
-    );
 
   @override
   Future<int> run() => runGuarded(() async {

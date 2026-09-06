@@ -11,7 +11,37 @@ import '../util.dart';
 
 /// `flutter_ota_kit deploy` — zip + upload + register a new bundle.
 class DeployCommand extends FlutterPatcherCommand {
-  DeployCommand({this.config, this.backendOverride});
+  DeployCommand({this.config, this.backendOverride}) {
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: 'Backend provider (supabase/postgres/cloudflare/aws).',
+    );
+    argParser.addOption('source', abbr: 's', help: 'Source directory to zip + upload.');
+    argParser.addOption('channel', abbr: 'c', help: 'Target channel.');
+    argParser.addOption('platform', abbr: 'p', defaultsTo: 'android', help: 'Platform.');
+    argParser.addOption('message', abbr: 'm', help: 'Release message.');
+    argParser.addFlag('force', abbr: 'f', help: 'Force the update on clients.');
+    argParser.addOption(
+      'target-app-version',
+      help: 'Semver range target (XOR with fingerprint-hash).',
+    );
+    argParser.addOption(
+      'fingerprint-hash',
+      help: 'Fingerprint hash target (XOR with target-app-version).',
+    );
+    argParser.addOption(
+      'key',
+      abbr: 'k',
+      help: 'Path to Ed25519 private key file (sign bundle).',
+    );
+    argParser.addOption('git-commit-hash', help: 'Git commit hash (auto-detected).');
+    argParser.addOption(
+      'bundle-id',
+      abbr: 'i',
+      help: 'Explicit bundle id (uuidv7 by default).',
+    );
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -22,38 +52,6 @@ class DeployCommand extends FlutterPatcherCommand {
   @override
   String get description =>
       'Zip a source directory, upload it, and register a new bundle.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption(
-      'backend',
-      abbr: 'b',
-      help: 'Backend provider (supabase/postgres/cloudflare/aws).',
-    )
-    ..addOption('source', abbr: 's', help: 'Source directory to zip + upload.')
-    ..addOption('channel', abbr: 'c', help: 'Target channel.')
-    ..addOption('platform', abbr: 'p', defaultsTo: 'android', help: 'Platform.')
-    ..addOption('message', abbr: 'm', help: 'Release message.')
-    ..addFlag('force', abbr: 'f', help: 'Force the update on clients.')
-    ..addOption(
-      'target-app-version',
-      help: 'Semver range target (XOR with fingerprint-hash).',
-    )
-    ..addOption(
-      'fingerprint-hash',
-      help: 'Fingerprint hash target (XOR with target-app-version).',
-    )
-    ..addOption(
-      'key',
-      abbr: 'k',
-      help: 'Path to Ed25519 private key file (sign bundle).',
-    )
-    ..addOption('git-commit-hash', help: 'Git commit hash (auto-detected).')
-    ..addOption(
-      'bundle-id',
-      abbr: 'i',
-      help: 'Explicit bundle id (uuidv7 by default).',
-    );
 
   @override
   Future<int> run() => runGuarded(() async {

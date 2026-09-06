@@ -38,7 +38,9 @@ class ChannelCommand extends FlutterPatcherCommand {
 }
 
 class ChannelListCommand extends FlutterPatcherCommand {
-  ChannelListCommand({this.config, this.backendOverride});
+  ChannelListCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -48,10 +50,6 @@ class ChannelListCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'List channels.';
-
-  @override
-  ArgParser get argParser =>
-      ArgParser()..addOption('backend', abbr: 'b', help: 'Backend provider.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -68,7 +66,10 @@ class ChannelListCommand extends FlutterPatcherCommand {
 }
 
 class ChannelGetCommand extends FlutterPatcherCommand {
-  ChannelGetCommand({this.config, this.backendOverride});
+  ChannelGetCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('channel', abbr: 'c', help: 'Channel.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -78,11 +79,6 @@ class ChannelGetCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Show the live (enabled) bundle for a channel.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('channel', abbr: 'c', help: 'Channel.');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -115,7 +111,11 @@ class ChannelGetCommand extends FlutterPatcherCommand {
 }
 
 class ChannelSetCommand extends FlutterPatcherCommand {
-  ChannelSetCommand({this.config, this.backendOverride});
+  ChannelSetCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('channel', abbr: 'c', help: 'Channel.');
+    argParser.addOption('bundle-id', abbr: 'i', help: 'Bundle id.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -125,12 +125,6 @@ class ChannelSetCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Promote a bundle to a channel.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('channel', abbr: 'c', help: 'Channel.')
-    ..addOption('bundle-id', abbr: 'i', help: 'Bundle id.');
 
   @override
   Future<int> run() => runGuarded(() async {

@@ -10,7 +10,9 @@ import '../ui/ui.dart';
 
 /// `flutter_ota_kit keys` — generate an Ed25519 keypair for bundle signing.
 class KeysCommand extends FlutterPatcherCommand {
-  KeysCommand({this.config, this.backendOverride});
+  KeysCommand({this.config, this.backendOverride}) {
+    argParser.addFlag('save', help: 'Persist the public key into the project config.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -21,10 +23,6 @@ class KeysCommand extends FlutterPatcherCommand {
   @override
   String get description =>
       'Generate an Ed25519 keypair used to sign deployed bundles.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addFlag('save', help: 'Persist the public key into the project config.');
 
   @override
   Future<int> run() => runGuarded(() async {

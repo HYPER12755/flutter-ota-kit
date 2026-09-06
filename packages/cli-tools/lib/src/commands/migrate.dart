@@ -11,35 +11,35 @@ import '../ui/ui.dart';
 
 /// `flutter_ota_kit migrate` — run backend SQL migrations.
 class MigrateCommand extends FlutterPatcherCommand {
+  MigrateCommand() {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption(
+      'database-url',
+      help: 'Postgres connection string (or DATABASE_URL env).',
+    );
+    argParser.addOption(
+      'management-key',
+      help:
+          'Supabase Management API key (or SUPABASE_MANAGEMENT_KEY env) — '
+          'runs migrations without a separate Postgres connection.',
+    );
+    argParser.addOption(
+      'migrations-dir',
+      help: 'Directory of *.sql migration files (ordered by name).',
+    );
+    argParser.addFlag(
+      'dry-run',
+      abbr: 'd',
+      help: 'Print migrations instead of applying them.',
+    );
+  }
+
   @override
   String get name => 'migrate';
 
   @override
   String get description =>
       'Run SQL migrations against the backend database (Supabase Postgres).';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption(
-      'database-url',
-      help: 'Postgres connection string (or DATABASE_URL env).',
-    )
-    ..addOption(
-      'management-key',
-      help:
-          'Supabase Management API key (or SUPABASE_MANAGEMENT_KEY env) — '
-          'runs migrations without a separate Postgres connection.',
-    )
-    ..addOption(
-      'migrations-dir',
-      help: 'Directory of *.sql migration files (ordered by name).',
-    )
-    ..addFlag(
-      'dry-run',
-      abbr: 'd',
-      help: 'Print migrations instead of applying them.',
-    );
 
   /// Default migrations dir lives next to the CLI entrypoint; each backend has
   /// its own dialect's migrations (cloudflare = D1 SQLite, postgres = plain

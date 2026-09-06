@@ -27,7 +27,10 @@ class StorageCommand extends FlutterPatcherCommand {
 }
 
 class StorageListCommand extends FlutterPatcherCommand {
-  StorageListCommand({this.config, this.backendOverride});
+  StorageListCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addOption('prefix', help: 'Key prefix filter (e.g. bundles).');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -37,11 +40,6 @@ class StorageListCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'List storage objects.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addOption('prefix', help: 'Key prefix filter (e.g. bundles).');
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -73,7 +71,11 @@ class StorageListCommand extends FlutterPatcherCommand {
 }
 
 class StorageDeleteCommand extends FlutterPatcherCommand {
-  StorageDeleteCommand({this.config, this.backendOverride});
+  StorageDeleteCommand({this.config, this.backendOverride}) {
+    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    argParser.addMultiOption('key', help: 'Storage key to delete (repeatable).');
+    argParser.addOption('uri', help: 'Full storage URI to delete.');
+  }
 
   final FlutterPatcherConfig? config;
   final Backend? backendOverride;
@@ -83,12 +85,6 @@ class StorageDeleteCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Delete storage object(s) by key or full URI.';
-
-  @override
-  ArgParser get argParser => ArgParser()
-    ..addOption('backend', abbr: 'b', help: 'Backend provider.')
-    ..addMultiOption('key', help: 'Storage key to delete (repeatable).')
-    ..addOption('uri', help: 'Full storage URI to delete.');
 
   @override
   Future<int> run() => runGuarded(() async {
