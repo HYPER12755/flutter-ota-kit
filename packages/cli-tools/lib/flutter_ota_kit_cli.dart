@@ -59,7 +59,7 @@ import 'src/commands/storage.dart';
 Future<int> run(List<String> args) async {
   final runner =
       FlutterPatcherRunner(
-          'flutter_ota_kit',
+          'flutter-ota',
           'flutter_ota_kit CLI — OTA code push for Flutter (hot-updater compatible).',
         )
         ..addCommand(InitCommand())

@@ -1,7 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:args/args.dart';
 import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
 import 'package:http/http.dart' as http;
 import 'package:path/path.dart' as p;

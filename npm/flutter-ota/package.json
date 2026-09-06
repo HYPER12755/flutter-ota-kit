@@ -1,6 +1,6 @@
 {
   "name": "@_nazmiforreal/flutter-ota",
-  "version": "0.1.14",
+  "version": "0.1.15",
   "description": "Command-line interface for flutter_ota_kit — an OTA code-push tool for Flutter, hot-updater compatible.",
   "bin": {
     "flutter-ota": "./bin/flutter-ota.js"

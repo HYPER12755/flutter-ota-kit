@@ -4,7 +4,6 @@ library;
 import 'dart:async';
 import 'dart:io';
 
-import 'package:args/args.dart';
 import 'package:path/path.dart' as p;
 
 import '../cli_base.dart';

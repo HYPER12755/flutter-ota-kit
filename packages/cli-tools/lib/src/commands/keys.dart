@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:args/args.dart';
 
 import '../backend.dart';
 import '../cli_base.dart';

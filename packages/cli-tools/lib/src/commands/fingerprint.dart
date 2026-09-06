@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:args/args.dart';
 
 import '../cli_base.dart';
 import '../util.dart';
