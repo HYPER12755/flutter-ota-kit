@@ -95,7 +95,7 @@ packages:
       path: "../../packages/core"
       relative: true
     source: path
-    version: "0.1.2"
+    version: "0.1.4"
   frontend_server_client:
     dependency: transitive
     description:
