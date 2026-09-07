@@ -83,13 +83,13 @@ Future<int> run(List<String> args) async {
   } on UsageException catch (e) {
     final msg = e.message;
 
-    // Missing subcommand → show the command's own help.
+    // Missing subcommand → show the command's own help + suggestions.
     if (msg.startsWith('Missing subcommand')) {
       final match = RegExp(r'"flutter-ota (\w+)"').firstMatch(msg);
       if (match != null) {
         final cmd = runner.commands[match.group(1)];
         if (cmd != null) {
-          cmd.printUsage();
+          _printMissingSubcommand(cmd);
           return 0;
         }
       }
@@ -226,6 +226,27 @@ void _printUnknownSubcommand(Command<int> parent, String typed) {
     stderr.writeln('  ${_cyan('Did you mean?')}');
     for (final s in suggestions.take(3)) {
       stderr.writeln('    ${_green(s)}');
+    }
+    stderr.writeln('');
+  }
+
+  parent.printUsage();
+}
+
+/// Show a helpful "missing subcommand" message with all subcommand suggestions.
+void _printMissingSubcommand(Command<int> parent) {
+  final subNames = parent.subcommands.keys.toList()..sort();
+
+  stderr.writeln('');
+  stderr.writeln(
+    '  ${_red('✗')} Missing subcommand for ${_cyan('flutter-ota ${parent.name}')}',
+  );
+  stderr.writeln('');
+
+  if (subNames.isNotEmpty) {
+    stderr.writeln('  ${_cyan('Did you mean?')}');
+    for (final s in subNames) {
+      stderr.writeln('    ${_green('${parent.name} $s')}');
     }
     stderr.writeln('');
   }
