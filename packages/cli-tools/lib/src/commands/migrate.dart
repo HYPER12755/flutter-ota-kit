@@ -8,7 +8,7 @@ import 'package:postgres/postgres.dart';
 
 import '../ui/ui.dart';
 
-/// `flutter_ota_kit migrate` — run backend SQL migrations.
+/// `flutter-ota migrate` — run backend SQL migrations.
 class MigrateCommand extends FlutterPatcherCommand {
   MigrateCommand() {
     argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
@@ -40,9 +40,6 @@ class MigrateCommand extends FlutterPatcherCommand {
   String get description =>
       'Run SQL migrations against the backend database (Supabase Postgres).';
 
-  /// Default migrations dir lives next to the CLI entrypoint; each backend has
-  /// its own dialect's migrations (cloudflare = D1 SQLite, postgres = plain
-  /// Postgres, supabase = PostgREST, aws = no relational SQL).
   String defaultMigrationsDir(String provider) {
     final sub = switch (provider) {
       'supabase' => 'supabase',
@@ -84,9 +81,6 @@ class MigrateCommand extends FlutterPatcherCommand {
   Future<int> run() => runGuarded(() async {
     final provider = argResults!['backend'] as String? ?? 'supabase';
 
-    // Backends with no relational SQL handled out-of-band (S3 blob store).
-    // Short-circuit before any SQL discovery so a missing or empty
-    // (README-only) migrations dir does not abort.
     if (provider == 'aws') {
       final dir =
           argResults!['migrations-dir'] as String? ??
@@ -94,7 +88,7 @@ class MigrateCommand extends FlutterPatcherCommand {
       banner('migrate');
       box('migrate', [
         'Migrations for "$provider" do not run through this command:',
-        '  • aws  → S3 blob store, no relational SQL (see $dir/README.md)',
+        '  · aws  → S3 blob store, no relational SQL (see $dir/README.md)',
         '',
         'See the README under $dir for the intended setup.',
       ]);
@@ -152,9 +146,9 @@ class MigrateCommand extends FlutterPatcherCommand {
       }
       throw StateError(
         'For the supabase backend, provide either:\n'
-        '  • --management-key (or SUPABASE_MANAGEMENT_KEY, or set it via '
+        '  · --management-key (or SUPABASE_MANAGEMENT_KEY, or set it via '
         '`flutter-ota init`) — a Supabase Management API key, OR\n'
-        '  • --database-url (or DATABASE_URL, or set it via `init`) — a '
+        '  · --database-url (or DATABASE_URL, or set it via `init`) — a '
         'Postgres connection string.',
       );
     }
@@ -175,8 +169,6 @@ class MigrateCommand extends FlutterPatcherCommand {
     throw StateError('Unknown backend provider: "$provider".');
   });
 
-  /// Run migrations through the Supabase Management API (no Postgres creds
-  /// needed). Derived from the Supabase project ref in the configured URL.
   Future<void> _runViaManagementApi(String mgmtKey, List<File> files) async {
     final cfg = resolveSupabaseConfig(
       loadConfig() ??
@@ -188,7 +180,9 @@ class MigrateCommand extends FlutterPatcherCommand {
     final ref = Uri.parse(cfg.supabaseUrl).host.split('.').first;
     final endpoint = 'https://api.supabase.com/v1/projects/$ref/database/query';
     banner('migrate · supabase (management api)');
+    final steps = Steps('migrate');
     for (final file in files) {
+      final sw = Stopwatch()..start();
       final sql = file.readAsStringSync();
       final res = await http.post(
         Uri.parse(endpoint),
@@ -198,20 +192,27 @@ class MigrateCommand extends FlutterPatcherCommand {
         },
         body: jsonEncode({'query': sql}),
       );
+      sw.stop();
       if (res.statusCode >= 400) {
-        throw StateError(
-          'Migration ${p.basename(file.path)} failed '
-          '(${res.statusCode}): ${res.body}',
+        steps.fail(
+          '${p.basename(file.path)} (${res.statusCode}): ${res.body}',
         );
+      } else {
+        final ms = sw.elapsedMilliseconds;
+        final time = ms >= 1000
+            ? '${(ms / 1000).toStringAsFixed(1)}s'
+            : '${ms}ms';
+        steps.success('Applied ${p.basename(file.path)} in $time');
       }
-      step('applied ${p.basename(file.path)}');
     }
-    await _ensureSupabaseBucket();
+    await _ensureSupabaseBucket(steps);
+    steps.summary();
+    if (steps.hasErrors) {
+      throw StateError('One or more migrations failed.');
+    }
   }
 
-  /// Create the Supabase Storage bucket (public) if it doesn't exist, so
-  /// `deploy` can upload artifacts without a manual setup step.
-  Future<void> _ensureSupabaseBucket() async {
+  Future<void> _ensureSupabaseBucket(Steps steps) async {
     final storage = resolveSupabaseStorageConfig(
       loadConfig() ??
           FlutterPatcherConfig(
@@ -220,13 +221,12 @@ class MigrateCommand extends FlutterPatcherCommand {
           ),
     );
     if (storage.supabaseServiceRoleKey == null) {
-      box('migrate', [
-        'Skipped storage bucket creation — set supabase.serviceRoleKey '
-            '(or SUPABASE_SERVICE_ROLE_KEY) to auto-create the '
-            '"${storage.bucketName}" bucket.',
-      ]);
+      steps.skip(
+        'Skipped storage bucket creation — set supabase.serviceRoleKey',
+      );
       return;
     }
+    final sw = Stopwatch()..start();
     final res = await http.post(
       Uri.parse('${storage.supabaseUrl}/storage/v1/bucket'),
       headers: {
@@ -236,20 +236,22 @@ class MigrateCommand extends FlutterPatcherCommand {
       },
       body: jsonEncode({'name': storage.bucketName, 'public': true}),
     );
+    sw.stop();
     if (res.statusCode >= 400) {
       final body = jsonDecode(res.body) as Map<String, dynamic>;
       final msg = (body['message'] ?? body['error'] ?? '').toString();
       if (!msg.contains('already exists') && res.statusCode != 409) {
-        box('migrate', [
-          'Warning: could not create bucket "${storage.bucketName}": $msg',
-        ]);
+        steps.fail('Could not create bucket "${storage.bucketName}": $msg');
         return;
       }
     }
-    step('ensured storage bucket "${storage.bucketName}"');
+    final ms = sw.elapsedMilliseconds;
+    final time = ms >= 1000
+        ? '${(ms / 1000).toStringAsFixed(1)}s'
+        : '${ms}ms';
+    steps.success('Ensured storage bucket "${storage.bucketName}" in $time');
   }
 
-  /// Original path: connect directly to Postgres and execute each statement.
   Future<void> _runViaPostgres(String url, List<File> files) async {
     final uri = Uri.parse(url);
     final endpoint = Endpoint(
@@ -262,6 +264,7 @@ class MigrateCommand extends FlutterPatcherCommand {
           : null,
     );
     banner('migrate · postgres');
+    final steps = Steps('migrate');
     final conn = await Connection.open(
       endpoint,
       settings: ConnectionSettings(sslMode: SslMode.disable),
@@ -280,9 +283,10 @@ class MigrateCommand extends FlutterPatcherCommand {
           queryMode: QueryMode.simple,
         );
         if (existing.isNotEmpty) {
-          stdout.writeln('  ${dim('skip')}    $name (already applied)');
+          steps.skip('Skipped $name (already applied)');
           continue;
         }
+        final sw = Stopwatch()..start();
         for (final stmt in _splitStatements(file.readAsStringSync())) {
           await conn.execute(stmt, queryMode: QueryMode.simple);
         }
@@ -290,10 +294,16 @@ class MigrateCommand extends FlutterPatcherCommand {
           "INSERT INTO _flutter_ota_kit_migrations(name) VALUES ('$escaped')",
           queryMode: QueryMode.simple,
         );
-        step('applied $name');
+        sw.stop();
+        final ms = sw.elapsedMilliseconds;
+        final time = ms >= 1000
+            ? '${(ms / 1000).toStringAsFixed(1)}s'
+            : '${ms}ms';
+        steps.success('Applied $name in $time');
       }
     } finally {
       await conn.close();
     }
+    steps.summary();
   }
 }

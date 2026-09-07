@@ -4,7 +4,7 @@ import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
 
 import '../ui/ui.dart';
 
-/// `flutter_ota_kit doctor` — environment + backend connectivity check.
+/// `flutter-ota doctor` — environment + backend connectivity check.
 class DoctorCommand extends FlutterPatcherCommand {
   DoctorCommand({this.config, this.backendOverride}) {
     argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
@@ -23,67 +23,72 @@ class DoctorCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('doctor');
-    final lines = <String>[
-      kv('dart', Platform.version.split(' ').first),
-      kv(
-        'os',
-        '${Platform.operatingSystem} '
-            '${Platform.operatingSystemVersion.split('\n').first}',
-      ),
-    ];
+    final steps = Steps('doctor');
+
+    steps.success('Dart ${Platform.version.split(' ').first}');
+    steps.success(
+      'OS ${Platform.operatingSystem} '
+      '${Platform.operatingSystemVersion.split('\n').first}',
+    );
+
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     if (cfg == null) {
-      lines.add(kv('config', yellow('not found — run `flutter-ota init`')));
-      box('doctor', lines);
+      steps.fail('Config not found — run ${bold('flutter-ota init')}');
+      steps.summary();
       return;
     }
-    lines
-      ..add(kv('provider', cfg.provider))
-      ..add(kv('channel', cfg.channel))
-      ..add(kv('platform', cfg.platform));
+    steps.success('Provider ${cfg.provider}');
+    steps.success('Channel ${cfg.channel}');
+    steps.success('Platform ${cfg.platform}');
 
     // PocketBase-specific: show binary + health endpoint status.
     if (cfg.provider == 'pocketbase') {
-      await _checkPocketBase(cfg, lines);
+      await _checkPocketBase(cfg, steps);
     }
 
     try {
       final backend = requireBackend(cfg, override: backendOverride);
+      final sw = Stopwatch()..start();
       final channels = await backend.db.getChannels();
-      lines.add(kv('backend', green('reachable — ${channels.join(', ')}')));
+      sw.stop();
+      final ms = sw.elapsedMilliseconds;
+      final time = ms >= 1000
+          ? '${(ms / 1000).toStringAsFixed(1)}s'
+          : '${ms}ms';
+      steps.success(
+        'Backend reachable — ${channels.join(', ')} in $time',
+      );
     } catch (e) {
-      lines.add(kv('backend', red('unreachable — $e')));
+      steps.fail('Backend unreachable — $e');
     }
-    box('doctor', lines);
+    steps.summary();
   });
 
   Future<void> _checkPocketBase(
     FlutterPatcherConfig cfg,
-    List<String> lines,
+    Steps steps,
   ) async {
     final paths = PocketBaseInstallPaths.resolve();
     final installed = await paths.binaryPath.exists();
-    lines.add(
-      kv(
-        'pocketbase binary',
-        installed
-            ? green('installed at ${paths.binaryPath.path}')
-            : yellow(
-                'not installed — run `flutter-ota pocketbase install`',
-              ),
-      ),
-    );
-    // Probe the health endpoint if a URL is configured.
+    if (installed) {
+      steps.success('PocketBase binary at ${paths.binaryPath.path}');
+    } else {
+      steps.fail(
+        'PocketBase not installed — run ${bold('flutter-ota pocketbase install')}',
+      );
+    }
     final url = cfg.pocketbase.url;
     if (url != null && url.isNotEmpty) {
       try {
         final client = PocketBaseClient(url);
         final ok = await client.health();
-        lines.add(
-          kv('pocketbase health', ok ? green('reachable') : red('unreachable')),
-        );
+        if (ok) {
+          steps.success('PocketBase reachable');
+        } else {
+          steps.fail('PocketBase unreachable');
+        }
       } catch (e) {
-        lines.add(kv('pocketbase health', red('unreachable — $e')));
+        steps.fail('PocketBase unreachable — $e');
       }
     }
   }

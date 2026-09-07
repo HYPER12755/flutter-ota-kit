@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:args/args.dart';
 import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
 import 'package:path/path.dart' as p;
 

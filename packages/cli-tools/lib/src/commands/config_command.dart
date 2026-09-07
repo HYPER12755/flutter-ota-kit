@@ -1,10 +1,9 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:args/args.dart';
-
 import '../cli_base.dart';
 import '../config.dart';
+import '../ui/ui.dart' as ui;
 
 /// `flutter_ota_kit config` — get/set/list config values.
 class ConfigCommand extends FlutterPatcherCommand {
@@ -100,7 +99,8 @@ class ConfigSetCommand extends FlutterPatcherCommand {
     final json = _loadProjectJson();
     writePath(json, key, value);
     _saveProjectJson(json);
-    stdout.writeln('Set $key = $value');
+    ui.banner('config · set');
+    ui.step('$key = $value');
   });
 }
 
@@ -114,6 +114,25 @@ class ConfigListCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     final json = _loadProjectJson();
-    stdout.writeln(const JsonEncoder.withIndent('  ').convert(json));
+    if (json.isEmpty) {
+      ui.banner('config');
+      ui.warn('No config found. Run flutter-ota init to create one.');
+      return;
+    }
+    ui.banner('config');
+    _printConfig(json, '');
   });
+}
+
+void _printConfig(Map<String, dynamic> json, String prefix) {
+  for (final entry in json.entries) {
+    final key = prefix.isEmpty ? entry.key : '$prefix.${entry.key}';
+    final value = entry.value;
+    if (value is Map<String, dynamic>) {
+      _printConfig(value, key);
+    } else {
+      final display = value is String ? value : const JsonEncoder().convert(value);
+      stdout.writeln(ui.kv(key, display));
+    }
+  }
 }

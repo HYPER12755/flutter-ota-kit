@@ -64,7 +64,7 @@ class RollbackCommand extends FlutterPatcherCommand {
     );
     box('rollback', [
       kv('channel', channel),
-      kv('now live', cyan(live)),
+      kv('now live', live.isEmpty ? dim('(none)') : cyan(live)),
       kv('disabled', disabled.isEmpty ? dim('(none)') : disabled.join(', ')),
     ]);
   });

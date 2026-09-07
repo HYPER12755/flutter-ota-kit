@@ -1,7 +1,5 @@
 import 'dart:io';
 
-import 'package:args/args.dart';
-
 import '../backend.dart';
 import '../cli_base.dart';
 import '../config.dart';
@@ -9,7 +7,7 @@ import '../operations.dart';
 import '../ui/ui.dart';
 import '../util.dart';
 
-/// `flutter_ota_kit deploy` — zip + upload + register a new bundle.
+/// `flutter-ota deploy` — zip + upload + register a new bundle.
 class DeployCommand extends FlutterPatcherCommand {
   DeployCommand({this.config, this.backendOverride}) {
     argParser.addOption(
@@ -76,10 +74,11 @@ class DeployCommand extends FlutterPatcherCommand {
 
     banner('deploy');
     stdout.writeln(
-      '${gray('channel')}  ${cyan(channel)}   '
+      '  ${gray('channel')}  ${cyan(channel)}   '
       '${gray('platform')}  ${cyan(platform)}   '
       '${gray('source')}  ${dim(source)}',
     );
+
     final bundle = await spinner(
       () => deployBundle(
         backend,

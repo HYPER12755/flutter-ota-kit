@@ -1,4 +1,3 @@
-import 'package:args/args.dart';
 import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
 
 import '../ui/ui.dart';
@@ -94,7 +93,6 @@ class ChannelGetCommand extends FlutterPatcherCommand {
     banner('channel · get');
     final bundle = await getChannel(backend, channel);
     if (bundle == null) {
-      err('no live bundle on channel "$channel"');
       throw StateError('no live bundle on channel "$channel"');
     }
     box('channel "$channel"', [

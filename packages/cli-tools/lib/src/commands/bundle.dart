@@ -1,4 +1,3 @@
-import 'package:args/args.dart';
 import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
 
 import '../ui/ui.dart';
@@ -128,25 +127,25 @@ class BundleListCommand extends FlutterPatcherCommand {
       step('(no bundles)');
       return;
     }
-    final lines = <String>[];
+    final rows = <List<String>>[];
     for (var i = 0; i < res.data.length; i++) {
       final b = res.data[i];
-      final target = b.targetAppVersion ?? b.fingerprintHash ?? dim('-');
-      lines
-        ..add(kv('#$i', cyan(b.id)))
-        ..add(kv('channel', b.channel))
-        ..add(kv('enabled', b.enabled ? green('yes') : yellow('no')))
-        ..add(kv('platform', b.platform.value))
-        ..add(kv('force', b.shouldForceUpdate ? green('yes') : yellow('no')))
-        ..add(kv('target', target));
-      if (b.message != null) lines.add(kv('message', b.message!));
-      if (b.metadata?.signature != null) {
-        lines.add(kv('signature', green('✓ signed')));
-      }
-      lines.add('');
+      final enabled = b.enabled ? green('✓') : red('✗');
+      final force = b.shouldForceUpdate ? green('✓') : dim('✗');
+      rows.add([
+        '$i',
+        cyan(b.id),
+        b.channel,
+        b.platform.value,
+        force,
+        enabled,
+      ]);
     }
-    box('${res.data.length} bundles', lines);
-    step('total: ${res.pagination.total}');
+    table(
+      '${res.data.length} bundles (total: ${res.pagination.total})',
+      ['#', 'ID', 'CHANNEL', 'PLAT', 'FORCE', 'ON'],
+      rows,
+    );
   });
 }
 
@@ -225,18 +224,22 @@ class BundleDeleteCommand extends FlutterPatcherCommand {
       throw StateError('Bundle "$id" not found.');
     }
     final keepStorage = argResults!['keep-storage'] as bool;
+    final steps = Steps('delete');
     await spinner(
       () => deleteBundle(backend, id),
       'Deleting bundle $id',
       done: 'Deleted',
     );
+    steps.success('Deleted bundle $id');
     if (!keepStorage && existing.storageUri.isNotEmpty) {
       await spinner(
         () => backend.storage.delete(existing.storageUri),
         'Removing storage object',
         done: 'Storage removed',
       );
+      steps.success('Removed storage object');
     }
+    steps.summary();
   });
 }
 

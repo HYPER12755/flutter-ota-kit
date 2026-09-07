@@ -70,7 +70,7 @@ class BuildCommand extends FlutterPatcherCommand {
     }
 
     banner('build');
-    final bar = ProgressBar(1, 'pack');
+    final bar = ProgressBar(1, 'Packing patch.zip');
     final result = await packPatch(
       apkPath: apk,
       version: version,

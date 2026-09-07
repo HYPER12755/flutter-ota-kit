@@ -53,19 +53,16 @@ class StorageListCommand extends FlutterPatcherCommand {
       step('(no objects)');
       return;
     }
-    final lines = <String>[];
+    final rows = <List<String>>[];
     for (final o in objects) {
       final size = o.size >= 1024 * 1024
           ? '${(o.size / (1024 * 1024)).toStringAsFixed(2)} MB'
           : o.size >= 1024
           ? '${(o.size / 1024).toStringAsFixed(1)} KB'
           : '${o.size} B';
-      lines
-        ..add(kv('key', cyan(o.key)))
-        ..add(kv('size', size))
-        ..add('');
+      rows.add([cyan(o.key), size]);
     }
-    box('${objects.length} objects', lines);
+    table('${objects.length} objects', ['KEY', 'SIZE'], rows);
   });
 }
 

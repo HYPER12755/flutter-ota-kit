@@ -46,14 +46,15 @@ class PocketBaseInstallCommand extends FlutterPatcherCommand {
         argResults!['version'] as String? ?? kDefaultPocketBaseVersion;
     final installer = PocketBaseInstaller(version: version);
     final paths = installer.paths();
-    step('Installing PocketBase v$version to ${paths.installDir.path}...');
+    banner('pocketbase · install');
+    final bar = ProgressBar(1, 'Downloading PocketBase v$version');
     final result = await installer.ensureInstalled(
       paths: paths,
       onProgress: (p) {
-        stdout.write('\r  ${(p * 100).toStringAsFixed(0)}%   ');
+        bar.update((p * 100).round());
       },
     );
-    stdout.writeln();
+    bar.close();
     if (result.alreadyInstalled) {
       step('Already installed at ${paths.binaryPath.path}');
     } else {
