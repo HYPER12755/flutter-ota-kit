@@ -46,11 +46,13 @@ class StorageListCommand extends FlutterPatcherCommand {
     final backend = requireBackend(cfg, override: backendOverride);
     final prefix = argResults!['prefix'] as String?;
     banner('storage · list');
-    final objects = await backend.storage.listObjects(
-      prefix == null || prefix.isEmpty ? null : prefix,
-    );
+    final steps = Steps('list');
+    final objects = await steps.run('Listing storage objects', () =>
+        backend.storage.listObjects(
+            prefix == null || prefix.isEmpty ? null : prefix));
     if (objects.isEmpty) {
-      step('(no objects)');
+      steps.skip('(no objects)');
+      steps.summary();
       return;
     }
     final rows = <List<String>>[];
@@ -58,11 +60,12 @@ class StorageListCommand extends FlutterPatcherCommand {
       final size = o.size >= 1024 * 1024
           ? '${(o.size / (1024 * 1024)).toStringAsFixed(2)} MB'
           : o.size >= 1024
-          ? '${(o.size / 1024).toStringAsFixed(1)} KB'
-          : '${o.size} B';
+              ? '${(o.size / 1024).toStringAsFixed(1)} KB'
+              : '${o.size} B';
       rows.add([cyan(o.key), size]);
     }
     table('${objects.length} objects', ['KEY', 'SIZE'], rows);
+    steps.summary();
   });
 }
 
@@ -96,18 +99,13 @@ class StorageDeleteCommand extends FlutterPatcherCommand {
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('storage · delete');
+    final steps = Steps('delete');
     if (keys.isNotEmpty) {
-      await spinner(
-        () => backend.storage.deleteObjects(keys),
-        'Deleting ${keys.length} object(s)',
-        done: 'Deleted',
-      );
+      await steps.run('Deleting ${keys.length} object(s)',
+          () => backend.storage.deleteObjects(keys));
     } else {
-      await spinner(
-        () => backend.storage.delete(uri!),
-        'Deleting $uri',
-        done: 'Deleted',
-      );
+      await steps.run('Deleting $uri', () => backend.storage.delete(uri!));
     }
+    steps.summary();
   });
 }

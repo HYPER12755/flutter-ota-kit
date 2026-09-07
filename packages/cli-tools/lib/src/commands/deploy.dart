@@ -1,5 +1,7 @@
 import 'dart:io';
 
+import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart';
+
 import '../backend.dart';
 import '../cli_base.dart';
 import '../config.dart';
@@ -75,25 +77,11 @@ class DeployCommand extends FlutterPatcherCommand {
     banner('deploy');
     info('channel ${cyan(channel)}  platform ${cyan(platform)}  source ${dim(source)}');
 
-    final bundle = await spinner(
-      () => deployBundle(
-        backend,
-        DeployOptions(
-          source: source,
-          channel: channel,
-          platform: platform,
-          message: message,
-          force: force,
-          targetAppVersion: targetAppVersion,
-          fingerprintHash: fingerprintHash,
-          signingKeyBase64: signingKey,
-          gitCommitHash: resolvedGitCommitHash,
-          bundleId: bundleId,
-        ),
-      ),
-      'Uploading & registering bundle',
-      done: 'Bundle deployed',
-    );
+    final steps = Steps('deploy');
+    final bundle = await _deployWithPhases(steps, backend, source, channel,
+        platform, message, force, targetAppVersion, fingerprintHash,
+        signingKey, resolvedGitCommitHash, bundleId);
+    steps.summary();
 
     final lines = <String>[
       kv('bundle id', cyan(bundle.id)),
@@ -117,4 +105,58 @@ class DeployCommand extends FlutterPatcherCommand {
     }
     box('deployed', lines);
   });
+}
+
+/// Deploy with per-phase UI. Each phase reported by `DeployOptions.onPhase`
+/// is shown as an active spinner line that gets replaced in-place.
+Future<Bundle> _deployWithPhases(
+  Steps steps,
+  Backend backend,
+  String source,
+  String channel,
+  String platform,
+  String? message,
+  bool force,
+  String? targetAppVersion,
+  String? fingerprintHash,
+  String? signingKey,
+  String? resolvedGitCommitHash,
+  String? bundleId,
+) async {
+  String? activeLabel;
+  try {
+    final bundle = await deployBundle(
+      backend,
+      DeployOptions(
+        source: source,
+        channel: channel,
+        platform: platform,
+        message: message,
+        force: force,
+        targetAppVersion: targetAppVersion,
+        fingerprintHash: fingerprintHash,
+        signingKeyBase64: signingKey,
+        gitCommitHash: resolvedGitCommitHash,
+        bundleId: bundleId,
+        onPhase: (phase) {
+          if (activeLabel != null) {
+            steps.completeActive();
+          }
+          activeLabel = phase;
+          steps.startActive(phase);
+        },
+      ),
+    );
+    if (activeLabel != null) {
+      steps.completeActive();
+      activeLabel = null;
+    }
+    return bundle;
+  } catch (e) {
+    if (activeLabel != null) {
+      steps.completeActive(success: false);
+      activeLabel = null;
+    }
+    rethrow;
+  }
 }

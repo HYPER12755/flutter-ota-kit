@@ -23,6 +23,7 @@ class DeployOptions {
     this.gitCommitHash,
     this.bundleId,
     this.metadata,
+    this.onPhase,
   });
 
   final String source;
@@ -36,6 +37,10 @@ class DeployOptions {
   final String? gitCommitHash;
   final String? bundleId;
   final BundleMetadata? metadata;
+
+  /// Called with a human-readable phase label as deploy progresses.
+  /// Used by the CLI to show per-step progress (e.g. Steps.run()).
+  final void Function(String phase)? onPhase;
 }
 
 /// Options for [listBundles].
@@ -85,6 +90,7 @@ Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
       zipPath = packaged.path;
       shouldDelete = false;
     } else {
+      opts.onPhase?.call('Zipping source');
       zipPath = await zipDirectory(opts.source);
       shouldDelete = true;
     }
@@ -94,6 +100,7 @@ Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
     final zipBytes = await File(zipPath).readAsBytes();
     // Device SDK verifies the artifact against an MD5 hex of the whole file,
     // so `fileHash` is always the MD5 hex (never a `sig:`-prefixed value).
+    opts.onPhase?.call('Hashing artifact');
     final md5Hex = md5.convert(zipBytes).toString();
     final signature = opts.signingKeyBase64 != null
         ? await ed25519Sign(utf8.encode(md5Hex), opts.signingKeyBase64!)
@@ -101,6 +108,7 @@ Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
 
     final bundleId = opts.bundleId ?? uuidV7();
     final key = bundleId;
+    opts.onPhase?.call('Uploading to storage');
     final uploaded = await backend.storage.upload(key, zipPath);
     final storageUri = uploaded['storageUri'];
     if (storageUri == null || storageUri.isEmpty) {
@@ -125,6 +133,7 @@ Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
       rolloutCohortCount: defaultRolloutCohortCount,
     );
 
+    opts.onPhase?.call('Registering bundle in database');
     await backend.db.appendBundle(bundle);
     await backend.db.commitBundle();
     return bundle;

@@ -204,19 +204,10 @@ class BundleDeleteCommand extends FlutterPatcherCommand {
     }
     final keepStorage = argResults!['keep-storage'] as bool;
     final steps = Steps('delete');
-    await spinner(
-      () => deleteBundle(backend, id),
-      'Deleting bundle $id',
-      done: 'Deleted',
-    );
-    steps.success('Deleted bundle $id');
+    await steps.run('Deleting bundle $id', () => deleteBundle(backend, id));
     if (!keepStorage && existing.storageUri.isNotEmpty) {
-      await spinner(
-        () => backend.storage.delete(existing.storageUri),
-        'Removing storage object',
-        done: 'Storage removed',
-      );
-      steps.success('Removed storage object');
+      await steps.run('Removing storage object',
+          () => backend.storage.delete(existing.storageUri));
     }
     steps.summary();
   });
@@ -244,14 +235,12 @@ class BundleDisableCommand extends FlutterPatcherCommand {
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · disable');
-    await spinner(
-      () async {
-        await backend.db.updateBundle(id!, {'enabled': false});
-        await backend.db.commitBundle();
-      },
-      'Disabling bundle $id',
-      done: 'Disabled',
-    );
+    final steps = Steps('disable');
+    await steps.run('Disabling bundle $id', () async {
+      await backend.db.updateBundle(id!, {'enabled': false});
+      await backend.db.commitBundle();
+    });
+    steps.summary();
   });
 }
 
@@ -277,14 +266,12 @@ class BundleEnableCommand extends FlutterPatcherCommand {
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · enable');
-    await spinner(
-      () async {
-        await backend.db.updateBundle(id!, {'enabled': true});
-        await backend.db.commitBundle();
-      },
-      'Enabling bundle $id',
-      done: 'Enabled',
-    );
+    final steps = Steps('enable');
+    await steps.run('Enabling bundle $id', () async {
+      await backend.db.updateBundle(id!, {'enabled': true});
+      await backend.db.commitBundle();
+    });
+    steps.summary();
   });
 }
 
@@ -315,7 +302,9 @@ class BundleForceCommand extends FlutterPatcherCommand {
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · force');
-    await spinner(
+    final steps = Steps('force');
+    await steps.run(
+      off ? 'Clearing force flag on $id' : 'Forcing update for $id',
       () async {
         await backend.db.updateBundle(id!, {
           'shouldForceUpdate': !off,
@@ -323,9 +312,8 @@ class BundleForceCommand extends FlutterPatcherCommand {
         });
         await backend.db.commitBundle();
       },
-      off ? 'Clearing force flag on $id' : 'Forcing update for $id',
-      done: off ? 'Cleared' : 'Forced',
     );
+    steps.summary();
   });
 }
 
@@ -359,11 +347,10 @@ class BundlePromoteCommand extends FlutterPatcherCommand {
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · promote');
-    await spinner(
-      () => promoteBundle(backend, id!, channel),
-      'Promoting $id to $channel',
-      done: 'Promoted',
-    );
+    final steps = Steps('promote');
+    await steps.run('Promoting $id to $channel',
+        () => promoteBundle(backend, id!, channel));
+    steps.summary();
     box('promote', [kv('bundle', cyan(id!)), kv('channel', channel)]);
   });
 }
@@ -411,15 +398,13 @@ class BundleUpdateCommand extends FlutterPatcherCommand {
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
     final backend = requireBackend(cfg, override: backendOverride);
     banner('bundle · update');
-    await spinner(
-      () async {
-        await backend.db.updateBundle(id!, patch);
-        await backend.db.commitBundle();
-      },
-      'Updating $id',
-      done: 'Updated',
-    );
+    final steps = Steps('update');
+    await steps.run('Updating $id', () async {
+      await backend.db.updateBundle(id!, patch);
+      await backend.db.commitBundle();
+    });
     final b = await backend.db.getBundleById(id!);
+    steps.summary();
     if (b != null) {
       box('bundle', [
         kv('id', cyan(b.id)),

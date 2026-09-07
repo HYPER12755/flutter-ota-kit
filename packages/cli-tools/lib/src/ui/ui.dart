@@ -302,10 +302,114 @@ class Steps {
     final parts = <String>[];
     if (_done > 0) parts.add('${_done} completed');
     if (_skipped > 0) parts.add('${_skipped} skipped');
-    if (_failed > 0) parts.add('${red('${_failed} error${_failed > 1 ? 's' : ''}')}');
+    if (_failed > 0) {
+      parts.add('${red('${_failed} error${_failed > 1 ? 's' : ''}')}');
+    }
     if (parts.isEmpty) parts.add('no steps');
     parts.add(time);
     box('summary', [parts.join('  ·  ')]);
+  }
+
+  /// Run a step that shows a spinner while working, then marks it
+  /// success/fail/skip based on the result. This is the recommended way to
+  /// show multi-phase work where each phase has a distinct label the user
+  /// can understand.
+  ///
+  /// Example:
+  /// ```dart
+  /// final s = Steps('deploy');
+  /// final zipped = await s.run('Zipping source', () async {
+  ///   return await zipDir(source);
+  /// });
+  /// final uploaded = await s.run('Uploading to storage', () async {
+  ///   return await backend.putObject(bucket, zipped);
+  /// });
+  /// await s.run('Registering bundle', () async {
+  ///   return await backend.insertBundle(...);
+  /// });
+  /// s.summary();
+  /// ```
+  Future<T> run<T>(String label, Future<T> Function() task) async {
+    if (!_colorOn) {
+      _echo('  ${dim('•')} $label');
+      try {
+        final r = await task();
+        _done++;
+        _echo('  ${green('✓')} $label');
+        return r;
+      } catch (e) {
+        _failed++;
+        _echo('  ${red('✗')} $label');
+        rethrow;
+      }
+    }
+    var i = 0;
+    final sw = Stopwatch()..start();
+    final timer = Timer.periodic(const Duration(milliseconds: 80), (_) {
+      i = (i + 1) % _frames.length;
+      stdout.write('\r\x1b[K  ${cyan(_frames[i])} $label');
+    });
+    try {
+      final r = await task();
+      final elapsed = sw.elapsedMilliseconds;
+      if (elapsed < 200) {
+        await Future.delayed(Duration(milliseconds: 200 - elapsed));
+      }
+      timer.cancel();
+      sw.stop();
+      stdout.write('\r\x1b[K  ${green('✓')} $label\n');
+      _done++;
+      return r;
+    } catch (e) {
+      timer.cancel();
+      stdout.write('\r\x1b[K  ${red('✗')} $label\n');
+      _failed++;
+      rethrow;
+    }
+  }
+
+  Timer? _activeTimer;
+  int _activeIdx = 0;
+  String? _activeLabel;
+
+  /// Print an "active" phase line (⠹ label) that will be replaced in-place
+  /// by the next call to [startActive] or finalized by [completeActive].
+  /// Use this when a long-running operation reports multiple internal phases
+  /// via a callback (e.g. `DeployOptions.onPhase`).
+  void startActive(String label) {
+    _activeLabel = label;
+    if (!_colorOn) {
+      _echo('  ${dim('•')} $label');
+      return;
+    }
+    _activeIdx = 0;
+    _activeTimer?.cancel();
+    _activeTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
+      _activeIdx = (_activeIdx + 1) % _frames.length;
+      stdout.write('\r\x1b[K  ${cyan(_frames[_activeIdx])} $label');
+    });
+  }
+
+  /// Finalize the current active line. If [success] is true (default) the
+  /// line becomes `✓ label` and counts toward `_done`. If false, it becomes
+  /// `✗ label` and counts toward `_failed`. Call this when the long-running
+  /// operation finishes.
+  void completeActive({bool success = true}) {
+    final label = _activeLabel;
+    if (label == null) return;
+    _activeTimer?.cancel();
+    _activeTimer = null;
+    _activeLabel = null;
+    if (_colorOn) {
+      stdout.write(
+        '\r\x1b[K  ${success ? green('✓') : red('✗')} $label\n',
+      );
+    }
+    if (success) {
+      _done++;
+    } else {
+      _failed++;
+    }
   }
 }
 

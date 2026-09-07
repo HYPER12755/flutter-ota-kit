@@ -130,11 +130,10 @@ class ChannelSetCommand extends FlutterPatcherCommand {
     }
     final backend = requireBackend(cfg, override: backendOverride);
     banner('channel · set');
-    await spinner(
-      () => promoteBundle(backend, bundleId, channel),
-      'Promoting $bundleId to $channel',
-      done: 'Channel set',
-    );
+    final steps = Steps('set');
+    await steps.run('Promoting $bundleId to $channel',
+        () => promoteBundle(backend, bundleId, channel));
+    steps.summary();
     box('channel set', [kv('channel', channel), kv('bundle', cyan(bundleId))]);
   });
 }

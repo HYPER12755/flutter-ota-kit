@@ -111,14 +111,14 @@ packages:
       path: "../../packages/core"
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.1.5"
   flutter_ota_kit_plugin_core:
     dependency: "direct main"
     description:
       path: "../plugin-core"
       relative: true
     source: path
-    version: "0.0.6"
+    version: "0.0.7"
   frontend_server_client:
     dependency: transitive
     description:

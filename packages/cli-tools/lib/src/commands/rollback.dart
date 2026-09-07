@@ -45,23 +45,21 @@ class RollbackCommand extends FlutterPatcherCommand {
     final backend = requireBackend(cfg, override: backendOverride);
 
     banner('rollback');
-    final (disabled, live) = await spinner(
-      () async {
-        if (bundleId != null && bundleId.isNotEmpty) {
-          return rollbackToBundle(
-            backend,
-            channel,
-            bundleId,
-            platform: platform,
-          );
-        }
-        final id = await rollbackChannel(backend, channel);
-        final nowLive = (await getChannel(backend, channel))?.id ?? '';
-        return (<String>[id], nowLive);
-      },
-      'Rolling back channel "$channel"',
-      done: 'Rolled back',
-    );
+    final steps = Steps('rollback');
+    final (disabled, live) = await steps.run('Rolling back channel "$channel"', () async {
+      if (bundleId != null && bundleId.isNotEmpty) {
+        return rollbackToBundle(
+          backend,
+          channel,
+          bundleId,
+          platform: platform,
+        );
+      }
+      final id = await rollbackChannel(backend, channel);
+      final nowLive = (await getChannel(backend, channel))?.id ?? '';
+      return (<String>[id], nowLive);
+    });
+    steps.summary();
     box('rollback', [
       kv('channel', channel),
       kv('now live', live.isEmpty ? dim('(none)') : cyan(live)),

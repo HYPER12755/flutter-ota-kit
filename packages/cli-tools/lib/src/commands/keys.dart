@@ -21,10 +21,11 @@ class KeysCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('keys');
-    final (privateB64, publicB64) = await spinner(
-      () => generateEd25519KeyPair(),
+    final steps = Steps('keys');
+    final (privateB64, publicB64) = await steps.run(
       'Generating Ed25519 keypair',
-      done: 'Keypair generated',
+      () => generateEd25519KeyPair(),
+      // Use Steps.run without the spinner pattern; keys is fast.
     );
     box('ed25519 keys', [
       '${bold('private')} (keep secret — use with `deploy --key`):',
@@ -37,12 +38,15 @@ class KeysCommand extends FlutterPatcherCommand {
       final file = configCandidates().first;
       final json =
           file.existsSync() && file.readAsStringSync().trim().isNotEmpty
-          ? (jsonDecode(file.readAsStringSync()) as Map<String, dynamic>)
-          : <String, dynamic>{};
+              ? (jsonDecode(file.readAsStringSync()) as Map<String, dynamic>)
+              : <String, dynamic>{};
       writePath(json, 'publicKey', publicB64);
-      _save(json);
-      step('Saved public key to ${file.path}');
+      await steps.run<void>('Saving public key to ${file.path}',
+          () async {
+        _save(json);
+      });
     }
+    steps.summary();
   });
 
   void _save(Map<String, dynamic> json) {
