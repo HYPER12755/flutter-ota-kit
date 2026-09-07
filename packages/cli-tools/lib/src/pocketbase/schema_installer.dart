@@ -1,19 +1,22 @@
 /// Installs the flutter_ota_kit PocketBase schema (collections, indexes,
-/// default admin) on a running PB instance.
+/// default superuser) on a running PB instance.
 ///
 /// PocketBase is initialized with:
 ///   - `bundles` collection (the OTA bundle metadata)
 ///   - `channels` collection (release channels with a current_bundle pointer)
 ///   - `audit_log` collection (immutable event log)
-///   - `admins` is left to PB's built-in bootstrapping
-///     (set PB_ADMIN_EMAIL + PB_ADMIN_PASSWORD env vars on first start)
+///   - `app_meta` collection (key-value app metadata)
+///   - `bundles_patches` collection (per-bundle patch metadata)
+///   - `users` is PB's built-in auth collection
+///
+/// The first superuser is created via `pocketbase superuser upsert`
+/// before starting the server.
 ///
 /// Idempotent: re-running the installer is a no-op when collections exist.
 library;
 
 import 'dart:convert';
 
-import 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart';
 import 'package:http/http.dart' as http;
 
 const _kBundlesCollection = r'''
@@ -95,6 +98,50 @@ const _kAuditLogCollection = r'''
 }
 ''';
 
+const _kBundlePatchesCollection = r'''
+{
+  "name": "bundles_patches",
+  "type": "base",
+  "listRule": null,
+  "viewRule": null,
+  "createRule": null,
+  "updateRule": null,
+  "deleteRule": null,
+  "fields": [
+    {"name": "bundle_id", "type": "text", "required": true, "options": {"max": 64}},
+    {"name": "base_bundle_id", "type": "text", "required": true, "options": {"max": 64}},
+    {"name": "base_file_hash", "type": "text", "required": true, "options": {"max": 128}},
+    {"name": "patch_file_hash", "type": "text", "required": true, "options": {"max": 128}},
+    {"name": "patch_storage_uri", "type": "text", "required": true, "options": {"max": 512}},
+    {"name": "order_index", "type": "number", "options": {"min": 0}},
+    {"name": "artifact", "type": "file", "options": {"maxSelect": 1, "maxSize": 0, "mimeTypes": []}}
+  ],
+  "indexes": [
+    "CREATE INDEX idx_patches_bundle ON bundles_patches (bundle_id)",
+    "CREATE INDEX idx_patches_base ON bundles_patches (base_bundle_id)"
+  ]
+}
+''';
+
+const _kMetaCollection = r'''
+{
+  "name": "app_meta",
+  "type": "base",
+  "listRule": null,
+  "viewRule": null,
+  "createRule": null,
+  "updateRule": null,
+  "deleteRule": null,
+  "fields": [
+    {"name": "key", "type": "text", "required": true, "options": {"min": 1, "max": 128}},
+    {"name": "value", "type": "json"}
+  ],
+  "indexes": [
+    "CREATE UNIQUE INDEX idx_meta_key ON app_meta (key)"
+  ]
+}
+''';
+
 class _RawAdminClient {
   _RawAdminClient(this.baseUrl);
   final String baseUrl;
@@ -102,7 +149,7 @@ class _RawAdminClient {
 
   Future<String> authenticate(String email, String password) async {
     final res = await http.post(
-      Uri.parse('$baseUrl/api/admins/auth-with-password'),
+      Uri.parse('$baseUrl/api/collections/_superusers/auth-with-password'),
       headers: {'content-type': 'application/json'},
       body: jsonEncode({'identity': email, 'password': password}),
     );
@@ -209,6 +256,10 @@ class PocketBaseSchemaInstaller {
     String rename(String json) {
       if (bundlesCollection != 'bundles') {
         json = json.replaceAll('"bundles"', '"$bundlesCollection"');
+        json = json.replaceAll(
+          'bundles_patches',
+          '${bundlesCollection}_patches',
+        );
       }
       if (channelsCollection != 'channels') {
         json = json.replaceAll('"channels"', '"$channelsCollection"');
@@ -219,10 +270,13 @@ class PocketBaseSchemaInstaller {
       return json;
     }
 
+    final patchesCollectionName = '${bundlesCollection}_patches';
     return [
       _CollectionSpec(bundlesCollection, rename(_kBundlesCollection)),
       _CollectionSpec(channelsCollection, rename(_kChannelsCollection)),
       _CollectionSpec(auditLogCollection, rename(_kAuditLogCollection)),
+      _CollectionSpec(patchesCollectionName, rename(_kBundlePatchesCollection)),
+      _CollectionSpec('app_meta', _kMetaCollection),
     ];
   }
 }

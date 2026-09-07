@@ -16,7 +16,8 @@ export 'src/pocketbase_client.dart'
         PocketBaseClient,
         PocketBaseClientFactory,
         PocketBaseException,
-        PocketBaseList;
+        PocketBaseList,
+        PocketBaseBackup;
 export 'src/pocketbase_database.dart'
     show pocketbaseDatabase, PocketBaseDatabaseConfig;
 export 'src/pocketbase_storage.dart'

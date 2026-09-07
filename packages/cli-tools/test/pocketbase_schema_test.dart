@@ -29,7 +29,7 @@ class _MockPocketBase {
 
   Future<void> _handle(HttpRequest req) async {
     final path = req.uri.path;
-    if (path == '/api/admins/auth-with-password') {
+    if (path == '/api/collections/_superusers/auth-with-password') {
       authCalled = true;
       final body = jsonDecode(await utf8.decoder.bind(req).join()) as Map;
       lastAuthEmail = body['identity'] as String?;
@@ -63,6 +63,14 @@ class _MockPocketBase {
   }
 }
 
+const _allCollections = [
+  'bundles',
+  'channels',
+  'audit_log',
+  'bundles_patches',
+  'app_meta',
+];
+
 void main() {
   late _MockPocketBase mock;
   setUp(() async {
@@ -73,7 +81,7 @@ void main() {
   });
 
   test(
-    'schema installer creates the three collections on a fresh PB',
+    'schema installer creates all five collections on a fresh PB',
     () async {
       final installer = PocketBaseSchemaInstaller(
         url: mock.baseUrl,
@@ -83,24 +91,21 @@ void main() {
       final result = await installer.install();
       expect(mock.authCalled, isTrue);
       expect(mock.lastAuthEmail, 'admin@x.com');
-      expect(result.created, containsAll(['bundles', 'channels', 'audit_log']));
+      expect(result.created, containsAll(_allCollections));
       expect(result.skipped, isEmpty);
-      expect(
-        mock.createdCollections,
-        containsAll(['bundles', 'channels', 'audit_log']),
-      );
+      expect(mock.createdCollections, containsAll(_allCollections));
     },
   );
 
   test('schema installer skips collections that already exist', () async {
-    mock.existingCollections = ['bundles', 'channels', 'audit_log'];
+    mock.existingCollections = _allCollections;
     final installer = PocketBaseSchemaInstaller(
       url: mock.baseUrl,
       adminEmail: 'admin@x.com',
       adminPassword: 'secret',
     );
     final result = await installer.install();
-    expect(result.skipped, containsAll(['bundles', 'channels', 'audit_log']));
+    expect(result.skipped, containsAll(_allCollections));
     expect(result.created, isEmpty);
     expect(mock.createdCollections, isEmpty);
   });

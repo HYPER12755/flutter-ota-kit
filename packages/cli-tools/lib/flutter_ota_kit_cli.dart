@@ -183,11 +183,11 @@ void _printUnknownCommand(FlutterPatcherRunner runner, String typed) {
     // If it looks like "parent sub" but the sub is wrong, show sub help.
     if (parentCmd != null && subTyped != null) {
       final cmd = runner.commands[parentCmd];
+      final sub = subTyped;
       if (cmd != null && cmd.subcommands.isNotEmpty) {
-        // Find closest subcommand.
         final subNames = cmd.subcommands.keys.toList();
         final subSuggestion = subNames
-            .where((s) => s.startsWith(subTyped!) || _levenshtein(subTyped!, s) <= 2)
+            .where((s) => s.startsWith(sub) || _levenshtein(sub, s) <= 2)
             .toList();
         if (subSuggestion.isNotEmpty) {
           stderr.writeln('  ${_cyan('Did you mean?')} $parentCmd ${_green(subSuggestion.first)}');

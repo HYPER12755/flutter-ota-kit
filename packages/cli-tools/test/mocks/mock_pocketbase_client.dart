@@ -6,6 +6,7 @@
 library;
 
 import 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart';
+import 'package:http/http.dart' as http;
 
 class MockPocketBaseClient implements PocketBaseClient {
   MockPocketBaseClient(this.store);
@@ -182,6 +183,154 @@ class MockPocketBaseClient implements PocketBaseClient {
   void close() {
     _closed = true;
   }
+
+  @override
+  Future<Map<String, dynamic>> healthDetailed() async => {
+    'code': 200,
+    'message': 'API is healthy.',
+    'data': {'canBackup': false},
+  };
+
+  @override
+  Future<List<PocketBaseBackup>> listBackups() async => [];
+
+  @override
+  Future<void> createBackup({String? name}) async {}
+
+  @override
+  Future<void> deleteBackup(String key) async {}
+
+  @override
+  Future<void> restoreBackup(String key) async {}
+
+  @override
+  String backupDownloadUrl(String key, String token) => '';
+
+  @override
+  Future<List<Map<String, dynamic>>> listAdmins() async => [];
+
+  @override
+  Future<Map<String, dynamic>> createAdmin({
+    required String email,
+    required String password,
+    required String passwordConfirm,
+  }) async => {'id': 'mock_admin', 'email': email};
+
+  @override
+  Future<Map<String, dynamic>> updateAdmin(
+    String id,
+    Map<String, dynamic> data,
+  ) async => data;
+
+  @override
+  Future<void> deleteAdmin(String id) async {}
+
+  @override
+  Future<List<Map<String, dynamic>>> exportCollection(String collection) async =>
+      [];
+
+  @override
+  Future<void> importCollection(
+    String collection,
+    List<Map<String, dynamic>> records,
+  ) async {}
+
+  @override
+  Future<http.Response> rawRequest(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async => http.Response('{}', 200);
+
+  @override
+  Future<List<int>> downloadFileUnauth(String url) async => [];
+
+  @override
+  Future<Map<String, dynamic>> listLogs({
+    String? filter, String? sort, int page = 1, int perPage = 30,
+  }) async => {'items': [], 'totalItems': 0};
+
+  @override
+  Future<Map<String, dynamic>> getLog(String id) async => {};
+
+  @override
+  Future<List<Map<String, dynamic>>> getLogStats({String? filter}) async => [];
+
+  @override
+  Future<void> truncateLogs() async {}
+
+  @override
+  Future<List<Map<String, dynamic>>> listCollections() async => [];
+
+  @override
+  Future<Map<String, dynamic>> getCollection(String nameOrId) async => {};
+
+  @override
+  Future<Map<String, dynamic>> createCollection(
+    Map<String, dynamic> body,
+  ) async => body;
+
+  @override
+  Future<Map<String, dynamic>> updateCollection(
+    String nameOrId,
+    Map<String, dynamic> body,
+  ) async => body;
+
+  @override
+  Future<void> deleteCollection(String nameOrId) async {}
+
+  @override
+  Future<void> truncateCollection(String nameOrId) async {}
+
+  @override
+  Future<void> importCollections(
+    List<Map<String, dynamic>> collections, {
+    bool deleteMissing = false,
+  }) async {}
+
+  @override
+  Future<void> uploadBackup(List<int> bytes, {String? name}) async {}
+
+  @override
+  Future<List<Map<String, dynamic>>> batch(
+    List<Map<String, dynamic>> requests,
+  ) async => [];
+
+  @override
+  Future<Map<String, dynamic>> listSettings() async => {};
+
+  @override
+  Future<Map<String, dynamic>> updateSettings(
+    Map<String, dynamic> body,
+  ) async => body;
+
+  @override
+  Future<void> testS3(String filesystem) async {}
+
+  @override
+  Future<void> testEmail({
+    required String email,
+    required String template,
+    String? collection,
+  }) async {}
+
+  @override
+  Future<Map<String, dynamic>> runSql(String query) async => {};
+
+  @override
+  Future<List<Map<String, dynamic>>> listCrons() async => [];
+
+  @override
+  Future<void> runCron(String jobId) async {}
+
+  @override
+  Future<Map<String, dynamic>> getCollectionScaffolds() async => {};
+
+  @override
+  Future<List<Map<String, dynamic>>> listOAuth2Providers() async => [];
+
+  @override
+  Future<Map<String, dynamic>> dryRunViewQuery(String query) async => {};
 }
 
 /// In-memory store backing [MockPocketBaseClient].

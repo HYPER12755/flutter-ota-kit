@@ -109,8 +109,15 @@ class _PocketBaseRuntimeStorage implements RuntimeStorageProfile {
 
   @override
   Future<String?> readText(String storageUri) async {
-    // PB serves binary files only; text reads aren't supported.
-    return null;
+    try {
+      final urlData = await getDownloadUrl(storageUri);
+      final url = urlData['fileUrl'];
+      if (url == null || url.isEmpty) return null;
+      final bytes = await _client.downloadFile(url);
+      return String.fromCharCodes(bytes);
+    } catch (_) {
+      return null;
+    }
   }
 }
 

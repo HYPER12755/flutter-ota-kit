@@ -96,8 +96,16 @@ class PocketBaseBundleRow {
 }
 
 /// Convert a [PocketBaseBundleRow] into a [Bundle].
-Bundle mapRowToBundle(PocketBaseBundleRow row) {
+///
+/// If [patches] is provided, they are attached as [BundlePatchArtifact]s.
+Bundle mapRowToBundle(
+  PocketBaseBundleRow row, {
+  List<Map<String, dynamic>>? patches,
+}) {
   final rawMetadata = normalizeMetadata(row.metadata);
+  final patchArtifacts = patches?.map((p) => BundlePatchArtifact.fromJson(
+    p.cast<String, dynamic>(),
+  )).toList();
   return Bundle(
     id: row.id,
     channel: row.channel,
@@ -114,7 +122,7 @@ Bundle mapRowToBundle(PocketBaseBundleRow row) {
     manifestStorageUri: row.manifestStorageUri,
     manifestFileHash: row.manifestFileHash,
     assetBaseStorageUri: row.assetBaseStorageUri,
-    patches: const [],
+    patches: patchArtifacts,
     rolloutCohortCount: row.rolloutCohortCount,
     targetCohorts: row.targetCohorts,
   );

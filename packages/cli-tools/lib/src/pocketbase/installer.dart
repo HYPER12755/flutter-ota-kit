@@ -17,7 +17,7 @@ import 'package:path/path.dart' as p;
 
 /// Default PocketBase version managed by the CLI. Bumped in lockstep with
 /// the rest of the stack.
-const String kDefaultPocketBaseVersion = '0.22.21';
+const String kDefaultPocketBaseVersion = '0.40.3';
 
 /// Where the binary + extracted files live.
 class PocketBaseInstallPaths {
