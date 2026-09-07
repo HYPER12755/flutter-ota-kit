@@ -9,7 +9,6 @@
 /// windows/amd64. Other combinations fall back to a helpful error.
 library;
 
-import 'dart:async';
 import 'dart:io';
 
 import 'package:archive/archive.dart';

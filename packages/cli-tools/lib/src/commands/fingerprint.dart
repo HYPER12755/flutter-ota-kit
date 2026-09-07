@@ -1,7 +1,5 @@
-import 'dart:io';
-
-
 import '../cli_base.dart';
+import '../ui/ui.dart';
 import '../util.dart';
 
 /// `flutter_ota_kit fingerprint` — compute a build-time fingerprint hash.
@@ -24,8 +22,9 @@ class FingerprintCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
+    banner(name);
     final source = argResults!['source'] as String;
     final hash = generateFingerprint(source);
-    stdout.writeln(hash);
+    box('fingerprint', [kv('source', source), kv('hash', hash)]);
   });
 }

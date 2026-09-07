@@ -24,16 +24,6 @@ class ChannelCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Manage channels (list / get / set).';
-
-  @override
-  Future<int> run() => runGuarded(() async {
-    print(description);
-    print('');
-    print('Subcommands:');
-    print('  list              List channels');
-    print('  get <channel>     Show the live bundle for a channel');
-    print('  set <c> <id>      Promote a bundle to a channel');
-  });
 }
 
 class ChannelListCommand extends FlutterPatcherCommand {

@@ -239,12 +239,12 @@ void box(String title, List<String> lines) {
   final leftDashes = math.max(1, totalDashes ~/ 2);
   final rightDashes = totalDashes - leftDashes;
 
-  _echo('╭${'─' * leftDashes}$titleText${'─' * rightDashes}╮');
+  _echo('┌${'─' * leftDashes}$titleText${'─' * rightDashes}┐');
   for (final l in wrapped) {
     final pad = math.max(0, inner - _dispWidth(l));
     _echo('│ $l${' ' * pad} │');
   }
-  _echo('╰${'─' * (width - 2)}╯');
+  _echo('└${'─' * (width - 2)}┘');
 }
 
 // ── Steps ────────────────────────────────────────────────────────────────────
@@ -356,6 +356,10 @@ class ProgressBar {
     );
   }
 
+  /// Finish: print the final status line. This is intentionally async and
+  /// fire-and-forget (called without `await` from [update] and [close]).
+  /// The 500ms delay keeps fast ops readable; if the process exits early,
+  /// the final line may not print — acceptable for a CLI progress aid.
   void _finish() async {
     if (_closed) return;
     _closed = true;

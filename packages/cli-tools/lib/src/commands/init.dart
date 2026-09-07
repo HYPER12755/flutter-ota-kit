@@ -248,10 +248,8 @@ class InitCommand extends FlutterPatcherCommand {
     step('Wrote ${file.path}');
 
     if (global) {
-      stdout.writeln(
-        '  ${yellow('⚠')} Secrets are stored in plaintext under ~/.flutter_ota_kit. '
-        'Restrict permissions and use a secrets manager in production.',
-      );
+      warn('Secrets are stored in plaintext under ~/.flutter_ota_kit. '
+          'Restrict permissions and use a secrets manager in production.');
       return;
     }
 
@@ -259,35 +257,23 @@ class InitCommand extends FlutterPatcherCommand {
     await _scaffoldProject(cfg, provider);
 
     stdout.writeln();
-    stdout.writeln(cyan('Next steps:'));
-    stdout.writeln('  1. ${dim('flutter pub get')}');
-    stdout.writeln(
-      '  2. In lib/main.dart call ${green('await setupFlutterOta();')} '
-      'right after WidgetsFlutterBinding.ensureInitialized() (before runApp).',
-    );
-    stdout.writeln(
-      '     A `.env` scaffold was written — put secrets there, then build with '
-      '`--dart-define-from-file=.env` (environment overrides config).',
-    );
+    stdout.writeln('  ${cyan('Next steps:')}');
+    step('1. ${dim('flutter pub get')}');
+    step('2. In lib/main.dart call ${green('await setupFlutterOta();')} '
+        'right after WidgetsFlutterBinding.ensureInitialized() (before runApp). '
+        'A `.env` scaffold was written — put secrets there, then build with '
+        '`--dart-define-from-file=.env` (environment overrides config).');
     if (provider == 'supabase') {
-      stdout.writeln(
-        '  3. Provision the backend once: ${dim('flutter-ota migrate supabase')}',
-      );
+      step('3. Provision the backend once: ${dim('flutter-ota migrate supabase')}');
     } else if (provider == 'postgres') {
-      stdout.writeln(
-        '  3. Provision the backend: ${dim('flutter-ota migrate postgres')}',
-      );
+      step('3. Provision the backend: ${dim('flutter-ota migrate postgres')}');
     } else if (provider == 'pocketbase') {
-      stdout.writeln(
-        '  3. Install PocketBase + provision the schema: '
-        '${dim('flutter-ota pocketbase install')} then '
-        '${dim('flutter-ota pocketbase serve')}.',
-      );
+      step('3. Install PocketBase + provision the schema: '
+          '${dim('flutter-ota pocketbase install')} then '
+          '${dim('flutter-ota pocketbase serve')}.');
     }
-    stdout.writeln(
-      '  4. Build a patch: ${dim('flutter-ota build --name 1.0.1')} '
-      'then ${dim('flutter-ota deploy')}',
-    );
+    step('4. Build a patch: ${dim('flutter-ota build --name 1.0.1')} '
+        'then ${dim('flutter-ota deploy')}');
   });
 
   /// Generate the integration files (pubspec dep, manifest permission, setup dart
@@ -306,9 +292,7 @@ class InitCommand extends FlutterPatcherCommand {
   void _addPubDependency() {
     final pubspec = File('pubspec.yaml');
     if (!pubspec.existsSync()) {
-      stdout.writeln(
-        yellow('  ⚠ pubspec.yaml not found; skipping dependency injection.'),
-      );
+      warn('pubspec.yaml not found; skipping dependency injection.');
       return;
     }
     var content = pubspec.readAsStringSync();
@@ -320,11 +304,7 @@ class InitCommand extends FlutterPatcherCommand {
     final marker = '\ndependencies:';
     final idx = content.indexOf(marker);
     if (idx == -1) {
-      stdout.writeln(
-        yellow(
-          '  ⚠ could not find a `dependencies:` block; add `flutter_ota_kit` manually.',
-        ),
-      );
+      warn('Could not find a `dependencies:` block; add `flutter_ota_kit` manually.');
       return;
     }
     final insertAt = idx + marker.length;
@@ -336,11 +316,7 @@ class InitCommand extends FlutterPatcherCommand {
   void _addInternetPermission() {
     final mf = File('android/app/src/main/AndroidManifest.xml');
     if (!mf.existsSync()) {
-      stdout.writeln(
-        yellow(
-          '  ⚠ AndroidManifest.xml not found; skipping INTERNET permission.',
-        ),
-      );
+      warn('AndroidManifest.xml not found; skipping INTERNET permission.');
       return;
     }
     var content = mf.readAsStringSync();
@@ -350,11 +326,7 @@ class InitCommand extends FlutterPatcherCommand {
     }
     final match = RegExp(r'<manifest[^>]*>').firstMatch(content);
     if (match == null) {
-      stdout.writeln(
-        yellow(
-          '  ⚠ could not locate <manifest> tag; add INTERNET permission manually.',
-        ),
-      );
+      warn('Could not locate <manifest> tag; add INTERNET permission manually.');
       return;
     }
     final insertAt = match.end;

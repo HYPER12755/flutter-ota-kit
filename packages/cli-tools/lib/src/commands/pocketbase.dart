@@ -202,6 +202,7 @@ class PocketBaseStopCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
+    banner('pocketbase · stop');
     step('Use Ctrl+C on the running serve process to stop PocketBase.');
     return;
   });
@@ -216,6 +217,7 @@ class PocketBaseStatusCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
+    banner('pocketbase · status');
     final paths = PocketBaseInstallPaths.resolve();
     final exists = await paths.binaryPath.exists();
     if (exists) {

@@ -1,7 +1,5 @@
 import 'dart:convert';
 
-
-import '../backend.dart';
 import '../cli_base.dart';
 import '../config.dart';
 import '../sign.dart';
@@ -9,12 +7,9 @@ import '../ui/ui.dart';
 
 /// `flutter_ota_kit keys` — generate an Ed25519 keypair for bundle signing.
 class KeysCommand extends FlutterPatcherCommand {
-  KeysCommand({this.config, this.backendOverride}) {
+  KeysCommand() {
     argParser.addFlag('save', help: 'Persist the public key into the project config.');
   }
-
-  final FlutterPatcherConfig? config;
-  final Backend? backendOverride;
 
   @override
   String get name => 'keys';

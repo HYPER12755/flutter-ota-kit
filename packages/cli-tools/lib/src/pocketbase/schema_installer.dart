@@ -232,6 +232,3 @@ class _CollectionSpec {
   final String name;
   final String schema;
 }
-
-/// Re-export so callers can use the typed client as well.
-typedef PocketBaseBackend = PocketBaseClient;

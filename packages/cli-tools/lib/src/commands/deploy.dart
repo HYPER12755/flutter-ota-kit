@@ -73,11 +73,7 @@ class DeployCommand extends FlutterPatcherCommand {
     final bundleId = argResults!['bundle-id'] as String?;
 
     banner('deploy');
-    stdout.writeln(
-      '  ${gray('channel')}  ${cyan(channel)}   '
-      '${gray('platform')}  ${cyan(platform)}   '
-      '${gray('source')}  ${dim(source)}',
-    );
+    info('channel ${cyan(channel)}  platform ${cyan(platform)}  source ${dim(source)}');
 
     final bundle = await spinner(
       () => deployBundle(

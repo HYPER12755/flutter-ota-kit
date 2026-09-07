@@ -18,8 +18,22 @@ class FlutterPatcherRunner extends CommandRunner<int> {
   }
 
   @override
-  Future<int?> runCommand(ArgResults results) {
+  Future<int?> runCommand(ArgResults results) async {
     verboseMode = results['verbose'] as bool? ?? false;
+
+    // Intercept missing subcommand for parent commands so we show our
+    // colored usage text instead of the args package's plain text.
+    if (results.command == null && results.rest.isEmpty) {
+      final cmdName = results.arguments.isNotEmpty ? results.arguments.first : null;
+      if (cmdName != null) {
+        final cmd = commands[cmdName];
+        if (cmd != null && cmd.subcommands.isNotEmpty) {
+          cmd.printUsage();
+          return 0;
+        }
+      }
+    }
+
     return super.runCommand(results);
   }
 

@@ -59,27 +59,6 @@ class BundleCommand extends FlutterPatcherCommand {
   @override
   String get description =>
       'Manage bundles (list / show / delete / disable / enable / force / promote).';
-
-  @override
-  Future<int> run() => runGuarded(() async {
-    print(description);
-    print('');
-    print('Subcommands:');
-    print(
-      '  list                 List bundles (filters: --channel/-c, --platform/-p, --enabled, --limit/-l)',
-    );
-    print('  show --id <id>        Show a single bundle\'s details');
-    print('  delete --id <id>      Delete a bundle');
-    print('  disable --id <id>     Disable a bundle (stop serving it)');
-    print('  enable --id <id>      Enable a bundle');
-    print(
-      '  force --id <id>       Force an update onto clients (--off to clear)',
-    );
-    print('  promote --id <id> -c  Promote a bundle to a channel');
-    print(
-      '  update --id <id> ...  Edit metadata (--message/--target-version/--enabled/--force)',
-    );
-  });
 }
 
 class BundleListCommand extends FlutterPatcherCommand {

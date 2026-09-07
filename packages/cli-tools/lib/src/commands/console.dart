@@ -39,6 +39,7 @@ class ConsoleCommand extends FlutterPatcherCommand {
       return;
     }
     if (argResults!['open'] as bool) {
+      banner('console · open');
       step('Launching console...');
       final process = await Process.start(
         'flutter',
@@ -47,7 +48,8 @@ class ConsoleCommand extends FlutterPatcherCommand {
         runInShell: true,
         mode: ProcessStartMode.inheritStdio,
       );
-      exitCode = await process.exitCode;
+      final code = await process.exitCode;
+      if (code != 0) err('flutter run exited with code $code');
       return;
     }
     banner('console');

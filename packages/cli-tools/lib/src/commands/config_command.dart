@@ -18,17 +18,6 @@ class ConfigCommand extends FlutterPatcherCommand {
 
   @override
   String get description => 'Get, set, or list configuration values.';
-
-  @override
-  Future<int> run() => runGuarded(() async {
-    // No subcommand selected.
-    print(description);
-    print('');
-    print('Subcommands:');
-    print('  get <key>');
-    print('  set <key> <value>');
-    print('  list');
-  });
 }
 
 Map<String, dynamic> _loadProjectJson() {
@@ -59,6 +48,7 @@ class ConfigGetCommand extends FlutterPatcherCommand {
 
   @override
   Future<int> run() => runGuarded(() async {
+    ui.banner('config · get');
     final key = argResults!['key'] as String? ??
         (argResults!.rest.isNotEmpty ? argResults!.rest.first : null);
     if (key == null || key.isEmpty) {
@@ -66,7 +56,7 @@ class ConfigGetCommand extends FlutterPatcherCommand {
     }
     final value = readPath(_loadProjectJson(), key);
     if (value == null) {
-      stderr.writeln('(not set)');
+      ui.warn('(not set)');
       return;
     }
     stdout.writeln(
