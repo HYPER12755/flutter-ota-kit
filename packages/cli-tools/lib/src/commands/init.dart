@@ -227,8 +227,8 @@ class InitCommand extends FlutterPatcherCommand {
               env['SUPABASE_SERVICE_ROLE_KEY'],
             ),
             anonKey: _p(
-              'Supabase publishable key',
-              env['SUPABASE_PUBLISHABLE_KEY'],
+              'Supabase anon key',
+              env['SUPABASE_ANON_KEY'],
             ),
             bucket: _p('Storage bucket', env['SUPABASE_BUCKET'] ?? 'bundles'),
             basePath: _p('Storage base path', env['SUPABASE_BASE_PATH']),
@@ -420,7 +420,7 @@ class InitCommand extends FlutterPatcherCommand {
       default:
         final c = cfg.supabase;
         entries['SUPABASE_URL'] = c.url ?? '';
-        entries['SUPABASE_PUBLISHABLE_KEY'] = c.anonKey ?? '';
+        entries['SUPABASE_ANON_KEY'] = c.anonKey ?? '';
         entries['SUPABASE_BUCKET'] = c.bucket ?? 'bundles';
         entries['CHANNEL'] = cfg.channel;
         entries['APP_VERSION'] = '';
@@ -548,7 +548,7 @@ class InitCommand extends FlutterPatcherCommand {
             '''
   FlutterPatcher.configureSupabase(SupabaseUpdateConfig(
      supabaseUrl: const String.fromEnvironment('SUPABASE_URL', defaultValue: ${_q(c.url ?? '')}),
-     anonKey: const String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY', defaultValue: ''),
+     anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
      bucket: const String.fromEnvironment('SUPABASE_BUCKET', defaultValue: ${_q(c.bucket ?? 'bundles')}),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: $channel),
     platform: Platform.android,

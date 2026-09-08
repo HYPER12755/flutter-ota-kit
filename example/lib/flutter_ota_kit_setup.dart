@@ -14,7 +14,7 @@ import 'package:flutter_ota_kit/flutter_ota_kit.dart';
 Future<void> setupFlutterOta() async {
   FlutterPatcher.configureSupabase(SupabaseUpdateConfig(
      supabaseUrl: const String.fromEnvironment('SUPABASE_URL', defaultValue: ''),
-     anonKey: const String.fromEnvironment('SUPABASE_PUBLISHABLE_KEY', defaultValue: ''),
+     anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
      bucket: const String.fromEnvironment('SUPABASE_BUCKET', defaultValue: 'bundles'),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: 'production'),
     platform: Platform.android,
