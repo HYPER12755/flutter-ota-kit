@@ -767,11 +767,39 @@ class FlutterPatcher {
 
     final showOverlay = showUpdateUi && result.shouldForceUpdate;
     final fromVersion = await currentVersion;
+    final patchHash = result.patch!.md5;
+    final shortHash =
+        patchHash.isNotEmpty ? patchHash.substring(0, patchHash.length.clamp(0, 8)) : null;
+
+    // Extract channel/platform from whichever config is active
+    String? channel;
+    String? platform;
+    if (_supabaseConfig != null) {
+      channel = _supabaseConfig!.channel;
+      platform = _supabaseConfig!.platform.name;
+    } else if (_postgresConfig != null) {
+      channel = _postgresConfig!.channel;
+      platform = _postgresConfig!.platform.name;
+    } else if (_cloudflareConfig != null) {
+      channel = _cloudflareConfig!.channel;
+      platform = _cloudflareConfig!.platform.name;
+    } else if (_awsConfig != null) {
+      channel = _awsConfig!.channel;
+      platform = _awsConfig!.platform.name;
+    } else if (_pocketbaseConfig != null) {
+      channel = _pocketbaseConfig!.channel;
+      platform = _pocketbaseConfig!.platform.name;
+    }
+
     final handle = showOverlay
         ? OtaOverlayManager.instance.begin(
             message: result.message,
             targetVersion: result.id,
             currentVersion: fromVersion,
+            bundleHash: shortHash,
+            gitCommit: result.gitCommitHash,
+            channel: channel,
+            platform: platform,
           )
         : null;
 
@@ -785,6 +813,8 @@ class FlutterPatcher {
 
     if (applied.ok && result.shouldForceUpdate) {
       handle?.end();
+      // Wait for overlay to finish its minimum display time + success dwell
+      await Future.delayed(const Duration(seconds: 3));
       await restart();
     } else {
       handle?.end(hasError: !applied.ok, errorText: applied.message);

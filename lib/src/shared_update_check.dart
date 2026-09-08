@@ -115,5 +115,6 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
     shouldForceUpdate: info.shouldForceUpdate,
     id: info.id,
     message: info.message,
+    gitCommitHash: info.gitCommitHash,
   );
 }

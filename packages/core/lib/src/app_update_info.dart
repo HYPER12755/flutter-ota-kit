@@ -9,6 +9,7 @@ class UpdateInfo {
   final UpdateStatus status;
   final String? storageUri;
   final String? fileHash;
+  final String? gitCommitHash;
 
   /// Internal rollout metadata; never serialized to update-check clients.
   final int? rolloutCohortCount;
@@ -21,6 +22,7 @@ class UpdateInfo {
     required this.status,
     required this.storageUri,
     required this.fileHash,
+    this.gitCommitHash,
     this.rolloutCohortCount,
     this.targetCohorts,
   });

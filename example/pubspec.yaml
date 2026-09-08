@@ -26,8 +26,22 @@ dev_dependencies:
 # `dependency_overrides` against local paths. Mirror those here so the example
 # resolves consistently.
 dependency_overrides:
+  flutter_ota_kit_client:
+    path: ../packages/client
+  flutter_ota_kit_core:
+    path: ../packages/core
+  flutter_ota_kit_supabase:
+    path: ../plugins/supabase
+  flutter_ota_kit_postgres:
+    path: ../plugins/postgres
+  flutter_ota_kit_cloudflare:
+    path: ../plugins/cloudflare
+  flutter_ota_kit_aws:
+    path: ../plugins/aws
   flutter_ota_kit_pocketbase:
     path: ../plugins/pocketbase
+  flutter_ota_kit_plugin_core:
+    path: ../plugins/plugin-core
 
 flutter:
   uses-material-design: true

@@ -23,6 +23,7 @@ class _SupabaseUpdateInfoRow {
   final String status;
   final String? storageUri;
   final String? fileHash;
+  final String? gitCommitHash;
 
   const _SupabaseUpdateInfoRow({
     required this.id,
@@ -31,6 +32,7 @@ class _SupabaseUpdateInfoRow {
     required this.status,
     required this.storageUri,
     required this.fileHash,
+    this.gitCommitHash,
   });
 }
 
@@ -65,6 +67,7 @@ UpdateInfo mapUpdateInfoRow(_SupabaseUpdateInfoRow row) => UpdateInfo(
       : UpdateStatus.update,
   storageUri: row.storageUri,
   fileHash: row.fileHash,
+  gitCommitHash: row.gitCommitHash,
 );
 
 /// Supabase-backed [DatabasePlugin] factory.
@@ -213,6 +216,7 @@ class _SupabaseDatabasePlugin implements AbstractDatabasePlugin {
       status: row['status'] as String,
       storageUri: row['storage_uri'] as String?,
       fileHash: row['file_hash'] as String?,
+      gitCommitHash: row['git_commit_hash'] as String?,
     );
   }
 

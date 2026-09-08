@@ -12,6 +12,7 @@ class ServerUpdateResult {
     this.shouldForceUpdate = false,
     this.id,
     this.message,
+    this.gitCommitHash,
     this.raw = const {},
   });
 
@@ -32,6 +33,7 @@ class ServerUpdateResult {
 
   final String? id;
   final String? message;
+  final String? gitCommitHash;
   final Map<String, dynamic> raw;
 
   bool get hasUpdate => !isUpToDate && patch != null;

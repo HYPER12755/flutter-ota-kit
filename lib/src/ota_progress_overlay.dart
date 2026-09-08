@@ -6,37 +6,27 @@ import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
     show PatchApplyPhase, PatchApplyProgress;
 
 /// Snapshot of the forced-update progress overlay's visual state.
-///
-/// Drives every animated value in [OtaProgressOverlay]. The manager updates
-/// this via [ValueNotifier] so the widget rebuilds without a setState dance.
 class OtaOverlayState {
   final PatchApplyPhase? phase;
-
-  /// Download/verify progress in [0.0, 1.0]. Null when the server does not
-  /// provide a content-length.
   final double? fraction;
-
-  /// Server-provided human-readable update message ("New onboarding flow",
-  /// "Critical security fix", etc.). May be null/empty.
   final String? message;
-
-  /// True when the install failed; the UI switches to an error variant.
   final bool hasError;
-
-  /// Developer-facing error description shown when [hasError] is true.
   final String? errorText;
-
-  /// Target version (the bundle being installed). Shown as "Updating to 1.0.1".
   final String? targetVersion;
-
-  /// The version currently on disk before the install. Shown as
-  /// "1.0.0 → 1.0.1" together with [targetVersion].
   final String? currentVersion;
-
-  /// Optional user-facing error hint shown below [errorText] when the install
-  /// fails. Used to tell the user "relaunch the app to retry" / "check your
-  /// network" etc. without making the SDK guess the underlying cause.
   final String? errorHint;
+  final String? bundleHash;
+  final String? gitCommit;
+  final String? commitMessage;
+  final String? channel;
+  final String? platform;
+  final int? bytesPerSec;
+  final List<LogLine> logs;
+  final bool canRetry;
+
+  /// Which step index is currently active (0-based). Steps that are done
+  /// get a green checkmark; the active step gets the braille spinner.
+  final int activeStep;
 
   const OtaOverlayState({
     this.phase,
@@ -47,11 +37,17 @@ class OtaOverlayState {
     this.targetVersion,
     this.currentVersion,
     this.errorHint,
+    this.bundleHash,
+    this.gitCommit,
+    this.commitMessage,
+    this.channel,
+    this.platform,
+    this.bytesPerSec,
+    this.logs = const [],
+    this.canRetry = false,
+    this.activeStep = 0,
   });
 
-  /// Returns a new [OtaOverlayState] with the given fields replaced. A
-  /// sentinel object is used for [hasError] so the caller can clear it
-  /// (passing `false` to switch back to the progress variant after an error).
   OtaOverlayState copyWith({
     PatchApplyPhase? phase,
     double? fraction,
@@ -61,6 +57,14 @@ class OtaOverlayState {
     String? targetVersion,
     String? currentVersion,
     String? errorHint,
+    String? bundleHash,
+    String? gitCommit,
+    String? channel,
+    String? platform,
+    int? bytesPerSec,
+    List<LogLine>? logs,
+    bool? canRetry,
+    int? activeStep,
   }) {
     return OtaOverlayState(
       phase: phase ?? this.phase,
@@ -71,40 +75,52 @@ class OtaOverlayState {
       targetVersion: targetVersion ?? this.targetVersion,
       currentVersion: currentVersion ?? this.currentVersion,
       errorHint: errorHint ?? this.errorHint,
+      bundleHash: bundleHash ?? this.bundleHash,
+      gitCommit: gitCommit ?? this.gitCommit,
+      commitMessage: commitMessage ?? this.commitMessage,
+      channel: channel ?? this.channel,
+      platform: platform ?? this.platform,
+      bytesPerSec: bytesPerSec ?? this.bytesPerSec,
+      logs: logs ?? this.logs,
+      canRetry: canRetry ?? this.canRetry,
+      activeStep: activeStep ?? this.activeStep,
     );
   }
 }
 
-/// Sentinel for [OtaOverlayState.copyWith] — allows unsetting booleans.
+/// A single terminal log line with color tag.
+class LogLine {
+  final String color;
+  final String text;
+
+  const LogLine(this.color, this.text);
+}
+
 const Object _unset = Object();
 
-/// Terminal-style rotating dot spinner ([⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏]).
-const List<String> _brailleSpinner = [
-  '⠋',
-  '⠙',
-  '⠹',
-  '⠸',
-  '⠼',
-  '⠴',
-  '⠦',
-  '⠧',
-  '⠇',
-  '⠏',
-];
-
-/// Default retry hint shown when an error occurs and no override is given.
 const String _defaultErrorHint = 'Close the app and reopen to retry.';
 
-/// The visual overlay shown during a forced OTA update.
+/// The 5 steps shown during a forced update.
+const List<String> _stepLabels = [
+  'Initializing update',
+  'Downloading update',
+  'Verifying hash',
+  'Applying patch',
+  'Finalizing',
+];
+
+/// Returns the display label for step [i]. On error, step 3 shows
+/// "Skipping patch" instead of "Applying patch".
+String _stepLabel(int i, bool hasError) {
+  if (hasError && i == 3) return 'Skipping patch ✗';
+  return _stepLabels[i];
+}
+
+/// Full-screen terminal-style forced-update overlay.
 ///
-/// Renders a centered card with:
-///   * a circular progress ring with the spinner in the center,
-///   * the current phase label,
-///   * the from→to version transition (when both are known),
-///   * the server-provided message,
-///   * a slim determinate linear bar (when [OtaOverlayState.fraction] is known),
-///   * an error variant with a retry hint.
-class OtaProgressOverlay extends StatelessWidget {
+/// Top half: 5-step progress with braille spinner / checkmarks.
+/// Bottom half: scrollable terminal log box.
+class OtaProgressOverlay extends StatefulWidget {
   final ValueNotifier<OtaOverlayState> state;
   final bool dismissible;
 
@@ -114,157 +130,256 @@ class OtaProgressOverlay extends StatelessWidget {
     this.dismissible = false,
   });
 
-  static const Map<PatchApplyPhase, String> _phaseLabel = {
-    PatchApplyPhase.downloading: 'Downloading update',
-    PatchApplyPhase.verifying: 'Verifying integrity',
-    PatchApplyPhase.finalizing: 'Installing patch',
-  };
+  @override
+  State<OtaProgressOverlay> createState() => _OtaProgressOverlayState();
+}
 
-  /// Computes the "from → to" version line, e.g. "1.0.0 → 1.0.1".
-  /// Returns null when either side is missing.
-  String? _versionTransition(OtaOverlayState s) {
-    final from = s.currentVersion;
-    final to = s.targetVersion;
-    if (from == null || from.isEmpty || to == null || to.isEmpty) return null;
-    if (from == to) return to; // skip the arrow if already on this version
-    return '$from  →  $to';
+class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
+  int _spinnerIndex = 0;
+  Timer? _spinnerTimer;
+
+  static const _braille = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
+  @override
+  void initState() {
+    super.initState();
+    _spinnerTimer = Timer.periodic(const Duration(milliseconds: 80), (_) {
+      if (!mounted) return;
+      setState(() => _spinnerIndex = (_spinnerIndex + 1) % _braille.length);
+    });
   }
 
   @override
+  void dispose() {
+    _spinnerTimer?.cancel();
+    super.dispose();
+  }
+
+  static const Map<String, Color> _logColors = {
+    'green': Color(0xFF3FB950),
+    'red': Color(0xFFF85149),
+    'yellow': Color(0xFFD29922),
+    'gray': Color(0xFF8B949E),
+    'white': Color(0xFFC9D1D9),
+    'cyan': Color(0xFF58A6FF),
+    'success': Color(0xFF79C0FF),
+  };
+
+  @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final scheme = theme.colorScheme;
     return ValueListenableBuilder<OtaOverlayState>(
-      valueListenable: state,
+      valueListenable: widget.state,
       builder: (context, s, _) {
-        final phaseText = s.hasError
-            ? 'Update failed'
-            : (s.phase != null ? _phaseLabel[s.phase]! : 'Preparing update');
+        final spinner = _braille[_spinnerIndex];
         final pct = s.fraction;
         final pctText = pct != null
             ? '${(pct.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%'
-            : null;
-        final accent = s.hasError ? scheme.error : scheme.primary;
-        final onSurfaceDim = scheme.onSurface.withValues(alpha: 0.7);
-        final ringBg = scheme.onSurface.withValues(alpha: 0.12);
-        final versionLine = _versionTransition(s);
-        final message = s.message;
+            : '';
 
-        return Semantics(
-          label: s.hasError
-              ? 'Update failed. ${s.errorText ?? ''}'
-              : 'Updating app, ${phaseText.toLowerCase()}. ${pctText ?? ''}',
-          liveRegion: true,
-          child: Material(
-            color: Colors.black54,
-            child: Stack(
+        return Material(
+          color: const Color(0xFF0d1117),
+          child: SafeArea(
+            child: Column(
               children: [
-                if (dismissible)
-                  Positioned.fill(
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () {
-                        // The overlay intentionally ignores user dismissal — the
-                        // SDK owns the install. The flag exists only so tests
-                        // can opt-in.
-                      },
-                    ),
-                  ),
-                Center(
-                  child: Container(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    margin: const EdgeInsets.symmetric(horizontal: 24),
-                    padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-                    decoration: BoxDecoration(
-                      color: scheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      border: Border.all(
-                        color: scheme.onSurface.withValues(alpha: 0.06),
-                      ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withValues(alpha: 0.3),
-                          blurRadius: 32,
-                          offset: const Offset(0, 12),
-                        ),
-                      ],
-                    ),
+                // ─── Top half: steps ───
+                Expanded(
+                  child: Padding(
+                    padding: const EdgeInsets.symmetric(
+                        horizontal: 32, vertical: 24),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _ProgressRing(
-                          fraction: pct,
-                          color: accent,
-                          trackColor: ringBg,
-                          hasError: s.hasError,
-                          isDownloading: s.phase == PatchApplyPhase.downloading,
-                        ),
-                        const SizedBox(height: 18),
-                        Text(
-                          phaseText,
-                          textAlign: TextAlign.center,
-                          style: theme.textTheme.titleLarge?.copyWith(
-                            fontWeight: FontWeight.w600,
-                            letterSpacing: -0.2,
-                          ),
-                        ),
-                        if (versionLine != null) ...[
-                          const SizedBox(height: 4),
-                          Text(
-                            versionLine,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: onSurfaceDim,
+                        // Title
+                        Center(
+                          child: Text(
+                            s.hasError ? 'Update failed' : 'Updating app',
+                            style: const TextStyle(
                               fontFamily: 'monospace',
+                              fontSize: 20,
+                              fontWeight: FontWeight.w700,
+                              color: Color(0xFFC9D1D9),
+                              letterSpacing: -0.3,
                             ),
                           ),
-                        ],
-                        if (message != null && message.isNotEmpty) ...[
-                          const SizedBox(height: 14),
-                          Text(
-                            message,
-                            textAlign: TextAlign.center,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: onSurfaceDim,
-                            ),
-                          ),
-                        ],
-                        if (s.hasError) ...[
-                          const SizedBox(height: 12),
-                          _ErrorBlock(
-                            errorText: s.errorText,
-                            hint: s.errorHint ?? _defaultErrorHint,
-                            errorColor: scheme.error,
-                            hintColor: onSurfaceDim,
-                            bodyStyle: theme.textTheme.bodySmall,
-                          ),
-                        ],
-                        const SizedBox(height: 18),
-                        if (pctText != null)
-                          Padding(
-                            padding: const EdgeInsets.only(bottom: 6),
+                        ),
+                        const SizedBox(height: 8),
+                        // Version line
+                        if (s.currentVersion != null &&
+                            s.targetVersion != null)
+                          Center(
                             child: Text(
-                              pctText,
-                              style: theme.textTheme.titleSmall?.copyWith(
-                                color: accent,
-                                fontWeight: FontWeight.w600,
+                              '${s.currentVersion}  →  ${s.targetVersion}',
+                              style: const TextStyle(
                                 fontFamily: 'monospace',
+                                fontSize: 14,
+                                color: Color(0xFF58A6FF),
                               ),
                             ),
                           ),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(8),
-                          child: LinearProgressIndicator(
-                            value: pct,
-                            minHeight: 8,
-                            backgroundColor: ringBg,
-                            valueColor: AlwaysStoppedAnimation(accent),
+                        const SizedBox(height: 32),
+                        // Steps
+                        ...List.generate(_stepLabels.length, (i) {
+                          final done = i < s.activeStep;
+                          final active = i == s.activeStep && !s.hasError;
+                          final failed = i == s.activeStep && s.hasError;
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 14),
+                            child: Row(
+                              children: [
+                                SizedBox(
+                                  width: 24,
+                                  child: done
+                                      ? const Icon(Icons.check_rounded,
+                                          size: 18,
+                                          color: Color(0xFF79C0FF))
+                                      : active
+                                          ? Text(
+                                              spinner,
+                                              style: const TextStyle(
+                                                fontFamily: 'monospace',
+                                                fontSize: 16,
+                                                color: Color(0xFF58A6FF),
+                                              ),
+                                            )
+                                          : failed
+                                              ? const Icon(Icons.close_rounded,
+                                                  size: 18,
+                                                  color: Color(0xFFF85149))
+                                              : Text(
+                                                  '${i + 1}',
+                                                  style: const TextStyle(
+                                                    fontFamily: 'monospace',
+                                                    fontSize: 14,
+                                                    color: Color(0xFF484F58),
+                                                  ),
+                                                ),
+                                ),
+                                const SizedBox(width: 12),
+                                Text(
+                                  _stepLabel(i, s.hasError),
+                                  style: TextStyle(
+                                    fontFamily: 'monospace',
+                                    fontSize: 14,
+                                    color: done
+                                        ? const Color(0xFF79C0FF)
+                                        : active
+                                            ? const Color(0xFFC9D1D9)
+                                            : failed
+                                                ? const Color(0xFFF85149)
+                                                : const Color(0xFF484F58),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          );
+                        }),
+                      ],
+                    ),
+                  ),
+                ),
+                // ─── Braille progress bar ───
+                if (pct != null)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 32),
+                    child: Column(
+                      children: [
+                        _BrailleProgressBar(fraction: pct),
+                        const SizedBox(height: 6),
+                        Text(
+                          pctText,
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 12,
+                            color: Color(0xFF8B949E),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                const SizedBox(height: 12),
+                // ─── Bottom half: terminal log ───
+                Expanded(
+                  child: Container(
+                    margin: const EdgeInsets.symmetric(horizontal: 16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF161B22),
+                      borderRadius: BorderRadius.circular(10),
+                      border: Border.all(color: const Color(0xFF30363D)),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Terminal header
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 14, vertical: 8),
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF21262D),
+                            borderRadius: BorderRadius.only(
+                              topLeft: Radius.circular(10),
+                              topRight: Radius.circular(10),
+                            ),
+                          ),
+                          child: Row(
+                            children: [
+                              _dot(const Color(0xFFF85149)),
+                              const SizedBox(width: 6),
+                              _dot(const Color(0xFFD29922)),
+                              const SizedBox(width: 6),
+                              _dot(const Color(0xFF3FB950)),
+                              const SizedBox(width: 12),
+                              const Text(
+                                'ota-log',
+                                style: TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontSize: 11,
+                                  color: Color(0xFF8B949E),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        // Log lines
+                        Expanded(
+                          child: Padding(
+                            padding: const EdgeInsets.all(12),
+                            child: _TerminalLog(
+                              logs: s.logs,
+                              logColors: _logColors,
+                            ),
                           ),
                         ),
                       ],
                     ),
                   ),
                 ),
+                // Retry button (error only)
+                if (s.hasError && s.canRetry)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    child: TextButton(
+                      onPressed: () {},
+                      style: TextButton.styleFrom(
+                        foregroundColor: const Color(0xFF58A6FF),
+                        padding: const EdgeInsets.symmetric(
+                            horizontal: 32, vertical: 12),
+                        side: const BorderSide(color: Color(0xFF30363D)),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                      ),
+                      child: const Text(
+                        '[ Retry ]',
+                        style: TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 14,
+                        ),
+                      ),
+                    ),
+                  )
+                else
+                  const SizedBox(height: 48),
               ],
             ),
           ),
@@ -272,134 +387,122 @@ class OtaProgressOverlay extends StatelessWidget {
       },
     );
   }
+
+  Widget _dot(Color color) => Container(
+        width: 12,
+        height: 12,
+        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+      );
 }
 
-/// Circular progress ring with the spinner rendered inside. Falls back to
-/// a rotating braille spinner when [fraction] is unknown.
-class _ProgressRing extends StatelessWidget {
-  final double? fraction;
-  final Color color;
-  final Color trackColor;
-  final bool hasError;
-  final bool isDownloading;
+/// Braille-character progress bar with animated spinner at the leading edge.
+///
+/// Smoothly interpolates over ~4 seconds so the bar visually catches up
+/// to the actual download percentage.
+class _BrailleProgressBar extends StatefulWidget {
+  final double fraction;
+  const _BrailleProgressBar({required this.fraction});
 
-  const _ProgressRing({
-    required this.fraction,
-    required this.color,
-    required this.trackColor,
-    required this.hasError,
-    required this.isDownloading,
-  });
+  @override
+  State<_BrailleProgressBar> createState() => _BrailleProgressBarState();
+}
+
+class _BrailleProgressBarState extends State<_BrailleProgressBar> {
+  int _spinIdx = 0;
+  Timer? _spinTimer;
+  double _displayFraction = 0;
+  DateTime? _lastUpdate;
+
+  static const _spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
+
+  @override
+  void initState() {
+    super.initState();
+    _displayFraction = widget.fraction;
+    _lastUpdate = DateTime.now();
+    _spinTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      if (!mounted) return;
+      setState(() {
+        _spinIdx = (_spinIdx + 1) % _spinner.length;
+
+        // Smooth interpolation: reach target in ~4 seconds
+        // Use time-based lerp for consistent speed regardless of tick rate
+        final now = DateTime.now();
+        final dt = _lastUpdate != null
+            ? now.difference(_lastUpdate!).inMilliseconds / 1000.0
+            : 0.05;
+        _lastUpdate = now;
+
+        final diff = widget.fraction - _displayFraction;
+        if (diff > 0.001) {
+          // Lerp ~25% of remaining distance per frame → ~4s to reach 99%
+          final speed = diff * (1 - math.pow(0.75, dt * 20));
+          _displayFraction = (_displayFraction + speed).clamp(0.0, 1.0);
+        } else {
+          _displayFraction = widget.fraction;
+        }
+      });
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _BrailleProgressBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+  }
+
+  @override
+  void dispose() {
+    _spinTimer?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 88,
-      height: 88,
-      child: Stack(
-        alignment: Alignment.center,
-        children: [
-          CustomPaint(
-            size: const Size(88, 88),
-            painter: _RingPainter(
-              fraction: fraction,
-              color: color,
-              trackColor: trackColor,
-            ),
-          ),
-          if (isDownloading || fraction == null)
-            _DotSpinner(color: color)
-          else
-            Icon(
-              hasError ? Icons.error_outline : Icons.check_rounded,
-              color: color,
-              size: 32,
-            ),
-        ],
+    const total = 30;
+    final filled = (_displayFraction.clamp(0.0, 1.0) * total).floor();
+    final empty = total - filled - 1;
+    final spinChar = _spinner[_spinIdx];
+
+    return Text(
+      '${'⣿' * filled}$spinChar${'⠀' * empty}',
+      style: const TextStyle(
+        fontFamily: 'monospace',
+        fontSize: 14,
+        color: Color(0xFF58A6FF),
+        letterSpacing: 0,
       ),
     );
   }
 }
 
-/// Renders the ring background + the determinate progress arc.
-class _RingPainter extends CustomPainter {
-  final double? fraction;
-  final Color color;
-  final Color trackColor;
+/// Scrollable terminal log view — no prefix, auto-scrolls to bottom.
+class _TerminalLog extends StatefulWidget {
+  final List<LogLine> logs;
+  final Map<String, Color> logColors;
 
-  _RingPainter({
-    required this.fraction,
-    required this.color,
-    required this.trackColor,
-  });
+  const _TerminalLog({required this.logs, required this.logColors});
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final stroke = 6.0;
-    final center = Offset(size.width / 2, size.height / 2);
-    final radius = (math.min(size.width, size.height) - stroke) / 2;
-
-    final track = Paint()
-      ..color = trackColor
-      ..strokeWidth = stroke
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    canvas.drawCircle(center, radius, track);
-
-    final f = fraction;
-    if (f == null) return;
-    final progress = Paint()
-      ..color = color
-      ..strokeWidth = stroke
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-    final sweep = (f.clamp(0.0, 1.0)) * 2 * math.pi;
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -math.pi / 2,
-      sweep,
-      false,
-      progress,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_RingPainter oldDelegate) =>
-      oldDelegate.fraction != fraction ||
-      oldDelegate.color != color ||
-      oldDelegate.trackColor != trackColor;
+  State<_TerminalLog> createState() => _TerminalLogState();
 }
 
-/// Braille spinner widget — kept for the indeterminate phase (no progress
-/// yet known) and as the inner glyph while downloading.
-class _DotSpinner extends StatefulWidget {
-  final Color color;
-  const _DotSpinner({required this.color});
+class _TerminalLogState extends State<_TerminalLog> {
+  final _controller = ScrollController();
 
   @override
-  State<_DotSpinner> createState() => _DotSpinnerState();
-}
-
-class _DotSpinnerState extends State<_DotSpinner>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-  int _index = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller =
-        AnimationController(
-            vsync: this,
-            duration: Duration(milliseconds: 80 * _brailleSpinner.length),
-          )
-          ..addListener(_tick)
-          ..repeat();
-  }
-
-  void _tick() {
-    if (!mounted) return;
-    setState(() => _index = (_index + 1) % _brailleSpinner.length);
+  void didUpdateWidget(covariant _TerminalLog oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.logs.length > oldWidget.logs.length) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_controller.hasClients) {
+          _controller.animateTo(
+            _controller.position.maxScrollExtent,
+            duration: const Duration(milliseconds: 200),
+            curve: Curves.easeOut,
+          );
+        }
+      });
+    }
   }
 
   @override
@@ -409,64 +512,30 @@ class _DotSpinnerState extends State<_DotSpinner>
   }
 
   @override
-  Widget build(BuildContext context) => Text(
-    _brailleSpinner[_index],
-    style: TextStyle(
-      fontSize: 26,
-      height: 1,
-      fontWeight: FontWeight.bold,
-      color: widget.color,
-      fontFamily: 'monospace',
-    ),
-  );
-}
-
-/// Error block: red message on top, retry hint on bottom.
-class _ErrorBlock extends StatelessWidget {
-  final String? errorText;
-  final String hint;
-  final Color errorColor;
-  final Color hintColor;
-  final TextStyle? bodyStyle;
-
-  const _ErrorBlock({
-    required this.errorText,
-    required this.hint,
-    required this.errorColor,
-    required this.hintColor,
-    required this.bodyStyle,
-  });
-
-  @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-      decoration: BoxDecoration(
-        color: errorColor.withValues(alpha: 0.08),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: errorColor.withValues(alpha: 0.2)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (errorText != null && errorText!.isNotEmpty)
-            Text(errorText!, style: bodyStyle?.copyWith(color: errorColor)),
-          const SizedBox(height: 4),
-          Text(hint, style: bodyStyle?.copyWith(color: hintColor)),
-        ],
-      ),
+    return ListView.builder(
+      controller: _controller,
+      itemCount: widget.logs.length,
+      itemBuilder: (context, i) {
+        final line = widget.logs[i];
+        final color = widget.logColors[line.color] ?? widget.logColors['gray']!;
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 4),
+          child: Text(
+            line.text,
+            style: TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 12,
+              color: color,
+            ),
+          ),
+        );
+      },
     );
   }
 }
 
-/// Drives the forced-update progress overlay from SDK code without requiring the
-/// consuming app to build any UI.
-///
-/// An overlay host must be available for the overlay to appear. The recommended
-/// (zero-code) way is to wrap the app in [FlutterOtaApp]; alternatively, assign
-/// [FlutterPatcher.navigatorKey] to the app's [MaterialApp.navigatorKey]. If no
-/// host is registered, [begin] returns `null` and the SDK silently applies the
-/// update (graceful degradation — no crash, just no UI).
+/// Drives the forced-update progress overlay from SDK code.
 class OtaOverlayManager {
   OtaOverlayManager._();
 
@@ -478,68 +547,178 @@ class OtaOverlayManager {
   );
   OverlayEntry? _entry;
   bool _disposed = false;
+  DateTime? _startTime;
 
-  /// Optional resolver used as a fallback when no [OverlayState] has been
-  /// registered (e.g. the app provided [FlutterPatcher.navigatorKey] instead of
-  /// wrapping with [FlutterOtaApp]). Wired by the SDK entrypoint.
   OverlayState? Function()? _resolver;
 
-  /// How long the error state is shown before the overlay is removed. Long
-  /// enough to read the message + retry hint.
-  static const Duration errorDwell = Duration(seconds: 6);
+  /// Minimum time the overlay stays visible (7 seconds).
+  static const Duration _minDuration = Duration(seconds: 7);
 
-  /// Set the fallback overlay resolver (used by [FlutterPatcher.navigatorKey]).
+  /// Dwell time after patch is applied before restart.
+  static const Duration _successDwell = Duration(seconds: 2);
+
+  static const Duration errorDwell = Duration(seconds: 8);
+
   void setResolver(OverlayState? Function()? resolver) => _resolver = resolver;
 
-  /// Register the overlay host (called by [FlutterOtaApp] or via
-  /// [FlutterPatcher.navigatorKey]).
   void register(OverlayState state) => _overlayState = state;
 
-  /// Forget a previously registered host (mirrors [register]).
   void unregister(OverlayState state) {
     if (_overlayState == state) _overlayState = null;
   }
 
-  /// Show the overlay. Returns a handle used to push progress / dismiss it, or
-  /// `null` when no overlay host is available.
   OtaOverlayHandle? begin({
     String? message,
+    String? commitMessage,
     String? targetVersion,
     String? currentVersion,
     String? errorHint,
+    String? bundleHash,
+    String? gitCommit,
+    String? channel,
+    String? platform,
   }) {
     if (_disposed) return null;
     final overlay = _overlayState ?? _resolver?.call();
     if (overlay == null) return null;
+
+    _startTime = DateTime.now();
+
+    final logs = <LogLine>[
+      if (channel != null) LogLine('gray', 'channel  $channel'),
+      if (platform != null) LogLine('gray', 'platform $platform'),
+      if (bundleHash != null) LogLine('gray', 'hash     $bundleHash'),
+      if (gitCommit != null) LogLine('gray', 'commit   $gitCommit'),
+      if (commitMessage != null && commitMessage.isNotEmpty)
+        LogLine('cyan', 'msg      $commitMessage'),
+      if (message != null && message.isNotEmpty)
+        LogLine('white', 'deploy   $message'),
+    ];
+
     _state.value = OtaOverlayState(
       message: message,
+      commitMessage: commitMessage,
       targetVersion: targetVersion,
       currentVersion: currentVersion,
       errorHint: errorHint,
+      bundleHash: bundleHash,
+      gitCommit: gitCommit,
+      channel: channel,
+      platform: platform,
+      logs: logs,
+      activeStep: 0,
     );
     _entry = OverlayEntry(builder: (_) => OtaProgressOverlay(state: _state));
     overlay.insert(_entry!);
     return OtaOverlayHandle._(this);
   }
 
+  void _log(String color, String text) {
+    if (_disposed) return;
+    final current = _state.value;
+    _state.value = current.copyWith(
+      logs: [...current.logs, LogLine(color, text)],
+    );
+  }
+
+  /// Map phase to step index.
+  int _phaseToStep(PatchApplyPhase? phase) {
+    switch (phase) {
+      case PatchApplyPhase.downloading:
+        return 1;
+      case PatchApplyPhase.verifying:
+        return 2;
+      case PatchApplyPhase.finalizing:
+        return 3;
+      case null:
+        return 0;
+    }
+  }
+
   void _update(PatchApplyProgress progress) {
     if (_disposed || _entry == null) return;
+    final s = _state.value;
+    final pct = progress.fraction;
+    final pctText = pct != null
+        ? '${(pct.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%'
+        : '';
+
+    final newStep = _phaseToStep(progress.phase);
+
+    // Log phase transitions with staggered delays
+    if (s.phase != progress.phase) {
+      switch (progress.phase) {
+        case PatchApplyPhase.downloading:
+          _log('gray', 'status   connecting...');
+          _delayedLog(300, 'gray', 'status   fetching metadata...');
+          _delayedLog(700, 'cyan', 'resolve  download url');
+          _delayedLog(1100, 'gray', 'status   downloading...');
+          break;
+        case PatchApplyPhase.verifying:
+          _log('cyan', 'verify   checking hash...');
+          _delayedLog(400, 'cyan', 'verify   checking signature...');
+          _delayedLog(800, 'success', 'verify   passed ✓');
+          break;
+        case PatchApplyPhase.finalizing:
+          _log('gray', 'status   staging files...');
+          _delayedLog(500, 'gray', 'status   installing...');
+          _delayedLog(1000, 'gray', 'status   finalizing...');
+          break;
+        case null:
+          break;
+      }
+    }
+
+    // Log download progress with size
+    if (progress.phase == PatchApplyPhase.downloading &&
+        pctText.isNotEmpty &&
+        progress.totalBytes > 0) {
+      final sizeMB = (progress.totalBytes / 1048576).toStringAsFixed(1);
+      _log('gray', 'data     ${sizeMB}MB  $pctText');
+    }
+
     _state.value = _state.value.copyWith(
       phase: progress.phase,
       fraction: progress.fraction,
+      activeStep: newStep,
     );
+  }
+
+  /// Log with a delay for staged feel.
+  void _delayedLog(int ms, String color, String text) {
+    Future.delayed(Duration(milliseconds: ms), () {
+      if (_disposed) return;
+      _log(color, text);
+    });
   }
 
   void _end({bool hasError = false, String? errorText}) {
     if (_disposed || _entry == null) return;
+    if (hasError) {
+      _log('red', 'error    ${errorText ?? 'unknown'}');
+      _log('yellow', 'hint     close and reopen to retry');
+    } else {
+      _log('success', 'done     patch installed ✓');
+      _delayedLog(300, 'cyan', 'status   restarting...');
+    }
+
+    // Calculate remaining time to enforce minimum duration
+    final elapsed = _startTime != null
+        ? DateTime.now().difference(_startTime!)
+        : _minDuration;
+    final remaining = _minDuration - elapsed;
+    final delay = remaining.isNegative ? Duration.zero : remaining;
+
     _state.value = _state.value.copyWith(
       hasError: hasError,
       errorText: errorText,
+      canRetry: hasError,
+      activeStep: hasError ? _state.value.activeStep : 4,
     );
-    // Let the error state paint briefly, then remove. Use a mounted check via
-    // the OverlayEntry so we don't try to remove a disposed entry.
+
     final entry = _entry;
-    Future.delayed(hasError ? errorDwell : Duration.zero, () {
+    final dwell = hasError ? errorDwell : _successDwell + delay;
+    Future.delayed(dwell, () {
       if (_disposed) return;
       entry?.remove();
       if (identical(_entry, entry)) _entry = null;
