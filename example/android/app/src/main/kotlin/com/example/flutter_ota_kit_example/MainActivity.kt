@@ -1,4 +1,4 @@
-package com.flutter_patcher.flutter_patcher_example
+package com.example.flutter_ota_kit_example
 
 import io.flutter.embedding.android.FlutterActivity
 

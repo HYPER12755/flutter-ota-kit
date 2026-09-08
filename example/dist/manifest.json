@@ -1,9 +1,11 @@
 {
   "schemaVersion": 2,
-  "version": "forced-v2.1",
-  "md5": "466c7f832b92f068aefa246586325836",
+  "version": "1.0.1",
+  "md5": "dbea53b02536e07fa59f9a7eb833d337",
   "targetVersionCode": 1,
   "abis": [
+    "arm64-v8a",
+    "armeabi-v7a",
     "x86_64"
   ],
   "payload": "patch.zip"
