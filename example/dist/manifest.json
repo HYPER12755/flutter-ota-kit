@@ -1,12 +1,10 @@
 {
   "schemaVersion": 2,
-  "version": "1.0.6",
-  "md5": "2e9b231e943c2bd2364b2ee5c8e134b7",
+  "version": "1.0.0",
+  "md5": "a62469c6a17a95e53b26d91e5f893ee9",
   "targetVersionCode": 1,
   "abis": [
-    "arm64-v8a",
-    "armeabi-v7a",
-    "x86_64"
+    "arm64-v8a"
   ],
   "payload": "patch.zip"
 }
