@@ -103,9 +103,9 @@ Bundle mapRowToBundle(
   List<Map<String, dynamic>>? patches,
 }) {
   final rawMetadata = normalizeMetadata(row.metadata);
-  final patchArtifacts = patches?.map((p) => BundlePatchArtifact.fromJson(
-    p.cast<String, dynamic>(),
-  )).toList();
+  final patchArtifacts = patches
+      ?.map((p) => BundlePatchArtifact.fromJson(p.cast<String, dynamic>()))
+      .toList();
   return Bundle(
     id: row.id,
     channel: row.channel,

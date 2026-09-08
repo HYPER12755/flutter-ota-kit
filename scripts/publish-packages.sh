@@ -42,7 +42,7 @@ publish_one() {
     cp "$ROOT/LICENSE" "$dir/LICENSE" 2>/dev/null || true
   fi
 
-  (cd "$dir" && /tmp/dart-sdk/bin/dart pub publish --force)
+  (cd "$dir" && /tmp/flutter/bin/cache/dart-sdk/bin/dart pub publish --force)
 
   # Restore .pubignore.
   if [ -f "$backup" ]; then

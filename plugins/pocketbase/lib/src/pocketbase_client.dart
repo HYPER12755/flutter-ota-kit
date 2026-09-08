@@ -53,7 +53,7 @@ class PocketBaseClient {
     _adminPassword = password;
   }
 
-  /// Authenticate as [adminEmail] / [adminPassword]. Idempotent — calling
+  /// Authenticate as admin email / admin password. Idempotent — calling
   /// twice refreshes the token.
   Future<PocketBaseClient> authenticate(
     String adminEmail,
@@ -392,15 +392,16 @@ class PocketBaseClient {
 
   /// List admin accounts via the _superusers collection.
   Future<List<Map<String, dynamic>>> listAdmins() async {
-    final res = await _get(Uri.parse('$_baseUrl/api/collections/_superusers/records?perPage=100'));
+    final res = await _get(
+      Uri.parse('$_baseUrl/api/collections/_superusers/records?perPage=100'),
+    );
     if (res.statusCode != 200) {
       throw PocketBaseException(
         'listAdmins failed: HTTP ${res.statusCode} ${res.body}',
       );
     }
     final body = jsonDecode(res.body) as Map<String, dynamic>;
-    return (body['items'] as List? ?? [])
-        .cast<Map<String, dynamic>>();
+    return (body['items'] as List? ?? []).cast<Map<String, dynamic>>();
   }
 
   /// Create a new admin account via the _superusers collection.
@@ -543,8 +544,7 @@ class PocketBaseClient {
     };
     if (filter != null && filter.isNotEmpty) qp['filter'] = filter;
     if (sort != null && sort.isNotEmpty) qp['sort'] = sort;
-    final uri =
-        Uri.parse('$_baseUrl/api/logs').replace(queryParameters: qp);
+    final uri = Uri.parse('$_baseUrl/api/logs').replace(queryParameters: qp);
     final res = await _get(uri);
     if (res.statusCode != 200) {
       throw PocketBaseException(
@@ -569,8 +569,8 @@ class PocketBaseClient {
   Future<List<Map<String, dynamic>>> getLogStats({String? filter}) async {
     final qp = <String, String>{};
     if (filter != null && filter.isNotEmpty) qp['filter'] = filter;
-    final uri =
-        Uri.parse('$_baseUrl/api/logs/stats').replace(queryParameters: qp);
+    final uri = Uri.parse('$_baseUrl/api/logs/stats')
+        .replace(queryParameters: qp);
     final res = await _get(uri);
     if (res.statusCode != 200) {
       throw PocketBaseException(
@@ -607,8 +607,7 @@ class PocketBaseClient {
 
   /// Get a collection by name or ID.
   Future<Map<String, dynamic>> getCollection(String nameOrId) async {
-    final res =
-        await _get(Uri.parse('$_baseUrl/api/collections/$nameOrId'));
+    final res = await _get(Uri.parse('$_baseUrl/api/collections/$nameOrId'));
     if (res.statusCode != 200) {
       throw PocketBaseException(
         'getCollection($nameOrId) failed: HTTP ${res.statusCode} ${res.body}',
@@ -621,10 +620,7 @@ class PocketBaseClient {
   Future<Map<String, dynamic>> createCollection(
     Map<String, dynamic> body,
   ) async {
-    final res = await _post(
-      Uri.parse('$_baseUrl/api/collections'),
-      body: body,
-    );
+    final res = await _post(Uri.parse('$_baseUrl/api/collections'), body: body);
     if (res.statusCode != 200 && res.statusCode != 201) {
       throw PocketBaseException(
         'createCollection failed: HTTP ${res.statusCode} ${res.body}',
@@ -652,8 +648,7 @@ class PocketBaseClient {
 
   /// Delete a collection.
   Future<void> deleteCollection(String nameOrId) async {
-    final res =
-        await _delete(Uri.parse('$_baseUrl/api/collections/$nameOrId'));
+    final res = await _delete(Uri.parse('$_baseUrl/api/collections/$nameOrId'));
     if (res.statusCode != 204) {
       throw PocketBaseException(
         'deleteCollection($nameOrId) failed: HTTP ${res.statusCode} ${res.body}',
@@ -681,10 +676,7 @@ class PocketBaseClient {
     await _ensureAuth();
     final res = await _http.put(
       Uri.parse('$_baseUrl/api/collections/import'),
-      headers: {
-        ..._authHeaders,
-        'content-type': 'application/json',
-      },
+      headers: {..._authHeaders, 'content-type': 'application/json'},
       body: jsonEncode({
         'collections': collections,
         'deleteMissing': deleteMissing,
@@ -761,9 +753,7 @@ class PocketBaseClient {
   }
 
   /// Update application settings.
-  Future<Map<String, dynamic>> updateSettings(
-    Map<String, dynamic> body,
-  ) async {
+  Future<Map<String, dynamic>> updateSettings(Map<String, dynamic> body) async {
     await _ensureAuth();
     final res = await _http.patch(
       Uri.parse('$_baseUrl/api/settings'),
@@ -800,10 +790,7 @@ class PocketBaseClient {
     String? collection,
   }) async {
     await _ensureAuth();
-    final body = <String, dynamic>{
-      'email': email,
-      'template': template,
-    };
+    final body = <String, dynamic>{'email': email, 'template': template};
     if (collection != null) body['collection'] = collection;
     final res = await _http.post(
       Uri.parse('$_baseUrl/api/settings/test/email'),
@@ -950,12 +937,11 @@ class PocketBaseBackup {
     required this.size,
   });
 
-  factory PocketBaseBackup.fromJson(Map<String, dynamic> j) =>
-      PocketBaseBackup(
-        key: j['key'] as String? ?? '',
-        modified: j['modified'] as String? ?? '',
-        size: (j['size'] as num?)?.toInt() ?? 0,
-      );
+  factory PocketBaseBackup.fromJson(Map<String, dynamic> j) => PocketBaseBackup(
+    key: j['key'] as String? ?? '',
+    modified: j['modified'] as String? ?? '',
+    size: (j['size'] as num?)?.toInt() ?? 0,
+  );
 
   final String key;
   final String modified;

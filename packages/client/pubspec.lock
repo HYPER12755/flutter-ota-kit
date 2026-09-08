@@ -95,21 +95,21 @@ packages:
       path: "../../plugins/cloudflare"
       relative: true
     source: path
-    version: "0.1.6"
+    version: "0.1.7"
   flutter_ota_kit_core:
     dependency: "direct main"
     description:
       path: "../core"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.1.6"
   flutter_ota_kit_plugin_core:
     dependency: "direct dev"
     description:
       path: "../../plugins/plugin-core"
       relative: true
     source: path
-    version: "0.0.7"
+    version: "0.0.8"
   frontend_server_client:
     dependency: transitive
     description:

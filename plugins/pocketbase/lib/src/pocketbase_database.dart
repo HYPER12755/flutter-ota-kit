@@ -148,7 +148,10 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
           .toList();
 
       // 2. Filter to compatible versions.
-      final compatible = filterCompatibleAppVersions(targetVersions, appVersion);
+      final compatible = filterCompatibleAppVersions(
+        targetVersions,
+        appVersion,
+      );
 
       if (compatible.isEmpty) {
         // No compatible bundles — check if we should rollback.
@@ -185,10 +188,12 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
       final bundles = res.items.map(mapRowToBundle).toList();
       final patchMap = await _getPatchMap(bundles.map((b) => b.id).toList());
       final bundlesWithPatches = bundles
-          .map((b) => mapRowToBundle(
-                res.items.firstWhere((r) => r.id == b.id),
-                patches: patchMap[b.id],
-              ))
+          .map(
+            (b) => mapRowToBundle(
+              res.items.firstWhere((r) => r.id == b.id),
+              patches: patchMap[b.id],
+            ),
+          )
           .toList();
 
       return resolveUpdateInfoFromBundles(
@@ -221,10 +226,12 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
     final bundles = res.items.map(mapRowToBundle).toList();
     final patchMap = await _getPatchMap(bundles.map((b) => b.id).toList());
     final bundlesWithPatches = bundles
-        .map((b) => mapRowToBundle(
-              res.items.firstWhere((r) => r.id == b.id),
-              patches: patchMap[b.id],
-            ))
+        .map(
+          (b) => mapRowToBundle(
+            res.items.firstWhere((r) => r.id == b.id),
+            patches: patchMap[b.id],
+          ),
+        )
         .toList();
 
     return resolveUpdateInfoFromBundles(
@@ -446,8 +453,9 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
       clauses.add('target_app_version = "${_escape(targetAppVersion)}"');
     }
     if (targetAppVersionIn != null && targetAppVersionIn.isNotEmpty) {
-      final escaped =
-          targetAppVersionIn.map((v) => '"${_escape(v)}"').join(',');
+      final escaped = targetAppVersionIn
+          .map((v) => '"${_escape(v)}"')
+          .join(',');
       clauses.add('target_app_version ?= [$escaped]');
     }
     if (targetAppVersionNotNull == true) {
