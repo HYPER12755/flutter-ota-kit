@@ -111,6 +111,29 @@ class PatcherChannel {
     await channel.invokeMethod<void>('clearBlacklist');
   }
 
+  /// Reports a failed patch apply to the native blacklist. The patch will be
+  /// skipped on future attempts.
+  static Future<void> reportApplyFailure({
+    required String version,
+    required String md5,
+    String reason = 'APPLY_FAILED',
+  }) async {
+    await channel.invokeMethod<void>('reportApplyFailure', {
+      'version': version,
+      'md5': md5,
+      'reason': reason,
+    });
+  }
+
+  /// Checks whether a patch version (optionally with md5) is blacklisted.
+  static Future<bool> isVersionBlacklisted(String version, {String md5 = ''}) async {
+    final found = await channel.invokeMethod<bool>('isVersionBlacklisted', {
+      'version': version,
+      'md5': md5,
+    });
+    return found ?? false;
+  }
+
   /// Immediately restarts the whole App process (so a forced update takes effect).
   ///
   /// Uses the `restart_app` package with [RestartMode.process], which on Android

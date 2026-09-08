@@ -41,6 +41,7 @@ internal object BlacklistStore {
     const val REASON_MD5_MISMATCH = "MD5_MISMATCH"
     const val REASON_SIGNATURE_INVALID = "SIGNATURE_INVALID"
     const val REASON_META_CORRUPTED = "META_CORRUPTED"
+    const val REASON_APPLY_FAILED = "APPLY_FAILED"
 
     // ---- 字段 key ----
 

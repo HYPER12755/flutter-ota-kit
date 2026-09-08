@@ -98,8 +98,6 @@ class LogLine {
 
 const Object _unset = Object();
 
-const String _defaultErrorHint = 'Close the app and reopen to retry.';
-
 /// The 5 steps shown during a forced update.
 const List<String> _stepLabels = [
   'Initializing update',
@@ -663,8 +661,6 @@ class OtaOverlayManager {
           _log('gray', 'status   staging files...');
           _delayedLog(500, 'gray', 'status   installing...');
           _delayedLog(1000, 'gray', 'status   finalizing...');
-          break;
-        case null:
           break;
       }
     }

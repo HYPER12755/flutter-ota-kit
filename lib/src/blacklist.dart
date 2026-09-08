@@ -23,6 +23,7 @@ class BlacklistEntry {
   /// - `BOOT_CRASH`: circuit breaker tripped after repeated boot failures
   /// - `MD5_MISMATCH`: local file md5 verification failed
   /// - `SIGNATURE_INVALID`: Ed25519 signature verification failed
+  /// - `APPLY_FAILED`: patch apply failed (download/install error)
   final String reason;
 
   /// When the entry was blacklisted.

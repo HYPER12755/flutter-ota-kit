@@ -104,6 +104,8 @@ class FlutterPatcherPlugin :
                 BlacklistStore.clear(appContext)
                 result.success(null)
             }
+            "reportApplyFailure" -> handleReportApplyFailure(call, result)
+            "isVersionBlacklisted" -> handleIsVersionBlacklisted(call, result)
             else -> result.notImplemented()
         }
     }
@@ -205,5 +207,24 @@ class FlutterPatcherPlugin :
             )
         }
         result.success(null)
+    }
+
+    private fun handleReportApplyFailure(call: MethodCall, result: Result) {
+        val version = call.argument<String>("version") ?: ""
+        val md5 = call.argument<String>("md5") ?: ""
+        val reason = call.argument<String>("reason") ?: "APPLY_FAILED"
+        BlacklistStore.add(appContext, version, md5, reason)
+        result.success(null)
+    }
+
+    private fun handleIsVersionBlacklisted(call: MethodCall, result: Result) {
+        val version = call.argument<String>("version") ?: ""
+        val md5 = call.argument<String>("md5") ?: ""
+        val found = if (md5.isNotEmpty) {
+            BlacklistStore.contains(appContext, version, md5)
+        } else {
+            BlacklistStore.containsByVersion(appContext, version)
+        }
+        result.success(found)
     }
 }

@@ -811,6 +811,24 @@ class FlutterPatcher {
       },
     );
 
+    if (!applied.ok) {
+      // Blacklist the failed patch so it is never retried.
+      final patchVersion = result.patch!.version;
+      final patchMd5 = result.patch!.md5;
+      if (patchVersion.isNotEmpty) {
+        _log('applyUpdate: patch failed (${applied.error?.name}), blacklisting $patchVersion');
+        try {
+          await PatcherChannel.reportApplyFailure(
+            version: patchVersion,
+            md5: patchMd5,
+            reason: applied.error?.name ?? 'APPLY_FAILED',
+          );
+        } catch (e, s) {
+          _log('applyUpdate: failed to blacklist $patchVersion: $e', s);
+        }
+      }
+    }
+
     if (applied.ok && result.shouldForceUpdate) {
       handle?.end();
       // Wait for overlay to finish its minimum display time + success dwell
@@ -847,6 +865,17 @@ class FlutterPatcher {
       if (current != null && current == result.patch!.version) {
         _log('checkAndApplyUpdates: already on ${result.patch!.version}, skip');
         return null;
+      }
+      // Skip if this version was previously blacklisted after a failed apply.
+      final patchVersion = result.patch!.version;
+      final patchMd5 = result.patch!.md5;
+      try {
+        if (await PatcherChannel.isVersionBlacklisted(patchVersion, md5: patchMd5)) {
+          _log('checkAndApplyUpdates: $patchVersion is blacklisted, skip');
+          return null;
+        }
+      } catch (e, s) {
+        _log('checkAndApplyUpdates: blacklist check failed: $e', s);
       }
       return await applyUpdate(result, onProgress: onProgress);
     } catch (e, s) {
@@ -920,6 +949,20 @@ class FlutterPatcher {
       await PatcherChannel.clearBlacklist();
     } catch (e, s) {
       _log('clearBlacklist failed: $e', s);
+    }
+  }
+
+  /// Checks whether a patch version is in the local blacklist.
+  ///
+  /// When [md5] is provided, the match uses both version and md5. Without md5,
+  /// any entry with the same version is considered a match.
+  static Future<bool> isVersionBlacklisted(String version, {String md5 = ''}) async {
+    if (_notAndroidGuard('isVersionBlacklisted')) return false;
+    try {
+      return await PatcherChannel.isVersionBlacklisted(version, md5: md5);
+    } catch (e, s) {
+      _log('isVersionBlacklisted failed: $e', s);
+      return false;
     }
   }
 
