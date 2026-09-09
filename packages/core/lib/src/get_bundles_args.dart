@@ -6,14 +6,26 @@ import 'uuid.dart' show nilUuid;
 ///
 /// Two variants keyed by [UpdateStrategy]; shared fields defaulted the same
 /// way (minBundleId = NIL_UUID, channel = "production").
+///
+/// Use [AppVersionGetBundlesArgs] for semver-based targeting or
+/// [FingerprintGetBundlesArgs] for device-specific targeting.
 sealed class GetBundlesArgs {
+  /// The update strategy this request uses.
   final UpdateStrategy _updateStrategy;
+
+  /// Target platform (`ios` or `android`).
   final Platform platform;
+
+  /// Currently installed bundle ID.
   final String bundleId;
+
+  /// Minimum bundle ID to consider (for rollback protection).
   final String minBundleId;
+
+  /// Release channel to query (default: `"production"`).
   final String channel;
 
-  /// Cohort identifier for server-side rollout decisions.
+  /// Optional cohort identifier for server-side rollout decisions.
   final String? cohort;
 
   const GetBundlesArgs({
@@ -38,7 +50,13 @@ sealed class GetBundlesArgs {
   };
 }
 
+/// Update-check args using device fingerprint for targeting.
+///
+/// The server matches [fingerprintHash] against bundles that have a
+/// `targetCohorts` list, enabling device-specific rollouts without
+/// exposing device IDs.
 class FingerprintGetBundlesArgs extends GetBundlesArgs {
+  /// SHA-256 hex of the device fingerprint.
   final String fingerprintHash;
 
   const FingerprintGetBundlesArgs({
@@ -57,8 +75,12 @@ class FingerprintGetBundlesArgs extends GetBundlesArgs {
   };
 }
 
+/// Update-check args using semver range for targeting.
+///
+/// The server matches [appVersion] against bundles' `targetAppVersion`
+/// semver ranges to determine eligibility.
 class AppVersionGetBundlesArgs extends GetBundlesArgs {
-  /// Current app version (semver).
+  /// Current app version (semver string, e.g. `"1.2.3"`).
   final String appVersion;
 
   const AppVersionGetBundlesArgs({

@@ -128,36 +128,65 @@ class DatabaseBundleQueryOptions {
 // Database plugin
 // ---------------------------------------------------------------------------
 
+/// Database abstraction for bundle storage and querying.
+///
+/// Implementations handle the backend-specific SQL/API calls while the
+/// plugin-core layer manages pagination, unit-of-work tracking, and
+/// hook callbacks.
+///
+/// Lifecycle:
+/// 1. Plugin is created via [createDatabasePlugin] factory.
+/// 2. Methods are called by the CLI (deploy, migrate, bundle management)
+///    or the console (bundle listing, editing).
+/// 3. [onUnmount] is called when the plugin is disposed.
 abstract class DatabasePlugin {
+  /// Human-readable plugin name (e.g. `supabaseDatabase`).
   String get name;
 
+  /// List all distinct channel values across all bundles.
   Future<List<String>> getChannels();
 
+  /// Fetch a single bundle by its UUID. Returns null if not found.
   Future<Bundle?> getBundleById(String bundleId);
 
+  /// Resolve the update decision for a device's update-check request.
+  ///
+  /// Returns the eligible [UpdateInfo] (update or rollback), or null if
+  /// the device is already on the latest bundle.
   Future<UpdateInfo?> getUpdateInfo(GetBundlesArgs args);
 
+  /// Query bundles with filtering, pagination, and ordering.
   Future<Paginated<List<Bundle>>> getBundles(
     DatabaseBundleQueryOptions options,
   );
 
+  /// Update specific fields of an existing bundle.
+  ///
+  /// [newBundle] contains only the changed fields (partial update).
   Future<void> updateBundle(
     String targetBundleId,
     Map<String, Object?> newBundle,
   );
 
+  /// Insert a new bundle. The bundle is staged in the unit-of-work
+  /// until [commitBundle] is called.
   Future<void> appendBundle(Bundle insertBundle);
 
+  /// Flush all staged changes (inserts, updates, deletes) to the backend.
   Future<void> commitBundle();
 
+  /// Delete a bundle and its associated storage artifacts.
   Future<void> deleteBundle(Bundle deleteBundle);
 
+  /// Release resources (close connections, cancel timers).
   Future<void> onUnmount();
 }
 
+/// Optional lifecycle hooks for database plugin events.
 class DatabasePluginHooks {
   const DatabasePluginHooks({this.onDatabaseUpdated});
 
+  /// Called after a bundle mutation is committed to the database.
   final Future<void> Function()? onDatabaseUpdated;
 }
 
@@ -209,25 +238,51 @@ abstract class RuntimeStorageProfile {
   Future<String?> readText(String storageUri);
 }
 
+/// Profiles for accessing storage in different contexts.
+///
+/// A storage plugin may support one or both profiles:
+/// - [node]: For CLI/deploy operations (file upload, delete, list).
+/// - [runtime]: For device update-check operations (signed URLs, manifest read).
 class StoragePluginProfiles {
   const StoragePluginProfiles({this.node, this.runtime});
 
+  /// Node profile for CLI/deploy operations. Null if not supported.
   final NodeStorageProfile? node;
+
+  /// Runtime profile for device update-checks. Null if not supported.
   final RuntimeStorageProfile? runtime;
 
+  /// Whether this plugin supports CLI/deploy operations.
   bool get hasNode => node != null;
+
+  /// Whether this plugin supports device update-check operations.
   bool get hasRuntime => runtime != null;
 }
 
+/// Storage backend abstraction for artifact upload/download.
+///
+/// Each backend (S3, R2, Supabase Storage, PocketBase) implements this
+/// interface to provide a unified storage API.
+///
+/// Storage URIs follow the scheme defined in [parseStorageUri]:
+/// `protocol://bucket/key` where protocol is `s3`, `r2`, `supabase-storage`,
+/// or `pocketbase`.
 abstract class StoragePlugin {
+  /// Human-readable plugin name (e.g. `s3Storage`, `r2Storage`).
   String get name;
+
+  /// Protocol scheme this plugin handles (e.g. `s3`, `r2`, `supabase-storage`).
   String get supportedProtocol;
+
+  /// Access profiles for node (CLI) and runtime (device) operations.
   StoragePluginProfiles get profiles;
 }
 
+/// Optional lifecycle hooks for storage plugin events.
 class StoragePluginHooks {
   const StoragePluginHooks({this.onStorageUploaded});
 
+  /// Called after a file is successfully uploaded to storage.
   final Future<void> Function()? onStorageUploaded;
 }
 
@@ -235,6 +290,7 @@ class StoragePluginHooks {
 // Build plugin
 // ---------------------------------------------------------------------------
 
+/// Result of a successful build operation.
 class BuildPluginResult {
   const BuildPluginResult({
     required this.buildPath,
@@ -242,17 +298,32 @@ class BuildPluginResult {
     this.stdout,
   });
 
+  /// Path to the built artifact (e.g. `build/app/outputs/flutter-apk/app-release.apk`).
   final String buildPath;
+
+  /// Generated bundle UUID for this build.
   final String bundleId;
+
+  /// Raw build output (stdout + stderr combined).
   final String? stdout;
 }
 
+/// Build system abstraction for creating app artifacts.
+///
+/// Implementations handle the platform-specific build commands (Gradle,
+/// Xcodebuild) while the plugin-core layer manages versioning and artifact
+/// packaging.
 abstract class BuildPlugin {
+  /// Human-readable plugin name (e.g. `androidBuild`, `iosBuild`).
   String get name;
 
+  /// Execute the build for the given [platform] and return the artifact path.
   Future<BuildPluginResult> build(Platform platform);
 
+  /// Pre-build hook (e.g. clean, dependency resolution).
   Future<void> prebuild(Platform platform);
+
+  /// Post-build hook (e.g. signing, obfuscation).
   Future<void> postbuild(Platform platform);
 }
 
@@ -341,14 +412,14 @@ class NativeBuildArgs {
 class SigningConfigDisabled {
   const SigningConfigDisabled({this.privateKeyPath});
 
-  final bool enabled = false;
+  static const bool enabled = false;
   final String? privateKeyPath;
 }
 
 class SigningConfigEnabled {
   const SigningConfigEnabled({required this.privateKeyPath});
 
-  final bool enabled = true;
+  static const bool enabled = true;
   final String privateKeyPath;
 }
 
@@ -450,6 +521,26 @@ class NativeBuildOptions {
 // ---------------------------------------------------------------------------
 
 /// Opaque context object carried through a request lifecycle.
-/// In Dart we use a plain Map for extensibility.
+///
+/// Plugins may attach metadata to this map during processing. Known keys:
+///
+/// - `bundleId` (String) — Current bundle ID being processed
+/// - `channel` (String) — Target release channel
+/// - `platform` (String) — Target platform (`ios`, `android`)
+/// - `appVersion` (String) — Current app version (semver)
+/// - `fingerprintHash` (String) — Device fingerprint hash
+/// - `cohort` (String) — Rollout cohort identifier
+/// - `storageUri` (String) — Resolved storage URI for the artifact
+/// - `signedUrl` (String) — Pre-signed download URL
+///
+/// Extensions should use namespaced keys (e.g. `myPlugin.fieldName`) to
+/// avoid collisions.
 typedef HotUpdaterContext = Map<String, Object?>;
+
+/// Context for resolving storage URIs to download URLs.
+///
+/// Inherits all keys from [HotUpdaterContext] and adds:
+///
+/// - `storageProtocol` (String) — Expected protocol (`s3`, `r2`, `supabase-storage`, etc.)
+/// - `storageBucket` (String) — Target bucket name
 typedef StorageResolveContext = HotUpdaterContext;

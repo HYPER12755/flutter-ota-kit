@@ -7,9 +7,11 @@ library;
 import 'bundle.dart';
 import 'bundle_patch_artifact.dart';
 
-/// Identity — returns the metadata as-is.
-/// (TS version strips artifact-specific keys; Dart uses strong types so
-/// there is nothing to strip.)
+/// Identity function — returns the metadata as-is.
+///
+/// In the TypeScript version this strips artifact-specific keys from the
+/// metadata map. The Dart version uses strong types so there is nothing
+/// to strip; this function is kept for API compatibility.
 Map<String, Object?>? stripBundleArtifactMetadata(
   Map<String, Object?>? metadata,
 ) => metadata;
@@ -25,6 +27,8 @@ String? getAssetBaseStorageUri(Bundle bundle) => bundle.assetBaseStorageUri;
 
 /// Deduplicate patches by [BundlePatchArtifact.baseBundleId], keeping the
 /// first occurrence (by insertion order).
+///
+/// Returns an empty list if the bundle has no patches.
 List<BundlePatchArtifact> getBundlePatches(Bundle bundle) {
   final patches = bundle.patches;
   if (patches == null || patches.isEmpty) return const [];

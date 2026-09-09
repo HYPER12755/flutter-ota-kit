@@ -1,9 +1,6 @@
 import 'semver_range.dart' show satisfies;
 import 'semver_version.dart';
 
-export 'semver_range.dart' show satisfies;
-export 'semver_version.dart' show SemVer;
-
 /// hot-updater `semverSatisfies(targetAppVersion, currentVersion)`
 /// (plugins/plugin-core/src/semverSatisfies.ts):
 ///

@@ -21,6 +21,8 @@ export 'src/update_bundle_params.dart';
 // Algorithms.
 export 'src/rollout.dart';
 export 'src/semver.dart';
+export 'src/semver_range.dart' show satisfies;
+export 'src/semver_version.dart' show SemVer;
 export 'src/uuid.dart';
 
 // Bundle artifact helpers.

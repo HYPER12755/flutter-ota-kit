@@ -34,6 +34,12 @@ class ServerUpdateResult {
   final String? id;
   final String? message;
   final String? gitCommitHash;
+
+  /// Backend-specific raw response data not mapped to named fields.
+  ///
+  /// Contains any additional fields returned by the backend that are not
+  /// part of the standard update protocol. Useful for debugging or accessing
+  /// backend-specific metadata.
   final Map<String, dynamic> raw;
 
   bool get hasUpdate => !isUpToDate && patch != null;

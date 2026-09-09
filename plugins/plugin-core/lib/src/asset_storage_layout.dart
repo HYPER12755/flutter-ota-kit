@@ -5,7 +5,10 @@ import 'legacy_asset_storage_layout.dart'
 /// The two supported asset storage layout strategies.
 typedef AssetStorageLayout = String;
 
+/// Content-addressed layout: assets stored by SHA-256 hash.
 const String assetLayoutContentAddressed = 'content-addressed';
+
+/// Legacy layout: assets stored by original file path.
 const String assetLayoutLegacyFiles = 'legacy-files';
 
 /// Whether [assetPath] is a brotli-compressed manifest path

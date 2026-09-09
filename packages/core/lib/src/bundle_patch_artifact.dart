@@ -1,10 +1,26 @@
 /// Binary patch artifact — hot-updater `BundlePatchArtifact`.
+///
+/// Represents a single binary diff between two bundles. The device SDK uses
+/// [patchStorageUri] to download the patch, verifies it against [patchFileHash],
+/// then applies it on top of the base bundle identified by [baseBundleId].
 library;
 
+/// A binary diff artifact that patches an older bundle into a newer one.
+///
+/// Patch artifacts are stored in [Bundle.patches] as an ordered list. The
+/// device SDK tries each patch in order and applies the first one whose base
+/// matches the installed bundle.
 class BundlePatchArtifact {
+  /// UUID of the bundle this patch transforms from.
   final String baseBundleId;
+
+  /// MD5 hex of the base bundle's artifact (for verification).
   final String baseFileHash;
+
+  /// MD5 hex of the patch artifact (for download verification).
   final String patchFileHash;
+
+  /// Protocol URI pointing to the patch artifact in storage.
   final String patchStorageUri;
 
   const BundlePatchArtifact({

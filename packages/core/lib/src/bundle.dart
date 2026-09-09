@@ -172,28 +172,73 @@ class Bundle {
     'enabled': enabled,
     'file_hash': fileHash,
     'storage_uri': storageUri,
-    'git_commit_hash': gitCommitHash,
-    'message': message,
     'channel': channel,
-    'target_app_version': targetAppVersion,
-    'fingerprint_hash': fingerprintHash,
-    'metadata': metadata?.toJson() ?? <String, dynamic>{},
-    'manifest_storage_uri': manifestStorageUri,
-    'manifest_file_hash': manifestFileHash,
-    'asset_base_storage_uri': assetBaseStorageUri,
-    'patches': patches?.map((p) => p.toJson()).toList(),
-    'patch_base_bundle_id': patchBaseBundleId,
-    'patch_base_file_hash': patchBaseFileHash,
-    'patch_file_hash': patchFileHashLegacy,
-    'patch_storage_uri': patchStorageUri,
-    'rollout_cohort_count': rolloutCohortCount,
-    'target_cohorts': targetCohorts,
+    if (gitCommitHash != null) 'git_commit_hash': gitCommitHash,
+    if (message != null) 'message': message,
+    if (targetAppVersion != null) 'target_app_version': targetAppVersion,
+    if (fingerprintHash != null) 'fingerprint_hash': fingerprintHash,
+    if (metadata != null) 'metadata': metadata!.toJson(),
+    if (manifestStorageUri != null)
+      'manifest_storage_uri': manifestStorageUri,
+    if (manifestFileHash != null) 'manifest_file_hash': manifestFileHash,
+    if (assetBaseStorageUri != null)
+      'asset_base_storage_uri': assetBaseStorageUri,
+    if (patches != null) 'patches': patches!.map((p) => p.toJson()).toList(),
+    if (patchBaseBundleId != null) 'patch_base_bundle_id': patchBaseBundleId,
+    if (patchBaseFileHash != null)
+      'patch_base_file_hash': patchBaseFileHash,
+    if (patchFileHashLegacy != null) 'patch_file_hash': patchFileHashLegacy,
+    if (patchStorageUri != null) 'patch_storage_uri': patchStorageUri,
+    if (rolloutCohortCount != null)
+      'rollout_cohort_count': rolloutCohortCount,
+    if (targetCohorts != null) 'target_cohorts': targetCohorts,
   };
 
   @override
   bool operator ==(Object o) =>
-      o is Bundle && o.toJson().toString() == toJson().toString();
+      o is Bundle &&
+      o.id == id &&
+      o.platform == platform &&
+      o.shouldForceUpdate == shouldForceUpdate &&
+      o.enabled == enabled &&
+      o.fileHash == fileHash &&
+      o.storageUri == storageUri &&
+      o.channel == channel &&
+      o.gitCommitHash == gitCommitHash &&
+      o.message == message &&
+      o.targetAppVersion == targetAppVersion &&
+      o.fingerprintHash == fingerprintHash &&
+      o.metadata == metadata &&
+      o.manifestStorageUri == manifestStorageUri &&
+      o.manifestFileHash == manifestFileHash &&
+      o.assetBaseStorageUri == assetBaseStorageUri &&
+      o.patchBaseBundleId == patchBaseBundleId &&
+      o.patchBaseFileHash == patchBaseFileHash &&
+      o.patchFileHashLegacy == patchFileHashLegacy &&
+      o.patchStorageUri == patchStorageUri &&
+      o.rolloutCohortCount == rolloutCohortCount;
 
   @override
-  int get hashCode => toJson().toString().hashCode;
+  int get hashCode => Object.hash(
+    id,
+    platform,
+    shouldForceUpdate,
+    enabled,
+    fileHash,
+    storageUri,
+    channel,
+    gitCommitHash,
+    message,
+    targetAppVersion,
+    fingerprintHash,
+    metadata,
+    manifestStorageUri,
+    manifestFileHash,
+    assetBaseStorageUri,
+    patchBaseBundleId,
+    patchBaseFileHash,
+    patchFileHashLegacy,
+    patchStorageUri,
+    rolloutCohortCount,
+  );
 }

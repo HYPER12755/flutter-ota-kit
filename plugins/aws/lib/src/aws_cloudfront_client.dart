@@ -2,6 +2,7 @@ import 'dart:convert' show utf8;
 import 'dart:typed_data' show Uint8List;
 
 import 'package:crypto/crypto.dart' show Hmac, sha256;
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:http/http.dart' show Client, Request, Response;
 
 const String _cloudfrontService = 'cloudfront';
@@ -91,8 +92,7 @@ class AwsCloudFrontClient implements AwsCloudFrontClientLike {
       if (shouldWait) rethrow;
       // When not waiting, surface invalidation failures as warnings and
       // continue (mirrors hot-updater's s3Database behaviour).
-      // ignore: avoid_print
-      print(
+      debugPrint(
         '[flutter_ota_kit/aws] CloudFront invalidation failed for '
         '$distributionId; continuing without cache invalidation: $error',
       );
