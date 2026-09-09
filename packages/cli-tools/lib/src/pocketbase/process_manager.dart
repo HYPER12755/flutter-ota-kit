@@ -16,13 +16,17 @@ import 'dart:io';
 import 'package:path/path.dart' as p;
 
 class PocketBaseProcess {
-  PocketBaseProcess._(this.process, this.dataDir, this.binaryPath);
+  PocketBaseProcess._(this.process, this.dataDir, this.binaryPath)
+      : _exitCodeCompleted = false {
+    process.exitCode.then((_) => _exitCodeCompleted = true);
+  }
 
   final Process process;
   final Directory dataDir;
   final File binaryPath;
+  bool _exitCodeCompleted;
 
-  bool get isRunning => true;
+  bool get isRunning => !_exitCodeCompleted;
 
   int get pid => process.pid;
 
@@ -214,5 +218,9 @@ class PocketBaseProcessManager {
         .transform(utf8.decoder)
         .transform(const LineSplitter())
         .map((line) => '[stdout] $line');
+    yield* proc.errors
+        .transform(utf8.decoder)
+        .transform(const LineSplitter())
+        .map((line) => '[stderr] $line');
   }
 }

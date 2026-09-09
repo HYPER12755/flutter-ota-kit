@@ -6,7 +6,10 @@ import '../ui/ui.dart';
 /// `flutter-ota rollback` — roll a channel back to a previous bundle.
 class RollbackCommand extends FlutterPatcherCommand {
   RollbackCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null
+        ? 'Backend provider [detected: $detected].'
+        : 'Backend provider.');
     argParser.addOption('channel', abbr: 'c', help: 'Channel to roll back.');
     argParser.addOption(
       'bundle-id',

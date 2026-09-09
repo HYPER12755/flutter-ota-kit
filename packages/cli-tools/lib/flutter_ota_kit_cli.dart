@@ -38,6 +38,7 @@ export 'src/commands/channel.dart';
 export 'src/commands/migrate.dart';
 export 'src/commands/console.dart';
 export 'src/commands/pocketbase.dart';
+export 'src/commands/storage.dart';
 
 import 'src/commands/build.dart';
 import 'src/commands/bundle.dart';
@@ -244,7 +245,7 @@ void _printMissingSubcommand(Command<int> parent) {
   stderr.writeln('');
 
   if (subNames.isNotEmpty) {
-    stderr.writeln('  ${_cyan('Did you mean?')}');
+    stderr.writeln('  ${_cyan('Available subcommands:')}');
     for (final s in subNames) {
       stderr.writeln('    ${_green('${parent.name} $s')}');
     }

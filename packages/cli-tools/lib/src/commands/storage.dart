@@ -22,12 +22,15 @@ class StorageCommand extends FlutterPatcherCommand {
 
   @override
   String get description =>
-      'Inspect and manage bundle storage objects (find / delete orphans).';
+      'Inspect and manage bundle storage objects (list / delete).';
 }
 
 class StorageListCommand extends FlutterPatcherCommand {
   StorageListCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null
+        ? 'Backend provider [detected: $detected].'
+        : 'Backend provider.');
     argParser.addOption('prefix', help: 'Key prefix filter (e.g. bundles).');
   }
 
@@ -57,12 +60,7 @@ class StorageListCommand extends FlutterPatcherCommand {
     }
     final rows = <List<String>>[];
     for (final o in objects) {
-      final size = o.size >= 1024 * 1024
-          ? '${(o.size / (1024 * 1024)).toStringAsFixed(2)} MB'
-          : o.size >= 1024
-              ? '${(o.size / 1024).toStringAsFixed(1)} KB'
-              : '${o.size} B';
-      rows.add([cyan(o.key), size]);
+      rows.add([cyan(o.key), humanSize(o.size)]);
     }
     table('${objects.length} objects', ['KEY', 'SIZE'], rows);
     steps.summary();
@@ -71,7 +69,10 @@ class StorageListCommand extends FlutterPatcherCommand {
 
 class StorageDeleteCommand extends FlutterPatcherCommand {
   StorageDeleteCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null
+        ? 'Backend provider [detected: $detected].'
+        : 'Backend provider.');
     argParser.addMultiOption('key', help: 'Storage key to delete (repeatable).');
     argParser.addOption('uri', help: 'Full storage URI to delete.');
   }

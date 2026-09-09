@@ -35,8 +35,10 @@ class ConsoleCommand extends FlutterPatcherCommand {
   Future<int> run() => runGuarded(() async {
     final consoleDir = _findConsoleDir();
     if (consoleDir == null) {
-      err('Console package not found (expected packages/console).');
-      return;
+      throw PackException(
+        'Console package not found (expected packages/console).',
+        1,
+      );
     }
     if (argResults!['open'] as bool) {
       banner('console · open');
@@ -53,11 +55,8 @@ class ConsoleCommand extends FlutterPatcherCommand {
       return;
     }
     banner('console');
-    box('flutter-ota console', [
-      'Open the web console with Flutter:',
-      '',
-      kv('dir', consoleDir.path),
-      kv('run', 'flutter run -d chrome'),
-    ]);
+    info('Open the web console with Flutter:');
+    step('dir  ${dim(consoleDir.path)}');
+    step('run  ${cyan('flutter run -d chrome')}');
   });
 }

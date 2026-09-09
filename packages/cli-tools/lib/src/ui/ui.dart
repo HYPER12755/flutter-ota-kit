@@ -292,7 +292,7 @@ class Steps {
     _echo('  ${dim('·')} $label');
   }
 
-  /// Print boxed summary: "N applied · N skipped · N errors · TIME"
+  /// Print summary. Always inline — no box for a single line of text.
   void summary() {
     _sw.stop();
     final ms = _sw.elapsedMilliseconds;
@@ -307,7 +307,7 @@ class Steps {
     }
     if (parts.isEmpty) parts.add('no steps');
     parts.add(time);
-    box('summary', [parts.join('  ·  ')]);
+    _echo('  ${dim(parts.join('  ·  '))}');
   }
 
   /// Run a step that shows a spinner while working, then marks it

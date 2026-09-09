@@ -232,8 +232,6 @@ SupabaseServiceRoleConfig resolveSupabaseConfig(
   String? url,
   String? serviceRoleKey,
   String? anonKey,
-  String? bucket,
-  String? basePath,
   SupabaseClientFactory? clientFactory,
 }) {
   final env = Platform.environment;
@@ -247,8 +245,8 @@ SupabaseServiceRoleConfig resolveSupabaseConfig(
 
   if (resolvedUrl == null || resolvedUrl.isEmpty) {
     throw StateError(
-      'Supabase URL is required. Set it via --url, SUPABASE_URL, or '
-      '`flutter_ota_kit config set supabase.url <url>`.',
+      'Supabase URL is required. Set it via SUPABASE_URL env var, '
+          'or `flutter-ota config set supabase.url <url>`.',
     );
   }
 
@@ -275,8 +273,6 @@ SupabaseStorageConfig resolveSupabaseStorageConfig(
     url: url,
     serviceRoleKey: serviceRoleKey,
     anonKey: anonKey,
-    bucket: bucket,
-    basePath: basePath,
     clientFactory: clientFactory,
   );
   return SupabaseStorageConfig(
@@ -284,12 +280,10 @@ SupabaseStorageConfig resolveSupabaseStorageConfig(
     supabaseServiceRoleKey: db.supabaseServiceRoleKey,
     supabaseAnonKey: db.supabaseAnonKey,
     clientFactory: db.clientFactory,
-    bucketName: db.supabaseServiceRoleKey != null || db.supabaseAnonKey != null
-        ? (bucket ??
-              Platform.environment['SUPABASE_BUCKET'] ??
-              config.supabase.bucket ??
-              'bundles')
-        : (bucket ?? config.supabase.bucket ?? 'bundles'),
+    bucketName: bucket ??
+        Platform.environment['SUPABASE_BUCKET'] ??
+        config.supabase.bucket ??
+        'bundles',
     basePath:
         basePath ??
         Platform.environment['SUPABASE_BASE_PATH'] ??
@@ -387,8 +381,8 @@ PostgresConfig resolvePostgresDatabaseConfig(
 
   if (resolvedHost == null || resolvedHost.isEmpty) {
     throw StateError(
-      'Postgres host is required. Set --pg-host, POSTGRES_HOST, or '
-      '`flutter_ota_kit config set postgres.host <host>`.',
+      'Postgres host is required. Set POSTGRES_HOST env var, '
+          'or `flutter-ota config set postgres.host <host>`.',
     );
   }
 
@@ -765,15 +759,16 @@ PocketBaseDatabaseConfig resolvePocketBaseDatabaseConfig(
 
   if (resolvedUrl == null || resolvedUrl.isEmpty) {
     throw StateError(
-      'PocketBase URL is required. Set --pb-url, POCKETBASE_URL, or '
-      '`flutter_ota_kit config set pocketbase.url <url>`.',
+      'PocketBase URL is required. Set POCKETBASE_URL env var, '
+      'or `flutter-ota config set pocketbase.url <url>`.',
     );
   }
   if (resolvedEmail == null || resolvedPassword == null) {
     throw StateError(
-      'PocketBase admin credentials are required. Set --pb-email, '
-      '--pb-password, POCKETBASE_ADMIN_EMAIL/PASSWORD, or '
-      '`flutter_ota_kit config set pocketbase.*`.',
+      'PocketBase admin credentials are required. Set '
+      'POCKETBASE_ADMIN_EMAIL / POCKETBASE_ADMIN_PASSWORD env vars, or '
+      '`flutter-ota config set pocketbase.adminEmail/<email> '
+      'pocketbase.adminPassword/<password>`.',
     );
   }
 

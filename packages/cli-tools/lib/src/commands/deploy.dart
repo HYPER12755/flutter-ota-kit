@@ -6,16 +6,20 @@ import '../backend.dart';
 import '../cli_base.dart';
 import '../config.dart';
 import '../operations.dart';
+import '../pack.dart';
 import '../ui/ui.dart';
 import '../util.dart';
 
 /// `flutter-ota deploy` — zip + upload + register a new bundle.
 class DeployCommand extends FlutterPatcherCommand {
   DeployCommand({this.config, this.backendOverride}) {
+    final detected = config?.provider ?? loadConfig()?.provider;
     argParser.addOption(
       'backend',
       abbr: 'b',
-      help: 'Backend provider (supabase/postgres/cloudflare/aws).',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
     );
     argParser.addOption('source', abbr: 's', help: 'Source directory to zip + upload.');
     argParser.addOption('channel', abbr: 'c', help: 'Target channel.');
@@ -68,14 +72,19 @@ class DeployCommand extends FlutterPatcherCommand {
     final fingerprintHash = argResults!['fingerprint-hash'] as String?;
     final keyPath = argResults!['key'] as String?;
     String? signingKey;
-    if (keyPath != null) signingKey = File(keyPath).readAsStringSync().trim();
+    if (keyPath != null) {
+      final keyFile = File(keyPath);
+      if (!keyFile.existsSync()) {
+        throw PackException('Signing key file not found: $keyPath', 64);
+      }
+      signingKey = keyFile.readAsStringSync().trim();
+    }
     final resolvedGitCommitHash =
         argResults!['git-commit-hash'] as String? ??
         await gitCommitHash(source);
     final bundleId = argResults!['bundle-id'] as String?;
 
     banner('deploy');
-    info('channel ${cyan(channel)}  platform ${cyan(platform)}  source ${dim(source)}');
 
     final steps = Steps('deploy');
     final bundle = await _deployWithPhases(steps, backend, source, channel,

@@ -221,7 +221,6 @@ class PocketBaseSchemaInstaller {
     required this.url,
     required this.adminEmail,
     required this.adminPassword,
-    http.Client? httpClient,
     this.bundlesCollection = 'bundles',
     this.channelsCollection = 'channels',
     this.auditLogCollection = 'audit_log',

@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
 
 import '../ui/ui.dart';
@@ -58,12 +60,15 @@ class BundleCommand extends FlutterPatcherCommand {
 
   @override
   String get description =>
-      'Manage bundles (list / show / delete / disable / enable / force / promote).';
+      'Manage bundles (list / show / delete / disable / enable / force / promote / update).';
 }
 
 class BundleListCommand extends FlutterPatcherCommand {
   BundleListCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null
+        ? 'Backend provider [detected: $detected].'
+        : 'Backend provider.');
     argParser.addOption('channel', abbr: 'c', help: 'Filter by channel.');
     argParser.addOption('platform', abbr: 'p', help: 'Filter by platform.');
     argParser.addOption('enabled', help: 'Filter by enabled (true/false).');
@@ -130,7 +135,8 @@ class BundleListCommand extends FlutterPatcherCommand {
 
 class BundleShowCommand extends FlutterPatcherCommand {
   BundleShowCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null ? 'Backend provider [detected: $detected].' : 'Backend provider.');
     argParser.addOption('id', help: 'Bundle id.');
   }
 
@@ -173,7 +179,8 @@ class BundleShowCommand extends FlutterPatcherCommand {
 
 class BundleDeleteCommand extends FlutterPatcherCommand {
   BundleDeleteCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null ? 'Backend provider [detected: $detected].' : 'Backend provider.');
     argParser.addOption('id', help: 'Bundle id.');
     argParser.addFlag(
       'keep-storage',
@@ -215,7 +222,8 @@ class BundleDeleteCommand extends FlutterPatcherCommand {
 
 class BundleDisableCommand extends FlutterPatcherCommand {
   BundleDisableCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null ? 'Backend provider [detected: $detected].' : 'Backend provider.');
     argParser.addOption('id', help: 'Bundle id.');
   }
 
@@ -246,7 +254,8 @@ class BundleDisableCommand extends FlutterPatcherCommand {
 
 class BundleEnableCommand extends FlutterPatcherCommand {
   BundleEnableCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null ? 'Backend provider [detected: $detected].' : 'Backend provider.');
     argParser.addOption('id', help: 'Bundle id.');
   }
 
@@ -277,7 +286,8 @@ class BundleEnableCommand extends FlutterPatcherCommand {
 
 class BundleForceCommand extends FlutterPatcherCommand {
   BundleForceCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null ? 'Backend provider [detected: $detected].' : 'Backend provider.');
     argParser.addOption('id', help: 'Bundle id.');
     argParser.addFlag(
       'off',
@@ -319,7 +329,8 @@ class BundleForceCommand extends FlutterPatcherCommand {
 
 class BundlePromoteCommand extends FlutterPatcherCommand {
   BundlePromoteCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null ? 'Backend provider [detected: $detected].' : 'Backend provider.');
     argParser.addOption('id', help: 'Bundle id.');
     argParser.addOption('channel', abbr: 'c', help: 'Target channel.');
   }
@@ -351,13 +362,14 @@ class BundlePromoteCommand extends FlutterPatcherCommand {
     await steps.run('Promoting $id to $channel',
         () => promoteBundle(backend, id!, channel));
     steps.summary();
-    box('promote', [kv('bundle', cyan(id!)), kv('channel', channel)]);
+    stdout.writeln('  ${dim('→')} bundle ${cyan(id!)} → channel ${cyan(channel)}');
   });
 }
 
 class BundleUpdateCommand extends FlutterPatcherCommand {
   BundleUpdateCommand({this.config, this.backendOverride}) {
-    argParser.addOption('backend', abbr: 'b', help: 'Backend provider.');
+    final detected = config?.provider ?? loadConfig()?.provider;
+    argParser.addOption('backend', abbr: 'b', help: detected != null ? 'Backend provider [detected: $detected].' : 'Backend provider.');
     argParser.addOption('id', help: 'Bundle id.');
     argParser.addOption('message', abbr: 'm', help: 'New release message.');
     argParser.addOption('target-version', help: 'New target app version (e.g. 1.0.0).');

@@ -267,12 +267,14 @@ class InitCommand extends FlutterPatcherCommand {
       step('3. Provision the backend once: ${dim('flutter-ota migrate supabase')}');
     } else if (provider == 'postgres') {
       step('3. Provision the backend: ${dim('flutter-ota migrate postgres')}');
+    } else if (provider == 'cloudflare') {
+      step('3. Provision the backend: ${dim('flutter-ota migrate cloudflare')}');
+    } else if (provider == 'aws') {
+      step('3. Provision the backend: ${dim('flutter-ota migrate aws')}');
     } else if (provider == 'pocketbase') {
-      step('3. Install PocketBase + provision the schema: '
-          '${dim('flutter-ota pocketbase install')} then '
-          '${dim('flutter-ota pocketbase serve')}.');
+      step('3. Provision the backend: ${dim('flutter-ota migrate pocketbase')}');
     }
-    step('4. Build a patch: ${dim('flutter-ota build --name 1.0.1')} '
+    step('4. Build a patch: ${dim('flutter-ota build --version 1.0.1')} '
         'then ${dim('flutter-ota deploy')}');
   });
 
@@ -462,7 +464,14 @@ class InitCommand extends FlutterPatcherCommand {
     step('Added .env to .gitignore');
   }
 
-  String _q(String? s) => s == null ? "''" : "'${s.replaceAll("'", "\\'")}'";
+  String _q(String? s) {
+    if (s == null) return "''";
+    final escaped = s
+        .replaceAll('\\', '\\\\')
+        .replaceAll('\$', '\\\$')
+        .replaceAll("'", "\\'");
+    return "'$escaped'";
+  }
 
   /// Build the body of `lib/flutter_ota_kit_setup.dart` for the selected backend.
   ///
@@ -489,7 +498,7 @@ class InitCommand extends FlutterPatcherCommand {
     password: const String.fromEnvironment('POSTGRES_PASSWORD', defaultValue: ''),
     servingBaseUrl: const String.fromEnvironment('POSTGRES_SERVING_BASE_URL', defaultValue: ${_q(c.servingBaseUrl ?? '')}),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: $channel),
-    platform: Platform.android,
+    platform: Platform.${cfg.platform},
     updateStrategy: UpdateStrategy.appVersion,
     appVersion: $appVersionExpr,
   ));''';
@@ -506,7 +515,7 @@ class InitCommand extends FlutterPatcherCommand {
     secretAccessKey: const String.fromEnvironment('R2_SECRET_ACCESS_KEY', defaultValue: ''),
     basePath: const String.fromEnvironment('R2_BASE_PATH', defaultValue: ${_q(c.r2BasePath ?? '')}),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: $channel),
-    platform: Platform.android,
+    platform: Platform.${cfg.platform},
     updateStrategy: UpdateStrategy.appVersion,
     appVersion: $appVersionExpr,
   ));''';
@@ -522,7 +531,7 @@ class InitCommand extends FlutterPatcherCommand {
     basePath: const String.fromEnvironment('AWS_BASE_PATH', defaultValue: ${_q(c.basePath ?? '')}),
     endpoint: const String.fromEnvironment('AWS_ENDPOINT', defaultValue: ${_q(c.endpoint ?? '')}),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: $channel),
-    platform: Platform.android,
+    platform: Platform.${cfg.platform},
     updateStrategy: UpdateStrategy.appVersion,
     appVersion: $appVersionExpr,
   ));''';
@@ -537,7 +546,7 @@ class InitCommand extends FlutterPatcherCommand {
     bundlesCollection: const String.fromEnvironment('POCKETBASE_BUNDLES_COLLECTION', defaultValue: ${_q(c.bundlesCollection)}),
     bundlesBucket: const String.fromEnvironment('POCKETBASE_BUCKET', defaultValue: ${_q(c.bundlesBucket)}),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: $channel),
-    platform: Platform.android,
+    platform: Platform.${cfg.platform},
     updateStrategy: UpdateStrategy.appVersion,
     appVersion: $appVersionExpr,
   ));''';
@@ -551,7 +560,7 @@ class InitCommand extends FlutterPatcherCommand {
      anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
      bucket: const String.fromEnvironment('SUPABASE_BUCKET', defaultValue: ${_q(c.bucket ?? 'bundles')}),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: $channel),
-    platform: Platform.android,
+    platform: Platform.${cfg.platform},
     updateStrategy: UpdateStrategy.appVersion,
     appVersion: $appVersionExpr,
     sdkVersion: const String.fromEnvironment('SDK_VERSION', defaultValue: '1.0.0'),

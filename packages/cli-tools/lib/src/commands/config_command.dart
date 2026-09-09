@@ -32,6 +32,9 @@ void _saveProjectJson(Map<String, dynamic> json) {
   final file = configCandidates().first;
   file.parent.createSync(recursive: true);
   file.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(json));
+  if (!Platform.isWindows) {
+    Process.runSync('chmod', ['600', file.path]);
+  }
 }
 
 class ConfigGetCommand extends FlutterPatcherCommand {

@@ -35,8 +35,9 @@ Backend requireBackend(FlutterPatcherConfig? config, {Backend? override}) {
   if (override != null) return override;
   if (config == null) {
     throw StateError(
-      'No configuration found. Run `flutter_ota_kit init` or set '
-      'SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY.',
+      'No configuration found. Run `flutter-ota init <backend>` or set '
+      'the required environment variables for your provider '
+      '(see `flutter-ota init --help`).',
     );
   }
   return resolveBackend(config);

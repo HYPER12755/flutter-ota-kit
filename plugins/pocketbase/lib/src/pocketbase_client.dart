@@ -41,6 +41,9 @@ class PocketBaseClient {
   String _token;
   final http.Client _http;
 
+  /// The current admin auth token (empty if not authenticated).
+  String get authToken => _token;
+
   static String _normalizeUrl(String url) {
     var u = url.trim();
     if (u.endsWith('/')) u = u.substring(0, u.length - 1);

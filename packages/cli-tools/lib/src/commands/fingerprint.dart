@@ -25,6 +25,7 @@ class FingerprintCommand extends FlutterPatcherCommand {
     banner(name);
     final source = argResults!['source'] as String;
     final hash = generateFingerprint(source);
-    box('fingerprint', [kv('source', source), kv('hash', hash)]);
+    step('source ${dim(source)}');
+    step('hash   ${cyan(hash)}');
   });
 }

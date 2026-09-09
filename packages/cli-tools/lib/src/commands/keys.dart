@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:io';
 
 import '../cli_base.dart';
 import '../config.dart';
@@ -53,5 +54,8 @@ class KeysCommand extends FlutterPatcherCommand {
     final file = configCandidates().first;
     file.parent.createSync(recursive: true);
     file.writeAsStringSync(const JsonEncoder.withIndent('  ').convert(json));
+    if (!Platform.isWindows) {
+      Process.runSync('chmod', ['600', file.path]);
+    }
   }
 }

@@ -159,49 +159,49 @@ packages:
       path: "../../plugins/aws"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.1.7"
   flutter_ota_kit_cloudflare:
     dependency: "direct main"
     description:
       path: "../../plugins/cloudflare"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.1.7"
   flutter_ota_kit_core:
     dependency: "direct main"
     description:
       path: "../core"
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.1.6"
   flutter_ota_kit_plugin_core:
     dependency: "direct main"
     description:
       path: "../../plugins/plugin-core"
       relative: true
     source: path
-    version: "0.0.6"
+    version: "0.0.8"
   flutter_ota_kit_pocketbase:
     dependency: "direct main"
     description:
       path: "../../plugins/pocketbase"
       relative: true
     source: path
-    version: "0.1.2"
+    version: "0.1.4"
   flutter_ota_kit_postgres:
     dependency: "direct main"
     description:
       path: "../../plugins/postgres"
       relative: true
     source: path
-    version: "0.1.5"
+    version: "0.1.7"
   flutter_ota_kit_supabase:
     dependency: "direct main"
     description:
       path: "../../plugins/supabase"
       relative: true
     source: path
-    version: "0.1.6"
+    version: "0.1.8"
   frontend_server_client:
     dependency: transitive
     description:

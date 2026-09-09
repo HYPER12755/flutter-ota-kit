@@ -46,7 +46,7 @@ class PocketBaseCommand extends FlutterPatcherCommand {
   String get description =>
       'Manage a local PocketBase instance (install / serve / stop / '
       'status / backup / export / import / admin / migrate / health / '
-      'logs / records / collections / settings / sql / crons).';
+      'logs / records / collections / settings / sql / crons / query / config).';
 }
 
 class PocketBaseInstallCommand extends FlutterPatcherCommand {
@@ -225,18 +225,36 @@ class PocketBaseServeCommand extends FlutterPatcherCommand {
 }
 
 class PocketBaseStopCommand extends FlutterPatcherCommand {
+  PocketBaseStopCommand() {
+    argParser.addOption('port', help: 'HTTP port.', defaultsTo: '8090');
+    argParser.addOption('host', help: 'Bind address.', defaultsTo: '127.0.0.1');
+  }
+
   @override
   String get name => 'stop';
 
   @override
-  String get description =>
-      'Hint to stop a running PocketBase (Ctrl+C in serve).';
+  String get description => 'Stop a running PocketBase instance.';
 
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · stop');
-    step('Use Ctrl+C on the running serve process to stop PocketBase.');
-    return;
+    final port = int.tryParse(argResults!['port'] as String? ?? '8090') ?? 8090;
+    final host = argResults!['host'] as String? ?? '127.0.0.1';
+    final mgr = PocketBaseProcessManager(
+      binaryPath: PocketBaseInstallPaths.resolve().binaryPath,
+      dataDir: PocketBaseInstallPaths.resolve().installDir,
+      port: port,
+      host: host,
+    );
+    final pid = mgr.readPid();
+    if (pid <= 0) {
+      step('No PocketBase process found.');
+      return;
+    }
+    step('Stopping PocketBase (PID $pid)...');
+    await mgr.stop();
+    step('PocketBase stopped.');
   });
 }
 
@@ -298,6 +316,11 @@ void _addBackendOptions(ArgParser parser) {
   parser.addOption('admin-password', help: 'Admin password.');
   parser.addOption('version', help: 'PocketBase version.');
   parser.addOption('data-dir', help: 'PB data directory.');
+}
+
+String _safeSubstring(String? s, int length) {
+  if (s == null || s.isEmpty) return '';
+  return s.length > length ? s.substring(0, length) : s;
 }
 
 (String url, String adminEmail, String adminPassword) _resolveBackend(ArgResults r) {
@@ -500,16 +523,20 @@ class PocketBaseBackupDownloadCommand extends FlutterPatcherCommand {
     banner('pocketbase · backup · download');
     final key = argResults!['name'] as String;
     final output = argResults!['output'] as String;
-    final token = await _pbStep('Getting file token', (c) => c.getFileToken('', ''), argResults!);
-    final (url, _, _) = _resolveBackend(argResults!);
+    final (url, admin, pass) = _resolveBackend(argResults!);
     final dlClient = PocketBaseClient(url);
-    final url2 = dlClient.backupDownloadUrl(key, token);
-    final bytes = await dlClient.downloadFileUnauth(url2);
-    dlClient.close();
-    final out = File(p.join(output, key));
-    await out.parent.create(recursive: true);
-    await out.writeAsBytes(bytes);
-    step(green('Saved to ${out.path}'));
+    try {
+      await dlClient.authenticate(admin, pass);
+      final token = dlClient.authToken;
+      final dlUrl = dlClient.backupDownloadUrl(key, token);
+      final bytes = await dlClient.downloadFileUnauth(dlUrl);
+      final out = File(p.join(output, key));
+      await out.parent.create(recursive: true);
+      await out.writeAsBytes(bytes);
+      step(green('Saved to ${out.path}'));
+    } finally {
+      dlClient.close();
+    }
   });
 }
 
@@ -566,39 +593,43 @@ class PocketBaseExportCommand extends FlutterPatcherCommand {
     final collection = r['collection'] as String?;
     final output = r['output'] as String;
 
-    final client = PocketBaseClient(_resolveBackend(r).$1);
-    await client.authenticate(_resolveBackend(r).$2, _resolveBackend(r).$3);
+    final (url, admin, pass) = _resolveBackend(r);
+    final client = PocketBaseClient(url);
+    try {
+      await client.authenticate(admin, pass);
 
-    final collections = <String>[];
-    if (collection != null && collection.isNotEmpty) {
-      collections.add(collection);
-    } else {
-      final all = await client.listCollections();
-      for (final c in all) {
-        final name = c['name'] as String? ?? '';
-        if (name.isNotEmpty && !name.startsWith('_') && c['system'] != true) {
-          collections.add(name);
+      final collections = <String>[];
+      if (collection != null && collection.isNotEmpty) {
+        collections.add(collection);
+      } else {
+        final all = await client.listCollections();
+        for (final c in all) {
+          final name = c['name'] as String? ?? '';
+          if (name.isNotEmpty && !name.startsWith('_') && c['system'] != true) {
+            collections.add(name);
+          }
+        }
+        if (collections.isEmpty) {
+          collections.addAll(['bundles', 'channels', 'audit_log', 'bundles_patches']);
         }
       }
-      if (collections.isEmpty) {
-        collections.addAll(['bundles', 'channels', 'audit_log', 'bundles_patches']);
-      }
-    }
 
-    for (final c in collections) {
-      try {
-        final records = await client.exportCollection(c);
-        final outFile = File(p.join(output, '$c.json'));
-        await outFile.parent.create(recursive: true);
-        await outFile.writeAsString(
-          const JsonEncoder.withIndent('  ').convert(records),
-        );
-        step('${records.length} records → ${outFile.path}');
-      } catch (e) {
-        warn('Failed to export $c: $e');
+      for (final c in collections) {
+        try {
+          final records = await client.exportCollection(c);
+          final outFile = File(p.join(output, '$c.json'));
+          await outFile.parent.create(recursive: true);
+          await outFile.writeAsString(
+            const JsonEncoder.withIndent('  ').convert(records),
+          );
+          step('${records.length} records → ${outFile.path}');
+        } catch (e) {
+          warn('Failed to export $c: $e');
+        }
       }
+    } finally {
+      client.close();
     }
-    client.close();
   });
 }
 
@@ -677,7 +708,7 @@ class PocketBaseAdminCreateCommand extends FlutterPatcherCommand {
       (c) => c.createAdmin(email: email, password: password, passwordConfirm: password),
       r,
     );
-    box('admin', [kv('id', cyan(result['id'] ?? '?')), kv('email', email)]);
+    stdout.writeln('  ${dim('→')} admin ${cyan(result['id'] ?? '?')} $email');
   });
 }
 
@@ -808,11 +839,10 @@ class PocketBaseHealthCommand extends FlutterPatcherCommand {
     final code = health['code'] as int? ?? 0;
     final message = health['message'] as String? ?? '';
     final data = health['data'] as Map<String, dynamic>? ?? {};
-    box('health', [
-      kv('status', code == 200 ? green('healthy') : red('unhealthy')),
-      kv('message', message),
-      if (data.isNotEmpty) kv('canBackup', '${data['canBackup'] ?? false}'),
-    ]);
+    final status = code == 200 ? green('healthy') : red('unhealthy');
+    step('status      $status');
+    step('message     $message');
+    step('canBackup   ${data['canBackup'] ?? false}');
   });
 }
 
@@ -875,7 +905,7 @@ class PocketBaseLogsListCommand extends FlutterPatcherCommand {
       final msg = (log['message'] as String? ?? '').length > 60
           ? '${(log['message'] as String).substring(0, 57)}...'
           : log['message'] as String? ?? '';
-      return [lvl, log['created']?.toString().substring(0, 19) ?? '', msg];
+      return [lvl, _safeSubstring(log['created']?.toString(), 19), msg];
     }).toList();
     table('$total logs', ['LEVEL', 'TIME', 'MESSAGE'], rows);
   });
@@ -906,7 +936,7 @@ class PocketBaseLogsStatsCommand extends FlutterPatcherCommand {
       return;
     }
     final rows = stats.map((s) => [
-      s['date']?.toString().substring(0, 16) ?? '',
+      _safeSubstring(s['date']?.toString(), 16),
       '${s['total'] ?? 0}',
     ]).toList();
     table('${stats.length} entries', ['TIME', 'COUNT'], rows);
@@ -991,9 +1021,13 @@ class PocketBaseRecordsListCommand extends FlutterPatcherCommand {
     }
     final rows = data.items.map((r) {
       final m = r as Map<String, dynamic>;
-      return [cyan(m['id']?.toString() ?? '?'), m.values.first?.toString() ?? ''];
+      final label = m['name']?.toString() ??
+          m['updated']?.toString() ??
+          m['created']?.toString() ??
+          '';
+      return [cyan(m['id']?.toString() ?? '?'), label];
     }).toList();
-    table('${data.totalItems} records', ['ID', 'FIRST FIELD'], rows);
+    table('${data.totalItems} records', ['ID', 'LABEL'], rows);
   });
 }
 
@@ -1050,7 +1084,7 @@ class PocketBaseRecordsCreateCommand extends FlutterPatcherCommand {
       (c) => c.createRecord<dynamic>(r['collection'] as String, body, (j) => j),
       r,
     );
-    box('record', [kv('id', cyan((record as Map)['id']?.toString() ?? '?'))]);
+    stdout.writeln('  ${dim('→')} record ${cyan((record as Map)['id']?.toString() ?? '?')}');
   });
 }
 
@@ -1563,11 +1597,15 @@ class PocketBaseQueryCommand extends FlutterPatcherCommand {
     if (bodyStr != null && bodyStr.isNotEmpty) {
       body = jsonDecode(bodyStr) as Map<String, dynamic>;
     }
-    final client = PocketBaseClient(_resolveBackend(r).$1);
-    await client.authenticate(_resolveBackend(r).$2, _resolveBackend(r).$3);
-    final res = await client.rawRequest(method, path, body: body);
-    client.close();
-    stdout.writeln(const JsonEncoder.withIndent('  ').convert(jsonDecode(res.body)));
+    final (url, admin, pass) = _resolveBackend(r);
+    final client = PocketBaseClient(url);
+    try {
+      await client.authenticate(admin, pass);
+      final res = await client.rawRequest(method, path, body: body);
+      stdout.writeln(const JsonEncoder.withIndent('  ').convert(jsonDecode(res.body)));
+    } finally {
+      client.close();
+    }
   });
 }
 
