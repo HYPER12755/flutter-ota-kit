@@ -1,6 +1,6 @@
 name: flutter_ota_kit_pocketbase
 description: PocketBase plugin for flutter_ota_kit — local-first self-hostable backend with admin UI, auth, file storage, and realtime.
-version: 0.1.4
+version: 0.1.6
 homepage: https://github.com/HYPER12755/flutter-ota-kit
 repository: https://github.com/HYPER12755/flutter-ota-kit
 issue_tracker: https://github.com/HYPER12755/flutter-ota-kit/issues
