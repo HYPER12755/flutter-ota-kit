@@ -24,7 +24,9 @@ class FlutterPatcherRunner extends CommandRunner<int> {
     // Intercept missing subcommand for parent commands so we show our
     // colored usage text instead of the args package's plain text.
     if (results.command == null && results.rest.isEmpty) {
-      final cmdName = results.arguments.isNotEmpty ? results.arguments.first : null;
+      final cmdName = results.arguments.isNotEmpty
+          ? results.arguments.first
+          : null;
       if (cmdName != null) {
         final cmd = commands[cmdName];
         if (cmd != null && cmd.subcommands.isNotEmpty) {

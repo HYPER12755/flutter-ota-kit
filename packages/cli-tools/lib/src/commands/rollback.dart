@@ -7,16 +7,24 @@ import '../ui/ui.dart';
 class RollbackCommand extends FlutterPatcherCommand {
   RollbackCommand({this.config, this.backendOverride}) {
     final detected = config?.provider ?? loadConfig()?.provider;
-    argParser.addOption('backend', abbr: 'b', help: detected != null
-        ? 'Backend provider [detected: $detected].'
-        : 'Backend provider.');
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
+    );
     argParser.addOption('channel', abbr: 'c', help: 'Channel to roll back.');
     argParser.addOption(
       'bundle-id',
       abbr: 'i',
       help: 'Roll back to this specific bundle id.',
     );
-    argParser.addOption('platform', abbr: 'p', help: 'Platform filter (e.g. android).');
+    argParser.addOption(
+      'platform',
+      abbr: 'p',
+      help: 'Platform filter (e.g. android).',
+    );
   }
 
   final FlutterPatcherConfig? config;
@@ -49,14 +57,12 @@ class RollbackCommand extends FlutterPatcherCommand {
 
     banner('rollback');
     final steps = Steps('rollback');
-    final (disabled, live) = await steps.run('Rolling back channel "$channel"', () async {
+    final (
+      disabled,
+      live,
+    ) = await steps.run('Rolling back channel "$channel"', () async {
       if (bundleId != null && bundleId.isNotEmpty) {
-        return rollbackToBundle(
-          backend,
-          channel,
-          bundleId,
-          platform: platform,
-        );
+        return rollbackToBundle(backend, channel, bundleId, platform: platform);
       }
       final id = await rollbackChannel(backend, channel);
       final nowLive = (await getChannel(backend, channel))?.id ?? '';

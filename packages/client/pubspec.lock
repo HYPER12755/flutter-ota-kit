@@ -92,24 +92,27 @@ packages:
   flutter_ota_kit_cloudflare:
     dependency: "direct dev"
     description:
-      path: "../../plugins/cloudflare"
-      relative: true
-    source: path
+      name: flutter_ota_kit_cloudflare
+      sha256: "326850394cd6d9e404305bb5de101a8c4d5622301522031dadd46dc8f2020ac5"
+      url: "https://pub.dev"
+    source: hosted
     version: "0.1.7"
   flutter_ota_kit_core:
     dependency: "direct main"
     description:
-      path: "../core"
-      relative: true
-    source: path
-    version: "0.1.6"
+      name: flutter_ota_kit_core
+      sha256: f5f94a6be77ea1a05fe1d7c9cfb08ba05d0491ed5319a873b5b4eac686bedc25
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.1.7"
   flutter_ota_kit_plugin_core:
     dependency: "direct dev"
     description:
-      path: "../../plugins/plugin-core"
-      relative: true
-    source: path
-    version: "0.0.8"
+      name: flutter_ota_kit_plugin_core
+      sha256: "0e423240a1d1851df03a3a44c909d39e75190de5d0cb658f19e91ee088b002e4"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.0.9"
   frontend_server_client:
     dependency: transitive
     description:

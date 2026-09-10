@@ -31,9 +31,13 @@ class ChannelCommand extends FlutterPatcherCommand {
 class ChannelListCommand extends FlutterPatcherCommand {
   ChannelListCommand({this.config, this.backendOverride}) {
     final detected = config?.provider ?? loadConfig()?.provider;
-    argParser.addOption('backend', abbr: 'b', help: detected != null
-        ? 'Backend provider [detected: $detected].'
-        : 'Backend provider.');
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
+    );
   }
 
   final FlutterPatcherConfig? config;
@@ -62,9 +66,13 @@ class ChannelListCommand extends FlutterPatcherCommand {
 class ChannelGetCommand extends FlutterPatcherCommand {
   ChannelGetCommand({this.config, this.backendOverride}) {
     final detected = config?.provider ?? loadConfig()?.provider;
-    argParser.addOption('backend', abbr: 'b', help: detected != null
-        ? 'Backend provider [detected: $detected].'
-        : 'Backend provider.');
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
+    );
     argParser.addOption('channel', abbr: 'c', help: 'Channel.');
   }
 
@@ -109,9 +117,13 @@ class ChannelGetCommand extends FlutterPatcherCommand {
 class ChannelSetCommand extends FlutterPatcherCommand {
   ChannelSetCommand({this.config, this.backendOverride}) {
     final detected = config?.provider ?? loadConfig()?.provider;
-    argParser.addOption('backend', abbr: 'b', help: detected != null
-        ? 'Backend provider [detected: $detected].'
-        : 'Backend provider.');
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
+    );
     argParser.addOption('channel', abbr: 'c', help: 'Channel.');
     argParser.addOption('bundle-id', abbr: 'i', help: 'Bundle id.');
   }
@@ -142,9 +154,13 @@ class ChannelSetCommand extends FlutterPatcherCommand {
     final backend = requireBackend(cfg, override: backendOverride);
     banner('channel · set');
     final steps = Steps('set');
-    await steps.run('Promoting $bundleId to $channel',
-        () => promoteBundle(backend, bundleId, channel));
+    await steps.run(
+      'Promoting $bundleId to $channel',
+      () => promoteBundle(backend, bundleId, channel),
+    );
     steps.summary();
-    stdout.writeln('  ${dim('→')} channel ${cyan(channel)} = ${cyan(bundleId)}');
+    stdout.writeln(
+      '  ${dim('→')} channel ${cyan(channel)} = ${cyan(bundleId)}',
+    );
   });
 }

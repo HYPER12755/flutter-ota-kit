@@ -11,20 +11,20 @@ environment:
   sdk: ">=3.13.2 <4.0.0"
 
 dependencies:
-  flutter_ota_kit_core: ^0.1.6
+  flutter_ota_kit_core: ^0.1.8
 
 dev_dependencies:
   flutter_ota_kit_cloudflare: ^0.1.7
-  flutter_ota_kit_plugin_core: ^0.0.8
+  flutter_ota_kit_plugin_core: ^0.0.10
   crypto: ^3.0.3
   test: ^1.25.0
   lints: ^4.0.0
   shelf: ^1.4.0
 
 dependency_overrides:
-  flutter_ota_kit_core:
+  flutter_ota_kit_core:^0.1.8
     path: ../core
   flutter_ota_kit_cloudflare:
     path: ../../plugins/cloudflare
-  flutter_ota_kit_plugin_core:
+  flutter_ota_kit_plugin_core:^0.0.10
     path: ../../plugins/plugin-core

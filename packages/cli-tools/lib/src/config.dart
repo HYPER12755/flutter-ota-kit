@@ -170,9 +170,7 @@ FlutterPatcherConfig? loadConfig() {
           jsonDecode(raw) as Map<String, dynamic>,
         );
       } on FormatException {
-        stderr.writeln(
-          'Warning: invalid config at ${file.path} — ignoring.',
-        );
+        stderr.writeln('Warning: invalid config at ${file.path} — ignoring.');
         return null;
       }
     }
@@ -246,7 +244,7 @@ SupabaseServiceRoleConfig resolveSupabaseConfig(
   if (resolvedUrl == null || resolvedUrl.isEmpty) {
     throw StateError(
       'Supabase URL is required. Set it via SUPABASE_URL env var, '
-          'or `flutter-ota config set supabase.url <url>`.',
+      'or `flutter-ota config set supabase.url <url>`.',
     );
   }
 
@@ -280,7 +278,8 @@ SupabaseStorageConfig resolveSupabaseStorageConfig(
     supabaseServiceRoleKey: db.supabaseServiceRoleKey,
     supabaseAnonKey: db.supabaseAnonKey,
     clientFactory: db.clientFactory,
-    bucketName: bucket ??
+    bucketName:
+        bucket ??
         Platform.environment['SUPABASE_BUCKET'] ??
         config.supabase.bucket ??
         'bundles',
@@ -382,7 +381,7 @@ PostgresConfig resolvePostgresDatabaseConfig(
   if (resolvedHost == null || resolvedHost.isEmpty) {
     throw StateError(
       'Postgres host is required. Set POSTGRES_HOST env var, '
-          'or `flutter-ota config set postgres.host <host>`.',
+      'or `flutter-ota config set postgres.host <host>`.',
     );
   }
 

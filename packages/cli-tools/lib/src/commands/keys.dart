@@ -9,7 +9,10 @@ import '../ui/ui.dart';
 /// `flutter_ota_kit keys` — generate an Ed25519 keypair for bundle signing.
 class KeysCommand extends FlutterPatcherCommand {
   KeysCommand() {
-    argParser.addFlag('save', help: 'Persist the public key into the project config.');
+    argParser.addFlag(
+      'save',
+      help: 'Persist the public key into the project config.',
+    );
   }
 
   @override
@@ -39,11 +42,10 @@ class KeysCommand extends FlutterPatcherCommand {
       final file = configCandidates().first;
       final json =
           file.existsSync() && file.readAsStringSync().trim().isNotEmpty
-              ? (jsonDecode(file.readAsStringSync()) as Map<String, dynamic>)
-              : <String, dynamic>{};
+          ? (jsonDecode(file.readAsStringSync()) as Map<String, dynamic>)
+          : <String, dynamic>{};
       writePath(json, 'publicKey', publicB64);
-      await steps.run<void>('Saving public key to ${file.path}',
-          () async {
+      await steps.run<void>('Saving public key to ${file.path}', () async {
         _save(json);
       });
     }

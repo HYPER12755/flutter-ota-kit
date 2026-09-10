@@ -28,9 +28,13 @@ class StorageCommand extends FlutterPatcherCommand {
 class StorageListCommand extends FlutterPatcherCommand {
   StorageListCommand({this.config, this.backendOverride}) {
     final detected = config?.provider ?? loadConfig()?.provider;
-    argParser.addOption('backend', abbr: 'b', help: detected != null
-        ? 'Backend provider [detected: $detected].'
-        : 'Backend provider.');
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
+    );
     argParser.addOption('prefix', help: 'Key prefix filter (e.g. bundles).');
   }
 
@@ -50,9 +54,12 @@ class StorageListCommand extends FlutterPatcherCommand {
     final prefix = argResults!['prefix'] as String?;
     banner('storage · list');
     final steps = Steps('list');
-    final objects = await steps.run('Listing storage objects', () =>
-        backend.storage.listObjects(
-            prefix == null || prefix.isEmpty ? null : prefix));
+    final objects = await steps.run(
+      'Listing storage objects',
+      () => backend.storage.listObjects(
+        prefix == null || prefix.isEmpty ? null : prefix,
+      ),
+    );
     if (objects.isEmpty) {
       steps.skip('(no objects)');
       steps.summary();
@@ -70,10 +77,17 @@ class StorageListCommand extends FlutterPatcherCommand {
 class StorageDeleteCommand extends FlutterPatcherCommand {
   StorageDeleteCommand({this.config, this.backendOverride}) {
     final detected = config?.provider ?? loadConfig()?.provider;
-    argParser.addOption('backend', abbr: 'b', help: detected != null
-        ? 'Backend provider [detected: $detected].'
-        : 'Backend provider.');
-    argParser.addMultiOption('key', help: 'Storage key to delete (repeatable).');
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
+    );
+    argParser.addMultiOption(
+      'key',
+      help: 'Storage key to delete (repeatable).',
+    );
     argParser.addOption('uri', help: 'Full storage URI to delete.');
   }
 
@@ -102,8 +116,10 @@ class StorageDeleteCommand extends FlutterPatcherCommand {
     banner('storage · delete');
     final steps = Steps('delete');
     if (keys.isNotEmpty) {
-      await steps.run('Deleting ${keys.length} object(s)',
-          () => backend.storage.deleteObjects(keys));
+      await steps.run(
+        'Deleting ${keys.length} object(s)',
+        () => backend.storage.deleteObjects(keys),
+      );
     } else {
       await steps.run('Deleting $uri', () => backend.storage.delete(uri!));
     }

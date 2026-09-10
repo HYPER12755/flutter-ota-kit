@@ -17,7 +17,7 @@ import 'package:path/path.dart' as p;
 
 class PocketBaseProcess {
   PocketBaseProcess._(this.process, this.dataDir, this.binaryPath)
-      : _exitCodeCompleted = false {
+    : _exitCodeCompleted = false {
     process.exitCode.then((_) => _exitCodeCompleted = true);
   }
 
@@ -92,12 +92,14 @@ class PocketBaseProcessManager {
   }
 
   void _writeConfigFile(int pid) {
-    configFile.writeAsStringSync(jsonEncode({
-      'pid': pid,
-      'host': host,
-      'port': port,
-      'url': 'http://$host:$port',
-    }));
+    configFile.writeAsStringSync(
+      jsonEncode({
+        'pid': pid,
+        'host': host,
+        'port': port,
+        'url': 'http://$host:$port',
+      }),
+    );
   }
 
   Map<String, dynamic>? readConfig() {
@@ -135,19 +137,18 @@ class PocketBaseProcessManager {
     final hooksDir = Directory(p.join(dataDir.path, 'pb_hooks'));
     await hooksDir.create(recursive: true);
 
-    final mergedEnv = <String, String>{
-      ...Platform.environment,
-      ...?env,
-    };
+    final mergedEnv = <String, String>{...Platform.environment, ...?env};
 
     // Create superuser if credentials provided (PB 0.40+ doesn't support
     // PB_ADMIN_EMAIL env var, so we use the CLI directly).
     if (adminEmail != null && adminPassword != null) {
-      final result = await Process.run(
-        binaryPath.path,
-        ['superuser', 'upsert', '--dir=${dataDir.path}', adminEmail, adminPassword],
-        environment: mergedEnv,
-      );
+      final result = await Process.run(binaryPath.path, [
+        'superuser',
+        'upsert',
+        '--dir=${dataDir.path}',
+        adminEmail,
+        adminPassword,
+      ], environment: mergedEnv);
       if (result.exitCode != 0) {
         // Non-fatal; serve will continue but schema install may fail.
       }

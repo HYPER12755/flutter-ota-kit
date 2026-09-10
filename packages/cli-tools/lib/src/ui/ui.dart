@@ -127,7 +127,8 @@ Future<T> spinner<T>(
     final r = await task();
     // Keep spinner visible for at least 400ms so fast ops are readable.
     final elapsed = sw.elapsedMilliseconds;
-    if (elapsed < 400) await Future.delayed(Duration(milliseconds: 400 - elapsed));
+    if (elapsed < 400)
+      await Future.delayed(Duration(milliseconds: 400 - elapsed));
     timer.cancel();
     sw.stop();
     stdout.write('\r\x1b[K  ${green('✓')} ${done ?? label}\n');
@@ -296,9 +297,7 @@ class Steps {
   void summary() {
     _sw.stop();
     final ms = _sw.elapsedMilliseconds;
-    final time = ms >= 1000
-        ? '${(ms / 1000).toStringAsFixed(1)}s'
-        : '${ms}ms';
+    final time = ms >= 1000 ? '${(ms / 1000).toStringAsFixed(1)}s' : '${ms}ms';
     final parts = <String>[];
     if (_done > 0) parts.add('${_done} completed');
     if (_skipped > 0) parts.add('${_skipped} skipped');
@@ -401,9 +400,7 @@ class Steps {
     _activeTimer = null;
     _activeLabel = null;
     if (_colorOn) {
-      stdout.write(
-        '\r\x1b[K  ${success ? green('✓') : red('✗')} $label\n',
-      );
+      stdout.write('\r\x1b[K  ${success ? green('✓') : red('✗')} $label\n');
     }
     if (success) {
       _done++;
@@ -455,9 +452,7 @@ class ProgressBar {
     _spin = (_spin + 1) % _frames.length;
     final pctStr = '${(pct * 100).round()}%'.padLeft(4);
 
-    stdout.write(
-      '\r\x1b[K  ${cyan(_frames[_spin])} $_label  $bar $pctStr',
-    );
+    stdout.write('\r\x1b[K  ${cyan(_frames[_spin])} $_label  $bar $pctStr');
   }
 
   /// Finish: print the final status line. This is intentionally async and
@@ -470,11 +465,10 @@ class ProgressBar {
     _sw.stop();
     // Keep bar visible for at least 500ms so fast ops are readable.
     final elapsed = _sw.elapsedMilliseconds;
-    if (elapsed < 500) await Future.delayed(Duration(milliseconds: 500 - elapsed));
+    if (elapsed < 500)
+      await Future.delayed(Duration(milliseconds: 500 - elapsed));
     final ms = _sw.elapsedMilliseconds;
-    final time = ms >= 1000
-        ? '${(ms / 1000).toStringAsFixed(1)}s'
-        : '${ms}ms';
+    final time = ms >= 1000 ? '${(ms / 1000).toStringAsFixed(1)}s' : '${ms}ms';
     if (_colorOn) {
       stdout.write('\r\x1b[K  ${green('✓')} $_label in $time\n');
     } else {

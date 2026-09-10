@@ -178,19 +178,16 @@ class Bundle {
     if (targetAppVersion != null) 'target_app_version': targetAppVersion,
     if (fingerprintHash != null) 'fingerprint_hash': fingerprintHash,
     if (metadata != null) 'metadata': metadata!.toJson(),
-    if (manifestStorageUri != null)
-      'manifest_storage_uri': manifestStorageUri,
+    if (manifestStorageUri != null) 'manifest_storage_uri': manifestStorageUri,
     if (manifestFileHash != null) 'manifest_file_hash': manifestFileHash,
     if (assetBaseStorageUri != null)
       'asset_base_storage_uri': assetBaseStorageUri,
     if (patches != null) 'patches': patches!.map((p) => p.toJson()).toList(),
     if (patchBaseBundleId != null) 'patch_base_bundle_id': patchBaseBundleId,
-    if (patchBaseFileHash != null)
-      'patch_base_file_hash': patchBaseFileHash,
+    if (patchBaseFileHash != null) 'patch_base_file_hash': patchBaseFileHash,
     if (patchFileHashLegacy != null) 'patch_file_hash': patchFileHashLegacy,
     if (patchStorageUri != null) 'patch_storage_uri': patchStorageUri,
-    if (rolloutCohortCount != null)
-      'rollout_cohort_count': rolloutCohortCount,
+    if (rolloutCohortCount != null) 'rollout_cohort_count': rolloutCohortCount,
     if (targetCohorts != null) 'target_cohorts': targetCohorts,
   };
 

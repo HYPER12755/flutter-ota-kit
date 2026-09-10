@@ -226,8 +226,9 @@ class MockPocketBaseClient implements PocketBaseClient {
   Future<void> deleteAdmin(String id) async {}
 
   @override
-  Future<List<Map<String, dynamic>>> exportCollection(String collection) async =>
-      [];
+  Future<List<Map<String, dynamic>>> exportCollection(
+    String collection,
+  ) async => [];
 
   @override
   Future<void> importCollection(
@@ -247,7 +248,10 @@ class MockPocketBaseClient implements PocketBaseClient {
 
   @override
   Future<Map<String, dynamic>> listLogs({
-    String? filter, String? sort, int page = 1, int perPage = 30,
+    String? filter,
+    String? sort,
+    int page = 1,
+    int perPage = 30,
   }) async => {'items': [], 'totalItems': 0};
 
   @override

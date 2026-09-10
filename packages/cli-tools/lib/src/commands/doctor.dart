@@ -11,9 +11,13 @@ import '../ui/ui.dart';
 class DoctorCommand extends FlutterPatcherCommand {
   DoctorCommand({this.config, this.backendOverride}) {
     final detected = config?.provider ?? loadConfig()?.provider;
-    argParser.addOption('backend', abbr: 'b', help: detected != null
-        ? 'Backend provider [detected: $detected].'
-        : 'Backend provider.');
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
+    );
   }
 
   final FlutterPatcherConfig? config;
@@ -59,9 +63,7 @@ class DoctorCommand extends FlutterPatcherCommand {
       final time = ms >= 1000
           ? '${(ms / 1000).toStringAsFixed(1)}s'
           : '${ms}ms';
-      steps.success(
-        'Backend reachable — ${channels.join(', ')} in $time',
-      );
+      steps.success('Backend reachable — ${channels.join(', ')} in $time');
     } catch (e) {
       steps.fail('Backend unreachable — $e');
     }
@@ -85,19 +87,16 @@ class DoctorCommand extends FlutterPatcherCommand {
     }
   }
 
-  Future<void> _checkSupabase(
-    FlutterPatcherConfig cfg,
-    Steps steps,
-  ) async {
+  Future<void> _checkSupabase(FlutterPatcherConfig cfg, Steps steps) async {
     final url = cfg.supabase.url;
     if (url == null || url.isEmpty) {
       steps.fail('SUPABASE_URL not set');
       return;
     }
     try {
-      final res = await http.get(Uri.parse('$url/rest/v1/')).timeout(
-        const Duration(seconds: 5),
-      );
+      final res = await http
+          .get(Uri.parse('$url/rest/v1/'))
+          .timeout(const Duration(seconds: 5));
       if (res.statusCode < 400) {
         steps.success('Supabase reachable ($url)');
       } else {
@@ -108,10 +107,7 @@ class DoctorCommand extends FlutterPatcherCommand {
     }
   }
 
-  Future<void> _checkPostgres(
-    FlutterPatcherConfig cfg,
-    Steps steps,
-  ) async {
+  Future<void> _checkPostgres(FlutterPatcherConfig cfg, Steps steps) async {
     final host = cfg.postgres.host;
     if (host == null || host.isEmpty) {
       steps.fail('POSTGRES_HOST not set');
@@ -119,9 +115,10 @@ class DoctorCommand extends FlutterPatcherCommand {
     }
     final port = int.tryParse(cfg.postgres.port ?? '5432') ?? 5432;
     try {
-      final socket = await Socket.connect(host, port).timeout(
-        const Duration(seconds: 5),
-      );
+      final socket = await Socket.connect(
+        host,
+        port,
+      ).timeout(const Duration(seconds: 5));
       await socket.close();
       steps.success('Postgres reachable ($host:$port)');
     } catch (e) {
@@ -129,10 +126,7 @@ class DoctorCommand extends FlutterPatcherCommand {
     }
   }
 
-  Future<void> _checkCloudflare(
-    FlutterPatcherConfig cfg,
-    Steps steps,
-  ) async {
+  Future<void> _checkCloudflare(FlutterPatcherConfig cfg, Steps steps) async {
     final accountId = cfg.cloudflare.accountId;
     final apiToken = cfg.cloudflare.apiToken;
     if (accountId == null || accountId.isEmpty) {
@@ -168,10 +162,7 @@ class DoctorCommand extends FlutterPatcherCommand {
     }
   }
 
-  Future<void> _checkAws(
-    FlutterPatcherConfig cfg,
-    Steps steps,
-  ) async {
+  Future<void> _checkAws(FlutterPatcherConfig cfg, Steps steps) async {
     final bucket = cfg.aws.bucket;
     if (bucket == null || bucket.isEmpty) {
       steps.fail('AWS_BUCKET not set');
@@ -185,10 +176,7 @@ class DoctorCommand extends FlutterPatcherCommand {
     steps.success('AWS S3 bucket "$bucket" in $region');
   }
 
-  Future<void> _checkPocketBase(
-    FlutterPatcherConfig cfg,
-    Steps steps,
-  ) async {
+  Future<void> _checkPocketBase(FlutterPatcherConfig cfg, Steps steps) async {
     final paths = PocketBaseInstallPaths.resolve();
     final installed = await paths.binaryPath.exists();
     if (installed) {

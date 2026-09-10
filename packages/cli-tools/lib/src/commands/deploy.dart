@@ -21,9 +21,18 @@ class DeployCommand extends FlutterPatcherCommand {
           ? 'Backend provider [detected: $detected].'
           : 'Backend provider.',
     );
-    argParser.addOption('source', abbr: 's', help: 'Source directory to zip + upload.');
+    argParser.addOption(
+      'source',
+      abbr: 's',
+      help: 'Source directory to zip + upload.',
+    );
     argParser.addOption('channel', abbr: 'c', help: 'Target channel.');
-    argParser.addOption('platform', abbr: 'p', defaultsTo: 'android', help: 'Platform.');
+    argParser.addOption(
+      'platform',
+      abbr: 'p',
+      defaultsTo: 'android',
+      help: 'Platform.',
+    );
     argParser.addOption('message', abbr: 'm', help: 'Release message.');
     argParser.addFlag('force', abbr: 'f', help: 'Force the update on clients.');
     argParser.addOption(
@@ -39,7 +48,10 @@ class DeployCommand extends FlutterPatcherCommand {
       abbr: 'k',
       help: 'Path to Ed25519 private key file (sign bundle).',
     );
-    argParser.addOption('git-commit-hash', help: 'Git commit hash (auto-detected).');
+    argParser.addOption(
+      'git-commit-hash',
+      help: 'Git commit hash (auto-detected).',
+    );
     argParser.addOption(
       'bundle-id',
       abbr: 'i',
@@ -87,9 +99,20 @@ class DeployCommand extends FlutterPatcherCommand {
     banner('deploy');
 
     final steps = Steps('deploy');
-    final bundle = await _deployWithPhases(steps, backend, source, channel,
-        platform, message, force, targetAppVersion, fingerprintHash,
-        signingKey, resolvedGitCommitHash, bundleId);
+    final bundle = await _deployWithPhases(
+      steps,
+      backend,
+      source,
+      channel,
+      platform,
+      message,
+      force,
+      targetAppVersion,
+      fingerprintHash,
+      signingKey,
+      resolvedGitCommitHash,
+      bundleId,
+    );
     steps.summary();
 
     final lines = <String>[

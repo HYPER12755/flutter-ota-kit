@@ -103,8 +103,8 @@ Future<int> run(List<String> args) async {
     }
 
     // Unknown command → fuzzy-match and suggest.
-    final unknownMatch =
-        RegExp(r'Could not find a command named "?(\w+)"?').firstMatch(msg);
+    final unknownMatch = RegExp(r'Could not find a command named "?(\w+)"?')
+        .firstMatch(msg);
     if (unknownMatch != null) {
       final typed = unknownMatch.group(1)!;
       _printUnknownCommand(runner, typed);
@@ -191,7 +191,9 @@ void _printUnknownCommand(FlutterPatcherRunner runner, String typed) {
             .where((s) => s.startsWith(sub) || _levenshtein(sub, s) <= 2)
             .toList();
         if (subSuggestion.isNotEmpty) {
-          stderr.writeln('  ${_cyan('Did you mean?')} $parentCmd ${_green(subSuggestion.first)}');
+          stderr.writeln(
+            '  ${_cyan('Did you mean?')} $parentCmd ${_green(subSuggestion.first)}',
+          );
           stderr.writeln('');
         }
         cmd.printUsage();
@@ -283,7 +285,8 @@ bool get _noColor {
   return v != null && v.isNotEmpty;
 }
 
-bool get _colorOn => !_noColor && stderr.hasTerminal && stderr.supportsAnsiEscapes;
+bool get _colorOn =>
+    !_noColor && stderr.hasTerminal && stderr.supportsAnsiEscapes;
 
 String _red(String s) => _colorOn ? '\x1b[31m$s\x1b[0m' : s;
 String _green(String s) => _colorOn ? '\x1b[32m$s\x1b[0m' : s;

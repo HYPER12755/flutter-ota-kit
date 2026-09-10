@@ -1,3 +1,13 @@
+## 0.1.9
+
+- Automated release 2026-09-10
+
+## 0.1.8
+
+- Added comprehensive documentation for all public APIs.
+- Documented D1 database, R2 storage, and worker database plugins.
+- General maintenance.
+
 ## 0.1.7
 
 - General maintenance.

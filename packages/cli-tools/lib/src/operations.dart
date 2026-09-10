@@ -61,9 +61,7 @@ class ListOptions {
 /// Build the zip, upload it, and register a [Bundle] via the backend.
 Future<Bundle> deployBundle(Backend backend, DeployOptions opts) async {
   if (opts.targetAppVersion != null && opts.fingerprintHash != null) {
-    throw StateError(
-      'Use only one of target-app-version / fingerprint-hash.',
-    );
+    throw StateError('Use only one of target-app-version / fingerprint-hash.');
   }
   if (opts.targetAppVersion == null && opts.fingerprintHash == null) {
     throw StateError(

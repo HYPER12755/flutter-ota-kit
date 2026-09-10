@@ -12,9 +12,13 @@ import '../ui/ui.dart';
 class MigrateCommand extends FlutterPatcherCommand {
   MigrateCommand({this.config, this.backendOverride}) {
     final detected = config?.provider ?? loadConfig()?.provider;
-    argParser.addOption('backend', abbr: 'b', help: detected != null
-        ? 'Backend provider [detected: $detected].'
-        : 'Backend provider.');
+    argParser.addOption(
+      'backend',
+      abbr: 'b',
+      help: detected != null
+          ? 'Backend provider [detected: $detected].'
+          : 'Backend provider.',
+    );
     argParser.addOption(
       'database-url',
       help: 'Postgres connection string (or DATABASE_URL env).',
@@ -114,12 +118,17 @@ class MigrateCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     final cfg = effectiveConfig(config ?? loadConfig(), argResults!);
-    final provider = argResults!['backend'] as String? ?? cfg?.provider ?? 'supabase';
+    final provider =
+        argResults!['backend'] as String? ?? cfg?.provider ?? 'supabase';
 
     if (provider == 'aws') {
       banner('migrate · aws');
-      step('AWS stores bundle metadata as JSON in S3 — no SQL migrations needed.');
-      step('The S3 bucket and object prefix are created automatically on first deploy.');
+      step(
+        'AWS stores bundle metadata as JSON in S3 — no SQL migrations needed.',
+      );
+      step(
+        'The S3 bucket and object prefix are created automatically on first deploy.',
+      );
       step('No action required. Run `flutter-ota deploy` to get started.');
       return;
     }
@@ -176,7 +185,8 @@ class MigrateCommand extends FlutterPatcherCommand {
     }
 
     if (provider == 'cloudflare') {
-      final cfCfg = cfg ??
+      final cfCfg =
+          cfg ??
           FlutterPatcherConfig(
             provider: 'cloudflare',
             supabase: const SupabaseConfigJson(),
@@ -218,7 +228,8 @@ class MigrateCommand extends FlutterPatcherCommand {
     }
 
     if (provider == 'supabase') {
-      final sbCfg = cfg ??
+      final sbCfg =
+          cfg ??
           FlutterPatcherConfig(
             provider: 'supabase',
             supabase: const SupabaseConfigJson(),
@@ -289,9 +300,7 @@ class MigrateCommand extends FlutterPatcherCommand {
       );
       sw.stop();
       if (res.statusCode >= 400) {
-        steps.fail(
-          '${p.basename(file.path)} (${res.statusCode}): ${res.body}',
-        );
+        steps.fail('${p.basename(file.path)} (${res.statusCode}): ${res.body}');
       } else {
         final ms = sw.elapsedMilliseconds;
         final time = ms >= 1000
@@ -341,9 +350,7 @@ class MigrateCommand extends FlutterPatcherCommand {
       }
     }
     final ms = sw.elapsedMilliseconds;
-    final time = ms >= 1000
-        ? '${(ms / 1000).toStringAsFixed(1)}s'
-        : '${ms}ms';
+    final time = ms >= 1000 ? '${(ms / 1000).toStringAsFixed(1)}s' : '${ms}ms';
     steps.success('Ensured storage bucket "${storage.bucketName}" in $time');
   }
 
@@ -483,8 +490,9 @@ class MigrateCommand extends FlutterPatcherCommand {
         return;
       }
       final ms = sw.elapsedMilliseconds;
-      final time =
-          ms >= 1000 ? '${(ms / 1000).toStringAsFixed(1)}s' : '${ms}ms';
+      final time = ms >= 1000
+          ? '${(ms / 1000).toStringAsFixed(1)}s'
+          : '${ms}ms';
       steps.success('Created D1 database ($dbId) in $time');
     } else {
       steps.success('Using existing D1 database ($dbId)');
@@ -507,8 +515,9 @@ class MigrateCommand extends FlutterPatcherCommand {
         steps.fail('${p.basename(file.path)} ($res.statusCode): $msg');
       } else {
         final ms = sw.elapsedMilliseconds;
-        final time =
-            ms >= 1000 ? '${(ms / 1000).toStringAsFixed(1)}s' : '${ms}ms';
+        final time = ms >= 1000
+            ? '${(ms / 1000).toStringAsFixed(1)}s'
+            : '${ms}ms';
         steps.success('Applied ${p.basename(file.path)} in $time');
       }
     }
@@ -530,14 +539,16 @@ class MigrateCommand extends FlutterPatcherCommand {
         steps.fail('Could not create R2 bucket "$r2Bucket": $msg');
       } else {
         final ms = sw.elapsedMilliseconds;
-        final time =
-            ms >= 1000 ? '${(ms / 1000).toStringAsFixed(1)}s' : '${ms}ms';
+        final time = ms >= 1000
+            ? '${(ms / 1000).toStringAsFixed(1)}s'
+            : '${ms}ms';
         steps.success('Ensured R2 bucket "$r2Bucket" in $time');
       }
     } else {
       final ms = sw.elapsedMilliseconds;
-      final time =
-          ms >= 1000 ? '${(ms / 1000).toStringAsFixed(1)}s' : '${ms}ms';
+      final time = ms >= 1000
+          ? '${(ms / 1000).toStringAsFixed(1)}s'
+          : '${ms}ms';
       steps.success('Created R2 bucket "$r2Bucket" in $time');
     }
 

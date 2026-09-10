@@ -18,7 +18,7 @@ import '../pocketbase/schema_installer.dart';
 import '../ui/ui.dart';
 
 class PocketBaseCommand extends FlutterPatcherCommand {
-   PocketBaseCommand() {
+  PocketBaseCommand() {
     addSubcommand(PocketBaseInstallCommand());
     addSubcommand(PocketBaseServeCommand());
     addSubcommand(PocketBaseStopCommand());
@@ -91,7 +91,11 @@ class PocketBaseServeCommand extends FlutterPatcherCommand {
   PocketBaseServeCommand() {
     argParser.addOption('version', help: 'PocketBase version.');
     argParser.addOption('port', help: 'PB HTTP port.', defaultsTo: '8090');
-    argParser.addOption('host', help: 'PB bind address.', defaultsTo: '127.0.0.1');
+    argParser.addOption(
+      'host',
+      help: 'PB bind address.',
+      defaultsTo: '127.0.0.1',
+    );
     argParser.addOption('data-dir', help: 'PB data directory.');
     argParser.addOption('admin-email', help: 'Bootstrap admin email.');
     argParser.addOption('admin-password', help: 'Bootstrap admin password.');
@@ -299,7 +303,10 @@ class PocketBaseStatusCommand extends FlutterPatcherCommand {
     box('status', [
       kv('version', paths.version),
       kv('binary', exists ? green('installed') : red('not installed')),
-      kv('pid', pidAlive ? green('$pid') : (pid > 0 ? yellow('$pid (dead)') : dim('-'))),
+      kv(
+        'pid',
+        pidAlive ? green('$pid') : (pid > 0 ? yellow('$pid (dead)') : dim('-')),
+      ),
       kv('health', healthy ? green('healthy') : red('unreachable')),
       kv('url', 'http://$host:$port'),
     ]);
@@ -323,7 +330,9 @@ String _safeSubstring(String? s, int length) {
   return s.length > length ? s.substring(0, length) : s;
 }
 
-(String url, String adminEmail, String adminPassword) _resolveBackend(ArgResults r) {
+(String url, String adminEmail, String adminPassword) _resolveBackend(
+  ArgResults r,
+) {
   final url = r['url'] as String? ?? _detectRunningUrl(r);
   if (url == null || url.isEmpty) {
     throw const PackException(
@@ -331,10 +340,12 @@ String _safeSubstring(String? s, int length) {
       64,
     );
   }
-  final admin = r['admin-email'] as String? ??
+  final admin =
+      r['admin-email'] as String? ??
       Platform.environment['POCKETBASE_ADMIN_EMAIL'] ??
       '';
-  final pass = r['admin-password'] as String? ??
+  final pass =
+      r['admin-password'] as String? ??
       Platform.environment['POCKETBASE_ADMIN_PASSWORD'] ??
       '';
   if (admin.isEmpty || pass.isEmpty) {
@@ -487,7 +498,11 @@ class PocketBaseBackupDeleteCommand extends FlutterPatcherCommand {
 class PocketBaseBackupRestoreCommand extends FlutterPatcherCommand {
   PocketBaseBackupRestoreCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('name', help: 'Backup key to restore.', mandatory: true);
+    argParser.addOption(
+      'name',
+      help: 'Backup key to restore.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -508,7 +523,11 @@ class PocketBaseBackupRestoreCommand extends FlutterPatcherCommand {
 class PocketBaseBackupDownloadCommand extends FlutterPatcherCommand {
   PocketBaseBackupDownloadCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('name', help: 'Backup key to download.', mandatory: true);
+    argParser.addOption(
+      'name',
+      help: 'Backup key to download.',
+      mandatory: true,
+    );
     argParser.addOption('output', help: 'Output directory.', defaultsTo: '.');
   }
 
@@ -610,7 +629,12 @@ class PocketBaseExportCommand extends FlutterPatcherCommand {
           }
         }
         if (collections.isEmpty) {
-          collections.addAll(['bundles', 'channels', 'audit_log', 'bundles_patches']);
+          collections.addAll([
+            'bundles',
+            'channels',
+            'audit_log',
+            'bundles_patches',
+          ]);
         }
       }
 
@@ -644,7 +668,8 @@ class PocketBaseImportCommand extends FlutterPatcherCommand {
   String get name => 'import';
 
   @override
-  String get description => 'Import records from a JSON file into a collection.';
+  String get description =>
+      'Import records from a JSON file into a collection.';
 
   @override
   Future<int> run() => runGuarded(() async {
@@ -705,7 +730,11 @@ class PocketBaseAdminCreateCommand extends FlutterPatcherCommand {
     final password = r['password'] as String;
     final result = await _pbStep(
       'Creating admin $email',
-      (c) => c.createAdmin(email: email, password: password, passwordConfirm: password),
+      (c) => c.createAdmin(
+        email: email,
+        password: password,
+        passwordConfirm: password,
+      ),
       r,
     );
     stdout.writeln('  ${dim('→')} admin ${cyan(result['id'] ?? '?')} $email');
@@ -726,13 +755,22 @@ class PocketBaseAdminListCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · admin · list');
-    final admins = await _pbStep('Listing admins', (c) => c.listAdmins(), argResults!);
+    final admins = await _pbStep(
+      'Listing admins',
+      (c) => c.listAdmins(),
+      argResults!,
+    );
     if (admins.isEmpty) {
       warn('No admins found.');
       return;
     }
     final rows = admins
-        .map((a) => [cyan(a['id']?.toString() ?? '?'), a['email']?.toString() ?? '?'])
+        .map(
+          (a) => [
+            cyan(a['id']?.toString() ?? '?'),
+            a['email']?.toString() ?? '?',
+          ],
+        )
         .toList();
     table('${admins.length} admins', ['ID', 'EMAIL'], rows);
   });
@@ -742,7 +780,11 @@ class PocketBaseAdminUpdateCommand extends FlutterPatcherCommand {
   PocketBaseAdminUpdateCommand() {
     _addBackendOptions(argParser);
     argParser.addOption('id', help: 'Admin ID to update.', mandatory: true);
-    argParser.addOption('body', help: 'JSON fields to update.', mandatory: true);
+    argParser.addOption(
+      'body',
+      help: 'JSON fields to update.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -835,7 +877,11 @@ class PocketBaseHealthCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · health');
-    final health = await _pbStep('health', (c) => c.healthDetailed(), argResults!);
+    final health = await _pbStep(
+      'health',
+      (c) => c.healthDetailed(),
+      argResults!,
+    );
     final code = health['code'] as int? ?? 0;
     final message = health['message'] as String? ?? '';
     final data = health['data'] as Map<String, dynamic>? ?? {};
@@ -901,7 +947,11 @@ class PocketBaseLogsListCommand extends FlutterPatcherCommand {
     }
     final rows = items.map((log) {
       final level = log['level'] as int? ?? 0;
-      final lvl = level == 0 ? green('INFO') : level == 1 ? yellow('WARN') : red('ERROR');
+      final lvl = level == 0
+          ? green('INFO')
+          : level == 1
+          ? yellow('WARN')
+          : red('ERROR');
       final msg = (log['message'] as String? ?? '').length > 60
           ? '${(log['message'] as String).substring(0, 57)}...'
           : log['message'] as String? ?? '';
@@ -935,10 +985,14 @@ class PocketBaseLogsStatsCommand extends FlutterPatcherCommand {
       warn('No stats available.');
       return;
     }
-    final rows = stats.map((s) => [
-      _safeSubstring(s['date']?.toString(), 16),
-      '${s['total'] ?? 0}',
-    ]).toList();
+    final rows = stats
+        .map(
+          (s) => [
+            _safeSubstring(s['date']?.toString(), 16),
+            '${s['total'] ?? 0}',
+          ],
+        )
+        .toList();
     table('${stats.length} entries', ['TIME', 'COUNT'], rows);
   });
 }
@@ -986,7 +1040,11 @@ class PocketBaseRecordsCommand extends FlutterPatcherCommand {
 class PocketBaseRecordsListCommand extends FlutterPatcherCommand {
   PocketBaseRecordsListCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('collection', help: 'Collection name.', mandatory: true);
+    argParser.addOption(
+      'collection',
+      help: 'Collection name.',
+      mandatory: true,
+    );
     argParser.addOption('filter', help: 'PB filter expression.');
     argParser.addOption('sort', help: 'Sort field.');
     argParser.addOption('page', help: 'Page number.', defaultsTo: '1');
@@ -1021,7 +1079,8 @@ class PocketBaseRecordsListCommand extends FlutterPatcherCommand {
     }
     final rows = data.items.map((r) {
       final m = r as Map<String, dynamic>;
-      final label = m['name']?.toString() ??
+      final label =
+          m['name']?.toString() ??
           m['updated']?.toString() ??
           m['created']?.toString() ??
           '';
@@ -1034,7 +1093,11 @@ class PocketBaseRecordsListCommand extends FlutterPatcherCommand {
 class PocketBaseRecordsGetCommand extends FlutterPatcherCommand {
   PocketBaseRecordsGetCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('collection', help: 'Collection name.', mandatory: true);
+    argParser.addOption(
+      'collection',
+      help: 'Collection name.',
+      mandatory: true,
+    );
     argParser.addOption('id', help: 'Record ID.', mandatory: true);
   }
 
@@ -1050,7 +1113,11 @@ class PocketBaseRecordsGetCommand extends FlutterPatcherCommand {
     final r = argResults!;
     final record = await _pbStep(
       'Getting ${r['collection']}/${r['id']}',
-      (c) => c.getRecord<dynamic>(r['collection'] as String, r['id'] as String, (j) => j),
+      (c) => c.getRecord<dynamic>(
+        r['collection'] as String,
+        r['id'] as String,
+        (j) => j,
+      ),
       r,
     );
     if (record == null) {
@@ -1064,7 +1131,11 @@ class PocketBaseRecordsGetCommand extends FlutterPatcherCommand {
 class PocketBaseRecordsCreateCommand extends FlutterPatcherCommand {
   PocketBaseRecordsCreateCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('collection', help: 'Collection name.', mandatory: true);
+    argParser.addOption(
+      'collection',
+      help: 'Collection name.',
+      mandatory: true,
+    );
     argParser.addOption('body', help: 'JSON body.', mandatory: true);
   }
 
@@ -1084,14 +1155,20 @@ class PocketBaseRecordsCreateCommand extends FlutterPatcherCommand {
       (c) => c.createRecord<dynamic>(r['collection'] as String, body, (j) => j),
       r,
     );
-    stdout.writeln('  ${dim('→')} record ${cyan((record as Map)['id']?.toString() ?? '?')}');
+    stdout.writeln(
+      '  ${dim('→')} record ${cyan((record as Map)['id']?.toString() ?? '?')}',
+    );
   });
 }
 
 class PocketBaseRecordsUpdateCommand extends FlutterPatcherCommand {
   PocketBaseRecordsUpdateCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('collection', help: 'Collection name.', mandatory: true);
+    argParser.addOption(
+      'collection',
+      help: 'Collection name.',
+      mandatory: true,
+    );
     argParser.addOption('id', help: 'Record ID.', mandatory: true);
     argParser.addOption('body', help: 'JSON body.', mandatory: true);
   }
@@ -1109,7 +1186,12 @@ class PocketBaseRecordsUpdateCommand extends FlutterPatcherCommand {
     final body = jsonDecode(r['body'] as String) as Map<String, dynamic>;
     await _pbStep(
       'Updating ${r['collection']}/${r['id']}',
-      (c) => c.updateRecord<dynamic>(r['collection'] as String, r['id'] as String, body, (j) => j),
+      (c) => c.updateRecord<dynamic>(
+        r['collection'] as String,
+        r['id'] as String,
+        body,
+        (j) => j,
+      ),
       r,
     );
     step(green('Updated ${r['collection']}/${r['id']}'));
@@ -1119,7 +1201,11 @@ class PocketBaseRecordsUpdateCommand extends FlutterPatcherCommand {
 class PocketBaseRecordsDeleteCommand extends FlutterPatcherCommand {
   PocketBaseRecordsDeleteCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('collection', help: 'Collection name.', mandatory: true);
+    argParser.addOption(
+      'collection',
+      help: 'Collection name.',
+      mandatory: true,
+    );
     argParser.addOption('id', help: 'Record ID.', mandatory: true);
   }
 
@@ -1145,19 +1231,25 @@ class PocketBaseRecordsDeleteCommand extends FlutterPatcherCommand {
 class PocketBaseRecordsBatchCommand extends FlutterPatcherCommand {
   PocketBaseRecordsBatchCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('requests', help: 'JSON array of request objects.', mandatory: true);
+    argParser.addOption(
+      'requests',
+      help: 'JSON array of request objects.',
+      mandatory: true,
+    );
   }
 
   @override
   String get name => 'batch';
 
   @override
-  String get description => 'Execute multiple record operations in a single transaction.';
+  String get description =>
+      'Execute multiple record operations in a single transaction.';
 
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · records · batch');
-    final requests = jsonDecode(argResults!['requests'] as String) as List<dynamic>;
+    final requests =
+        jsonDecode(argResults!['requests'] as String) as List<dynamic>;
     final body = requests.cast<Map<String, dynamic>>();
     final results = await _pbStep(
       'Executing ${body.length} batch requests',
@@ -1205,16 +1297,24 @@ class PocketBaseCollectionsListCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · collections · list');
-    final cols = await _pbStep('Listing collections', (c) => c.listCollections(), argResults!);
+    final cols = await _pbStep(
+      'Listing collections',
+      (c) => c.listCollections(),
+      argResults!,
+    );
     if (cols.isEmpty) {
       warn('No collections found.');
       return;
     }
-    final rows = cols.map((c) => [
-      cyan(c['name']?.toString() ?? '?'),
-      c['type']?.toString() ?? '?',
-      '${(c['fields'] as List?)?.length ?? 0} fields',
-    ]).toList();
+    final rows = cols
+        .map(
+          (c) => [
+            cyan(c['name']?.toString() ?? '?'),
+            c['type']?.toString() ?? '?',
+            '${(c['fields'] as List?)?.length ?? 0} fields',
+          ],
+        )
+        .toList();
     table('${cols.length} collections', ['NAME', 'TYPE', 'FIELDS'], rows);
   });
 }
@@ -1222,7 +1322,11 @@ class PocketBaseCollectionsListCommand extends FlutterPatcherCommand {
 class PocketBaseCollectionsViewCommand extends FlutterPatcherCommand {
   PocketBaseCollectionsViewCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('name', help: 'Collection name or ID.', mandatory: true);
+    argParser.addOption(
+      'name',
+      help: 'Collection name or ID.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -1235,7 +1339,11 @@ class PocketBaseCollectionsViewCommand extends FlutterPatcherCommand {
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · collections · view');
     final name = argResults!['name'] as String;
-    final col = await _pbStep('Viewing $name', (c) => c.getCollection(name), argResults!);
+    final col = await _pbStep(
+      'Viewing $name',
+      (c) => c.getCollection(name),
+      argResults!,
+    );
     stdout.writeln(const JsonEncoder.withIndent('  ').convert(col));
   });
 }
@@ -1243,7 +1351,11 @@ class PocketBaseCollectionsViewCommand extends FlutterPatcherCommand {
 class PocketBaseCollectionsCreateCommand extends FlutterPatcherCommand {
   PocketBaseCollectionsCreateCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('body', help: 'JSON collection definition.', mandatory: true);
+    argParser.addOption(
+      'body',
+      help: 'JSON collection definition.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -1255,9 +1367,13 @@ class PocketBaseCollectionsCreateCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · collections · create');
-    final body = jsonDecode(argResults!['body'] as String) as Map<String, dynamic>;
-    await _pbStep('Creating ${body['name'] ?? 'collection'}',
-      (c) => c.createCollection(body), argResults!);
+    final body =
+        jsonDecode(argResults!['body'] as String) as Map<String, dynamic>;
+    await _pbStep(
+      'Creating ${body['name'] ?? 'collection'}',
+      (c) => c.createCollection(body),
+      argResults!,
+    );
     step(green('Created ${body['name'] ?? 'collection'}'));
   });
 }
@@ -1265,8 +1381,16 @@ class PocketBaseCollectionsCreateCommand extends FlutterPatcherCommand {
 class PocketBaseCollectionsUpdateCommand extends FlutterPatcherCommand {
   PocketBaseCollectionsUpdateCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('name', help: 'Collection name or ID.', mandatory: true);
-    argParser.addOption('body', help: 'JSON fields to update.', mandatory: true);
+    argParser.addOption(
+      'name',
+      help: 'Collection name or ID.',
+      mandatory: true,
+    );
+    argParser.addOption(
+      'body',
+      help: 'JSON fields to update.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -1289,7 +1413,11 @@ class PocketBaseCollectionsUpdateCommand extends FlutterPatcherCommand {
 class PocketBaseCollectionsDeleteCommand extends FlutterPatcherCommand {
   PocketBaseCollectionsDeleteCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('name', help: 'Collection name or ID.', mandatory: true);
+    argParser.addOption(
+      'name',
+      help: 'Collection name or ID.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -1302,7 +1430,11 @@ class PocketBaseCollectionsDeleteCommand extends FlutterPatcherCommand {
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · collections · delete');
     final name = argResults!['name'] as String;
-    await _pbStep('Deleting $name', (c) => c.deleteCollection(name), argResults!);
+    await _pbStep(
+      'Deleting $name',
+      (c) => c.deleteCollection(name),
+      argResults!,
+    );
     step(green('Deleted collection $name'));
   });
 }
@@ -1310,7 +1442,11 @@ class PocketBaseCollectionsDeleteCommand extends FlutterPatcherCommand {
 class PocketBaseCollectionsTruncateCommand extends FlutterPatcherCommand {
   PocketBaseCollectionsTruncateCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('name', help: 'Collection name or ID.', mandatory: true);
+    argParser.addOption(
+      'name',
+      help: 'Collection name or ID.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -1323,7 +1459,11 @@ class PocketBaseCollectionsTruncateCommand extends FlutterPatcherCommand {
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · collections · truncate');
     final name = argResults!['name'] as String;
-    await _pbStep('Truncating $name', (c) => c.truncateCollection(name), argResults!);
+    await _pbStep(
+      'Truncating $name',
+      (c) => c.truncateCollection(name),
+      argResults!,
+    );
     step(green('Truncated $name'));
   });
 }
@@ -1331,8 +1471,16 @@ class PocketBaseCollectionsTruncateCommand extends FlutterPatcherCommand {
 class PocketBaseCollectionsImportCommand extends FlutterPatcherCommand {
   PocketBaseCollectionsImportCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('file', help: 'JSON file with collections config.', mandatory: true);
-    argParser.addFlag('delete-missing', help: 'Delete collections not in file.', defaultsTo: false);
+    argParser.addOption(
+      'file',
+      help: 'JSON file with collections config.',
+      mandatory: true,
+    );
+    argParser.addFlag(
+      'delete-missing',
+      help: 'Delete collections not in file.',
+      defaultsTo: false,
+    );
   }
 
   @override
@@ -1352,7 +1500,8 @@ class PocketBaseCollectionsImportCommand extends FlutterPatcherCommand {
     final cols = json.cast<Map<String, dynamic>>();
     await _pbStep(
       'Importing ${cols.length} collections',
-      (c) => c.importCollections(cols, deleteMissing: r['delete-missing'] as bool),
+      (c) =>
+          c.importCollections(cols, deleteMissing: r['delete-missing'] as bool),
       r,
     );
     step(green('Imported ${cols.length} collections'));
@@ -1392,7 +1541,11 @@ class PocketBaseSettingsListCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · settings · list');
-    final settings = await _pbStep('Fetching settings', (c) => c.listSettings(), argResults!);
+    final settings = await _pbStep(
+      'Fetching settings',
+      (c) => c.listSettings(),
+      argResults!,
+    );
     stdout.writeln(const JsonEncoder.withIndent('  ').convert(settings));
   });
 }
@@ -1400,7 +1553,11 @@ class PocketBaseSettingsListCommand extends FlutterPatcherCommand {
 class PocketBaseSettingsUpdateCommand extends FlutterPatcherCommand {
   PocketBaseSettingsUpdateCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('body', help: 'JSON object with settings to update.', mandatory: true);
+    argParser.addOption(
+      'body',
+      help: 'JSON object with settings to update.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -1412,8 +1569,13 @@ class PocketBaseSettingsUpdateCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · settings · update');
-    final body = jsonDecode(argResults!['body'] as String) as Map<String, dynamic>;
-    await _pbStep('Updating settings', (c) => c.updateSettings(body), argResults!);
+    final body =
+        jsonDecode(argResults!['body'] as String) as Map<String, dynamic>;
+    await _pbStep(
+      'Updating settings',
+      (c) => c.updateSettings(body),
+      argResults!,
+    );
     step(green('Settings updated'));
   });
 }
@@ -1421,7 +1583,11 @@ class PocketBaseSettingsUpdateCommand extends FlutterPatcherCommand {
 class PocketBaseSettingsTestS3Command extends FlutterPatcherCommand {
   PocketBaseSettingsTestS3Command() {
     _addBackendOptions(argParser);
-    argParser.addOption('filesystem', help: 'Storage filesystem to test.', defaultsTo: 'storage');
+    argParser.addOption(
+      'filesystem',
+      help: 'Storage filesystem to test.',
+      defaultsTo: 'storage',
+    );
   }
 
   @override
@@ -1477,7 +1643,11 @@ class PocketBaseSettingsTestEmailCommand extends FlutterPatcherCommand {
 class PocketBaseSqlCommand extends FlutterPatcherCommand {
   PocketBaseSqlCommand() {
     _addBackendOptions(argParser);
-    argParser.addOption('query', help: 'SQL query to execute.', mandatory: true);
+    argParser.addOption(
+      'query',
+      help: 'SQL query to execute.',
+      mandatory: true,
+    );
   }
 
   @override
@@ -1490,8 +1660,13 @@ class PocketBaseSqlCommand extends FlutterPatcherCommand {
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · sql');
     final query = argResults!['query'] as String;
-    final result = await _pbStep('Executing query', (c) => c.runSql(query), argResults!);
-    final columns = (result['columns'] as List? ?? []).cast<Map<String, dynamic>>();
+    final result = await _pbStep(
+      'Executing query',
+      (c) => c.runSql(query),
+      argResults!,
+    );
+    final columns = (result['columns'] as List? ?? [])
+        .cast<Map<String, dynamic>>();
     final rows = (result['rows'] as List? ?? []).cast<List<dynamic>>();
     if (rows.isNotEmpty) {
       final colNames = columns.map((c) => '${c['name']}').toList();
@@ -1534,15 +1709,23 @@ class PocketBaseCronsListCommand extends FlutterPatcherCommand {
   @override
   Future<int> run() => runGuarded(() async {
     banner('pocketbase · crons · list');
-    final crons = await _pbStep('Fetching cron jobs', (c) => c.listCrons(), argResults!);
+    final crons = await _pbStep(
+      'Fetching cron jobs',
+      (c) => c.listCrons(),
+      argResults!,
+    );
     if (crons.isEmpty) {
       warn('No cron jobs registered.');
       return;
     }
-    final rows = crons.map((c) => [
-      cyan(c['id']?.toString() ?? '?'),
-      c['expression']?.toString() ?? '?',
-    ]).toList();
+    final rows = crons
+        .map(
+          (c) => [
+            cyan(c['id']?.toString() ?? '?'),
+            c['expression']?.toString() ?? '?',
+          ],
+        )
+        .toList();
     table('${crons.length} cron jobs', ['ID', 'EXPRESSION'], rows);
   });
 }
@@ -1602,7 +1785,9 @@ class PocketBaseQueryCommand extends FlutterPatcherCommand {
     try {
       await client.authenticate(admin, pass);
       final res = await client.rawRequest(method, path, body: body);
-      stdout.writeln(const JsonEncoder.withIndent('  ').convert(jsonDecode(res.body)));
+      stdout.writeln(
+        const JsonEncoder.withIndent('  ').convert(jsonDecode(res.body)),
+      );
     } finally {
       client.close();
     }
@@ -1634,7 +1819,10 @@ class PocketBaseConfigCommand extends FlutterPatcherCommand {
       kv('url', cyan(url)),
       kv('admin', admin),
       kv('version', paths.version),
-      kv('binary', exists ? green(paths.binaryPath.path) : red('not installed')),
+      kv(
+        'binary',
+        exists ? green(paths.binaryPath.path) : red('not installed'),
+      ),
     ]);
   });
 }

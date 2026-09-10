@@ -80,22 +80,19 @@ void main() {
     await mock.stop();
   });
 
-  test(
-    'schema installer creates all five collections on a fresh PB',
-    () async {
-      final installer = PocketBaseSchemaInstaller(
-        url: mock.baseUrl,
-        adminEmail: 'admin@x.com',
-        adminPassword: 'secret',
-      );
-      final result = await installer.install();
-      expect(mock.authCalled, isTrue);
-      expect(mock.lastAuthEmail, 'admin@x.com');
-      expect(result.created, containsAll(_allCollections));
-      expect(result.skipped, isEmpty);
-      expect(mock.createdCollections, containsAll(_allCollections));
-    },
-  );
+  test('schema installer creates all five collections on a fresh PB', () async {
+    final installer = PocketBaseSchemaInstaller(
+      url: mock.baseUrl,
+      adminEmail: 'admin@x.com',
+      adminPassword: 'secret',
+    );
+    final result = await installer.install();
+    expect(mock.authCalled, isTrue);
+    expect(mock.lastAuthEmail, 'admin@x.com');
+    expect(result.created, containsAll(_allCollections));
+    expect(result.skipped, isEmpty);
+    expect(mock.createdCollections, containsAll(_allCollections));
+  });
 
   test('schema installer skips collections that already exist', () async {
     mock.existingCollections = _allCollections;

@@ -31,7 +31,11 @@ class InitCommand extends FlutterPatcherCommand {
       defaultsTo: 'production',
       help: 'Default channel.',
     );
-    argParser.addOption('platform', defaultsTo: 'android', help: 'Default platform.');
+    argParser.addOption(
+      'platform',
+      defaultsTo: 'android',
+      help: 'Default platform.',
+    );
     argParser.addOption(
       'source',
       abbr: 's',
@@ -42,7 +46,11 @@ class InitCommand extends FlutterPatcherCommand {
       'global',
       help: 'Write to the global ~/.flutter_ota_kit config (no scaffolding).',
     );
-    argParser.addFlag('force', abbr: 'f', help: 'Overwrite an existing config.');
+    argParser.addFlag(
+      'force',
+      abbr: 'f',
+      help: 'Overwrite an existing config.',
+    );
   }
 
   final FlutterPatcherConfig? config;
@@ -226,10 +234,7 @@ class InitCommand extends FlutterPatcherCommand {
               'Supabase service role key',
               env['SUPABASE_SERVICE_ROLE_KEY'],
             ),
-            anonKey: _p(
-              'Supabase anon key',
-              env['SUPABASE_ANON_KEY'],
-            ),
+            anonKey: _p('Supabase anon key', env['SUPABASE_ANON_KEY']),
             bucket: _p('Storage bucket', env['SUPABASE_BUCKET'] ?? 'bundles'),
             basePath: _p('Storage base path', env['SUPABASE_BASE_PATH']),
             managementKey: _p(
@@ -248,8 +253,10 @@ class InitCommand extends FlutterPatcherCommand {
     step('Wrote ${file.path}');
 
     if (global) {
-      warn('Secrets are stored in plaintext under ~/.flutter_ota_kit. '
-          'Restrict permissions and use a secrets manager in production.');
+      warn(
+        'Secrets are stored in plaintext under ~/.flutter_ota_kit. '
+        'Restrict permissions and use a secrets manager in production.',
+      );
       return;
     }
 
@@ -259,23 +266,33 @@ class InitCommand extends FlutterPatcherCommand {
     stdout.writeln();
     stdout.writeln('  ${cyan('Next steps:')}');
     step('1. ${dim('flutter pub get')}');
-    step('2. In lib/main.dart call ${green('await setupFlutterOta();')} '
-        'right after WidgetsFlutterBinding.ensureInitialized() (before runApp). '
-        'A `.env` scaffold was written — put secrets there, then build with '
-        '`--dart-define-from-file=.env` (environment overrides config).');
+    step(
+      '2. In lib/main.dart call ${green('await setupFlutterOta();')} '
+      'right after WidgetsFlutterBinding.ensureInitialized() (before runApp). '
+      'A `.env` scaffold was written — put secrets there, then build with '
+      '`--dart-define-from-file=.env` (environment overrides config).',
+    );
     if (provider == 'supabase') {
-      step('3. Provision the backend once: ${dim('flutter-ota migrate supabase')}');
+      step(
+        '3. Provision the backend once: ${dim('flutter-ota migrate supabase')}',
+      );
     } else if (provider == 'postgres') {
       step('3. Provision the backend: ${dim('flutter-ota migrate postgres')}');
     } else if (provider == 'cloudflare') {
-      step('3. Provision the backend: ${dim('flutter-ota migrate cloudflare')}');
+      step(
+        '3. Provision the backend: ${dim('flutter-ota migrate cloudflare')}',
+      );
     } else if (provider == 'aws') {
       step('3. Provision the backend: ${dim('flutter-ota migrate aws')}');
     } else if (provider == 'pocketbase') {
-      step('3. Provision the backend: ${dim('flutter-ota migrate pocketbase')}');
+      step(
+        '3. Provision the backend: ${dim('flutter-ota migrate pocketbase')}',
+      );
     }
-    step('4. Build a patch: ${dim('flutter-ota build --version 1.0.1')} '
-        'then ${dim('flutter-ota deploy')}');
+    step(
+      '4. Build a patch: ${dim('flutter-ota build --version 1.0.1')} '
+      'then ${dim('flutter-ota deploy')}',
+    );
   });
 
   /// Generate the integration files (pubspec dep, manifest permission, setup dart
@@ -306,7 +323,9 @@ class InitCommand extends FlutterPatcherCommand {
     final marker = '\ndependencies:';
     final idx = content.indexOf(marker);
     if (idx == -1) {
-      warn('Could not find a `dependencies:` block; add `flutter_ota_kit` manually.');
+      warn(
+        'Could not find a `dependencies:` block; add `flutter_ota_kit` manually.',
+      );
       return;
     }
     final insertAt = idx + marker.length;
@@ -328,7 +347,9 @@ class InitCommand extends FlutterPatcherCommand {
     }
     final match = RegExp(r'<manifest[^>]*>').firstMatch(content);
     if (match == null) {
-      warn('Could not locate <manifest> tag; add INTERNET permission manually.');
+      warn(
+        'Could not locate <manifest> tag; add INTERNET permission manually.',
+      );
       return;
     }
     final insertAt = match.end;
