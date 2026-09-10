@@ -156,63 +156,63 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.1.13"
+    version: "0.1.15"
   flutter_ota_kit_aws:
     dependency: "direct overridden"
     description:
       path: "../plugins/aws"
       relative: true
     source: path
-    version: "0.1.7"
+    version: "0.1.10"
   flutter_ota_kit_client:
     dependency: "direct overridden"
     description:
       path: "../packages/client"
       relative: true
     source: path
-    version: "0.1.6"
+    version: "0.1.8"
   flutter_ota_kit_cloudflare:
     dependency: "direct overridden"
     description:
       path: "../plugins/cloudflare"
       relative: true
     source: path
-    version: "0.1.7"
+    version: "0.1.10"
   flutter_ota_kit_core:
     dependency: "direct overridden"
     description:
       path: "../packages/core"
       relative: true
     source: path
-    version: "0.1.6"
+    version: "0.1.8"
   flutter_ota_kit_plugin_core:
     dependency: "direct overridden"
     description:
       path: "../plugins/plugin-core"
       relative: true
     source: path
-    version: "0.0.8"
+    version: "0.0.10"
   flutter_ota_kit_pocketbase:
     dependency: "direct overridden"
     description:
       path: "../plugins/pocketbase"
       relative: true
     source: path
-    version: "0.1.4"
+    version: "0.1.7"
   flutter_ota_kit_postgres:
     dependency: "direct overridden"
     description:
       path: "../plugins/postgres"
       relative: true
     source: path
-    version: "0.1.7"
+    version: "0.1.10"
   flutter_ota_kit_supabase:
     dependency: "direct overridden"
     description:
       path: "../plugins/supabase"
       relative: true
     source: path
-    version: "0.1.8"
+    version: "0.1.11"
   flutter_test:
     dependency: "direct dev"
     description: flutter

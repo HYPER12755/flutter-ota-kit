@@ -267,47 +267,48 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 8),
-            Row(
-              children: [
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const ChatListScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.chat_bubble_outline),
-                    label: const Text('Chat'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.blue,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Expanded(
-                  child: FilledButton.icon(
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                          builder: (_) => const GameScreen(),
-                        ),
-                      );
-                    },
-                    icon: const Icon(Icons.videogame_asset),
-                    label: const Text('Game'),
-                    style: FilledButton.styleFrom(
-                      backgroundColor: Colors.green,
-                      padding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ],
-            ),
+            // Chat & Game buttons (hidden)
+            // Row(
+            //   children: [
+            //     Expanded(
+            //       child: FilledButton.icon(
+            //         onPressed: () {
+            //           Navigator.push(
+            //             context,
+            //             MaterialPageRoute(
+            //               builder: (_) => const ChatListScreen(),
+            //             ),
+            //           );
+            //         },
+            //         icon: const Icon(Icons.chat_bubble_outline),
+            //         label: const Text('Chat'),
+            //         style: FilledButton.styleFrom(
+            //           backgroundColor: Colors.blue,
+            //           padding: const EdgeInsets.symmetric(vertical: 14),
+            //         ),
+            //       ),
+            //     ),
+            //     const SizedBox(width: 12),
+            //     Expanded(
+            //       child: FilledButton.icon(
+            //         onPressed: () {
+            //           Navigator.push(
+            //             context,
+            //             MaterialPageRoute(
+            //               builder: (_) => const GameScreen(),
+            //             ),
+            //           );
+            //         },
+            //         icon: const Icon(Icons.videogame_asset),
+            //         label: const Text('Game'),
+            //         style: FilledButton.styleFrom(
+            //           backgroundColor: Colors.green,
+            //           padding: const EdgeInsets.symmetric(vertical: 14),
+            //         ),
+            //       ),
+            //     ),
+            //   ],
+            // ),
           ],
         ),
       ),

@@ -220,7 +220,7 @@ class FlutterPatcherPlugin :
     private fun handleIsVersionBlacklisted(call: MethodCall, result: Result) {
         val version = call.argument<String>("version") ?: ""
         val md5 = call.argument<String>("md5") ?: ""
-        val found = if (md5.isNotEmpty) {
+        val found = if (md5.isNotEmpty()) {
             BlacklistStore.contains(appContext, version, md5)
         } else {
             BlacklistStore.containsByVersion(appContext, version)

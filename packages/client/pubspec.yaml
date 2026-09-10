@@ -22,9 +22,9 @@ dev_dependencies:
   shelf: ^1.4.0
 
 dependency_overrides:
-  flutter_ota_kit_core:^0.1.8
+  flutter_ota_kit_core:
     path: ../core
   flutter_ota_kit_cloudflare:
     path: ../../plugins/cloudflare
-  flutter_ota_kit_plugin_core:^0.0.10
+  flutter_ota_kit_plugin_core:
     path: ../../plugins/plugin-core

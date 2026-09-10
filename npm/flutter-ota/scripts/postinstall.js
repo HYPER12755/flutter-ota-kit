@@ -76,7 +76,11 @@ if (getRes.status !== 0) {
 }
 
 console.log(`flutter-ota: building native binary (${platformName}-${archName})...`);
-const res = spawnSync(
+  // Ensure bin directory exists
+  if (!fs.existsSync(binDir)) {
+    fs.mkdirSync(binDir, { recursive: true });
+  }
+  const res = spawnSync(
   'dart',
   ['compile', 'exe', 'bin/flutter_ota_kit.dart', '-o', target],
   { stdio: 'inherit', cwd: cliDir },

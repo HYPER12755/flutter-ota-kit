@@ -19,5 +19,5 @@ dev_dependencies:
   lints: ^5.1.0
 
 dependency_overrides:
-  flutter_ota_kit_core:^0.1.8
+  flutter_ota_kit_core:
     path: ../../packages/core
