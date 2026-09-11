@@ -31,7 +31,7 @@ enum AppUpdateStatus {
   /// Device is already on the latest bundle for its channel/platform.
   upToDate('UP_TO_DATE'),
 
-  /// Device should roll back to a previous bundle.
+  /// Device should roll back to a previous bundle (server signaled rollback).
   rollback('ROLLBACK'),
 
   /// Device should download and install a new bundle.

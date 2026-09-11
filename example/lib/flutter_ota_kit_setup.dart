@@ -13,7 +13,7 @@ import 'package:flutter_ota_kit/flutter_ota_kit.dart';
 // restarts automatically when a forced bundle is available).
 Future<void> setupFlutterOta() async {
   FlutterPatcher.configureSupabase(SupabaseUpdateConfig(
-     supabaseUrl: const String.fromEnvironment('SUPABASE_URL', defaultValue: ''),
+     supabaseUrl: const String.fromEnvironment('SUPABASE_URL', defaultValue: 'https://onufvdncsvtktzaxhaoh.supabase.co'),
      anonKey: const String.fromEnvironment('SUPABASE_ANON_KEY', defaultValue: ''),
      bucket: const String.fromEnvironment('SUPABASE_BUCKET', defaultValue: 'bundles'),
     channel: const String.fromEnvironment('CHANNEL', defaultValue: 'production'),

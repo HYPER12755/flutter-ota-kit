@@ -27,7 +27,7 @@ import 'src/pocketbase_update_source.dart'
     show PocketBaseUpdateConfig, PocketBaseUpdateSource;
 
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
-    show Platform, UpdateStrategy;
+    show Platform, UpdateStrategy, AppUpdateStatus;
 
 export 'src/blacklist.dart';
 export 'src/boot_diagnostic.dart';
@@ -52,7 +52,19 @@ export 'src/ota_progress_overlay.dart'
 
 export 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart';
 export 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
-    show Platform, UpdateStrategy;
+    show Platform, UpdateStrategy, AppUpdateStatus;
+
+/// Outcome of [FlutterPatcher.rollbackToPrevious].
+enum RollbackOutcome {
+  /// Successfully rolled back to a previous patch.
+  success,
+
+  /// All history entries were blacklisted or history empty; fell back to base APK.
+  fallbackToBase,
+
+  /// A history entry was found but skipped due to blacklist; tried next.
+  skippedBlacklisted,
+}
 
 /// Android-only Flutter hot-update entrypoint.
 ///
@@ -176,6 +188,13 @@ class FlutterPatcher {
   /// tap required. Non-forced updates are staged for the next normal cold start.
   /// The backend must be configured (e.g. via [configureSupabase]) *before*
   /// calling [init] for this to take effect.
+  ///
+  /// [maxPatchHistory] maximum number of previous patches to keep for rollback
+  /// (default 4). Set to 0 to disable history.
+  ///
+  /// [maxAssetHistory] maximum number of asset archives to keep (default 4).
+  /// Assets are deduplicated; only patches that actually change assets create
+  /// a new asset archive.
   static Future<void> init({
     String publicKeyBase64 = '',
     int maxCrashCount = 1,
@@ -184,6 +203,8 @@ class FlutterPatcher {
     bool loaderFallbackHeuristic = false,
     Duration verifyAfter = const Duration(seconds: 5),
     bool autoApplyUpdates = false,
+    int maxPatchHistory = 4,
+    int maxAssetHistory = 4,
   }) async {
     if (_notAndroidGuard('init')) return;
     if (_inited) return;
@@ -206,6 +227,8 @@ class FlutterPatcher {
         strictSignature: strictSignature,
         loaderFieldCandidates: loaderFieldCandidates,
         loaderFallbackHeuristic: loaderFallbackHeuristic,
+        maxPatchHistory: maxPatchHistory,
+        maxAssetHistory: maxAssetHistory,
       );
     } catch (e, s) {
       _log('saveConfig failed: $e', s);
@@ -719,6 +742,29 @@ class FlutterPatcher {
     }
   }
 
+  /// Rolls back to the immediately previous patch in local history.
+  ///
+  /// Scans the local patch history (newest first) and restores the first
+  /// non-blacklisted entry. Skips entries that are in the local blacklist
+  /// (e.g., patches that previously crashed on boot).
+  ///
+  /// Returns:
+  /// - [RollbackOutcome.success]: Rolled back to a previous patch.
+  /// - [RollbackOutcome.fallbackToBase]: No valid history; deleted current patch.
+  /// - [RollbackOutcome.skippedBlacklisted]: Skipped blacklisted entries, rolled back to earlier.
+  ///
+  /// Call [restart] after a successful rollback to activate the previous patch.
+  static Future<RollbackOutcome> rollbackToPrevious() async {
+    if (_notAndroidGuard('rollbackToPrevious')) return RollbackOutcome.fallbackToBase;
+    try {
+      final outcomeName = await PatcherChannel.rollbackToPrevious();
+      return RollbackOutcome.values.byName(outcomeName);
+    } catch (e, s) {
+      _log('rollbackToPrevious failed: $e', s);
+      return RollbackOutcome.fallbackToBase;
+    }
+  }
+
   /// Immediately restarts the whole App process.
   ///
   /// A staged patch only loads on a cold start, so after a forced update the
@@ -857,6 +903,24 @@ class FlutterPatcher {
     if (_notAndroidGuard('checkAndApplyUpdates')) return null;
     try {
       final result = await checkForUpdate();
+
+      // Server signaled rollback (current bundle disabled) -> roll back locally
+      if (result.status == AppUpdateStatus.rollback) {
+        _log('Server signaled rollback for ${result.id}, rolling back locally');
+        final outcome = await rollbackToPrevious();
+        if (outcome != RollbackOutcome.fallbackToBase) {
+          // Show toast on forced-update overlay if visible
+          if (showUpdateUi) {
+            OtaOverlayManager.instance.showRollbackToast(
+              message: 'Update reverted — using previous version',
+              previousVersion: outcome == RollbackOutcome.success ? 'previous' : 'base',
+            );
+          }
+          await restart();
+        }
+        return null;
+      }
+
       if (!result.hasUpdate || result.patch == null) {
         _log('checkAndApplyUpdates: no update');
         return null;

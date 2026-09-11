@@ -720,6 +720,78 @@ class OtaOverlayManager {
       if (identical(_entry, entry)) _entry = null;
     });
   }
+
+  /// Shows a toast notification on the forced-update overlay when a rollback occurs.
+  void showRollbackToast({
+    required String message,
+    required String previousVersion,
+  }) {
+    if (_disposed) return;
+    final overlay = _overlayState ?? _resolver?.call();
+    if (overlay == null) return;
+
+    // Create a temporary toast overlay on top of existing overlay
+    final toastEntry = OverlayEntry(
+      builder: (context) => Positioned(
+        bottom: 100,
+        left: 24,
+        right: 24,
+        child: Material(
+          color: Colors.transparent,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.85),
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: Colors.orange.withValues(alpha: 0.5)),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.3),
+                  blurRadius: 12,
+                  offset: const Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                const SizedBox(width: 12),
+                Flexible(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        message,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Text(
+                        'Restored: $previousVersion',
+                        style: TextStyle(
+                          color: Colors.grey[400],
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+
+    overlay.insert(toastEntry);
+    Future.delayed(const Duration(seconds: 4), () {
+      if (!_disposed) toastEntry.remove();
+    });
+  }
 }
 
 /// Handle returned by [OtaOverlayManager.begin] to update / dismiss the overlay.

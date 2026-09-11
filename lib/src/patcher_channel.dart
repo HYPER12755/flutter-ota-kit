@@ -16,6 +16,8 @@ class PatcherChannel {
     required bool strictSignature,
     required List<String> loaderFieldCandidates,
     required bool loaderFallbackHeuristic,
+    int maxPatchHistory = 4,
+    int maxAssetHistory = 4,
   }) async {
     await channel.invokeMethod<void>('saveConfig', {
       'publicKeyBase64': publicKeyBase64,
@@ -23,6 +25,8 @@ class PatcherChannel {
       'strictSignature': strictSignature,
       'loaderFieldCandidates': loaderFieldCandidates,
       'loaderFallbackHeuristic': loaderFallbackHeuristic,
+      'maxPatchHistory': maxPatchHistory,
+      'maxAssetHistory': maxAssetHistory,
     });
   }
 
@@ -65,6 +69,13 @@ class PatcherChannel {
   /// Deletes the current patch + resets the circuit-breaker flag.
   static Future<void> rollback() async {
     await channel.invokeMethod<void>('rollback');
+  }
+
+  /// Rolls back to the immediately previous patch in local history.
+  /// Returns the RollbackOutcome enum name as string.
+  static Future<String> rollbackToPrevious() async {
+    final result = await channel.invokeMethod<String>('rollbackToPrevious');
+    return result ?? 'FALLBACK_TO_BASE';
   }
 
   /// The currently installed patch version (null / empty when none installed).

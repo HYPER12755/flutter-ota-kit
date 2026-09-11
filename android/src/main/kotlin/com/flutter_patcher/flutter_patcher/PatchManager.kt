@@ -14,6 +14,7 @@ import java.io.IOException
 import java.net.HttpURLConnection
 import java.net.URL
 import java.nio.ByteBuffer
+import java.util.Collections
 import java.util.zip.ZipException
 import java.util.zip.ZipEntry
 import java.util.zip.ZipFile
@@ -33,6 +34,20 @@ internal data class ValidPatch(
     val assetsArchivePath: String?,
     val assetsBundlePath: String?
 )
+
+internal data class HistoryEntry(
+    val version: String,
+    val md5: String,
+    val path: String,
+    val assetsRef: Int,
+    val installedAt: Long
+)
+
+internal enum class RollbackResult {
+    SUCCESS,
+    FALLBACK_TO_BASE,
+    SKIPPED_BLACKLISTED
+}
 
 private class PatchInstallException(
     val code: String,
@@ -175,6 +190,12 @@ internal class PatchManager(
     private val previousMeta = File(patchDir, "${PatcherConfig.META_FILENAME}.previous")
     private val previousAssets = File(patchDir, "$ASSET_DIR.previous")
     private val previousAssetsArchive = File(patchDir, "$ASSET_ARCHIVE.previous")
+
+    // Patch history directories
+    private val historyDir = File(patchDir, "history")
+    private val historyIndexFile = File(historyDir, "index.json")
+    private val assetsHistoryDir = File(patchDir, "assets")
+    private val baseAssetsArchive = File(assetsHistoryDir, "0/flutter_assets.apk")
 
     fun getValidPatchPath(
         onDrop: ((status: String, version: String?, extras: Map<String, Any?>) -> Unit)? = null
@@ -455,6 +476,259 @@ internal class PatchManager(
         return ApplyResult.SUCCESS
     }
 
+    // ========== Patch History Management ==========
+
+    private fun ensureHistoryDirs() {
+        historyDir.mkdirs()
+        assetsHistoryDir.mkdirs()
+    }
+
+    private fun readHistoryIndex(): List<HistoryEntry> {
+        if (!historyIndexFile.exists()) return emptyList()
+        return try {
+            val json = JSONObject(historyIndexFile.readText())
+            val arr = json.optJSONArray("history") ?: return emptyList()
+            (0 until arr.length()).mapNotNull { i ->
+                val obj = arr.optJSONObject(i) ?: return@mapNotNull null
+                HistoryEntry(
+                    version = obj.optString("version", ""),
+                    md5 = obj.optString("md5", ""),
+                    path = obj.optString("path", ""),
+                    assetsRef = obj.optInt("assetsRef", 0),
+                    installedAt = obj.optLong("installedAt", 0)
+                ).takeIf { it.version.isNotEmpty() && it.md5.isNotEmpty() && it.path.isNotEmpty() }
+            }
+        } catch (e: Exception) {
+            Log.w(TAG, "failed to read history index", e)
+            emptyList()
+        }
+    }
+
+    private fun writeHistoryIndex(entries: List<HistoryEntry>) {
+        ensureHistoryDirs()
+        val json = JSONObject().put("history", JSONArray().apply {
+            entries.forEach { entry ->
+                put(JSONObject().apply {
+                    put("version", entry.version)
+                    put("md5", entry.md5)
+                    put("path", entry.path)
+                    put("assetsRef", entry.assetsRef)
+                    put("installedAt", entry.installedAt)
+                })
+            }
+        })
+        writeTextSync(historyIndexFile, json.toString())
+    }
+
+    private fun archiveCurrentPatchToHistory(meta: JSONObject): Int {
+        ensureHistoryDirs()
+
+        val history = readHistoryIndex()
+        val maxHistory = PatcherConfig.maxPatchHistory(context)
+
+        // Determine next history slot (1-based, newest at front)
+        val nextSlot = if (history.isEmpty()) 1 else history.first().path.split("/").last().toIntOrNull()?.plus(1) ?: history.size + 1
+        val historyPath = "history/$nextSlot"
+        val historyEntryDir = File(patchDir, historyPath)
+        historyEntryDir.mkdirs()
+
+        // Move current patch to history
+        val currentVersion = meta.optString("version", "")
+        val currentMd5 = meta.optString("effectiveMd5", meta.optString("downloadMd5", ""))
+        val currentAssetsRef = meta.optInt("assetsRef", 0)
+
+        if (patchFile.exists()) {
+            patchFile.renameTo(File(historyEntryDir, "libapp_patch.so"))
+        }
+        if (metaFile.exists()) {
+            metaFile.renameTo(File(historyEntryDir, "patch_meta.json"))
+        }
+        if (assetsDir.exists()) {
+            assetsDir.renameTo(File(historyEntryDir, ASSET_DIR))
+        }
+        if (assetsArchive.exists()) {
+            assetsArchive.renameTo(File(historyEntryDir, ASSET_ARCHIVE))
+        }
+
+        // Add to history index (newest first)
+        val newEntry = HistoryEntry(
+            version = currentVersion,
+            md5 = currentMd5,
+            path = historyPath,
+            assetsRef = currentAssetsRef,
+            installedAt = meta.optLong("installed_at", System.currentTimeMillis())
+        )
+        val updatedHistory = (listOf(newEntry) + history).take(maxHistory)
+        writeHistoryIndex(updatedHistory)
+
+        // Prune old history directories
+        pruneOldHistoryDirectories(updatedHistory)
+
+        return newEntry.assetsRef
+    }
+
+    private fun pruneOldHistoryDirectories(validEntries: List<HistoryEntry>) {
+        val validPaths = validEntries.map { it.path }.toSet()
+        historyDir.listFiles()?.forEach { dir ->
+            if (dir.isDirectory && !validPaths.contains(dir.name)) {
+                dir.deleteRecursively()
+            }
+        }
+    }
+
+    private fun extractBaseAssetsIfNeeded(): Int {
+        // Extract base APK assets to assets/0/ if not already done
+        if (!baseAssetsArchive.exists()) {
+            baseAssetsArchive.parentFile?.mkdirs()
+            try {
+                copyInstalledFlutterAssets(File(assetsHistoryDir, "0"))
+                writeFlutterAssetsArchive(File(assetsHistoryDir, "0"), baseAssetsArchive)
+            } catch (e: Exception) {
+                Log.w(TAG, "failed to extract base assets", e)
+            }
+        }
+        return 0
+    }
+
+    private fun assetsChanged(newAssetsDir: File): Boolean {
+        if (!assetsDir.exists()) return true
+        if (!newAssetsDir.exists()) return false
+        try {
+            // Compare AssetManifest.bin to detect asset changes
+            val oldManifest = File(assetsDir, ASSET_MANIFEST)
+            val newManifest = File(newAssetsDir, ASSET_MANIFEST)
+            if (!oldManifest.exists() || !newManifest.exists()) return true
+            return !filesContentEqual(oldManifest, newManifest)
+        } catch (e: Exception) {
+            return true
+        }
+    }
+
+    private fun filesContentEqual(f1: File, f2: File): Boolean {
+        if (f1.length() != f2.length()) return false
+        f1.inputStream().use { in1 ->
+            f2.inputStream().use { in2 ->
+                val buf1 = ByteArray(8192)
+                val buf2 = ByteArray(8192)
+                while (true) {
+                    val n1 = in1.read(buf1)
+                    val n2 = in2.read(buf2)
+                    if (n1 != n2) return false
+                    if (n1 == -1) return true
+                    // Manual comparison since ByteArray.contentEquals doesn't support offset/length
+                    var i = 0
+                    while (i < n1) {
+                        if (buf1[i] != buf2[i]) return false
+                        i++
+                    }
+                }
+            }
+        }
+    }
+
+    private fun saveNewAssetsArchive(newAssetsDir: File, nextAssetsRef: Int): File {
+        val assetsArchiveDir = File(assetsHistoryDir, nextAssetsRef.toString())
+        assetsArchiveDir.mkdirs()
+        val newArchive = File(assetsArchiveDir, ASSET_ARCHIVE)
+        writeFlutterAssetsArchive(newAssetsDir, newArchive)
+        return newArchive
+    }
+
+    fun rollbackToPrevious(): RollbackResult {
+        val history = readHistoryIndex()
+        if (history.isEmpty()) {
+            Log.i(TAG, "no history available, falling back to base APK")
+            deletePatch()
+            CrashGuard(context).reset()
+            return RollbackResult.FALLBACK_TO_BASE
+        }
+
+        for (entry in history) {
+            // Skip blacklisted entries
+            if (BlacklistStore.contains(context, entry.version, entry.md5)) {
+                Log.w(TAG, "skipping blacklisted history entry: ${entry.version}")
+                continue
+            }
+
+            val entryDir = File(patchDir, entry.path)
+            val entrySo = File(entryDir, "libapp_patch.so")
+            val entryMeta = File(entryDir, "patch_meta.json")
+            val entryAssets = File(entryDir, ASSET_DIR)
+            val entryAssetsArchive = File(entryDir, ASSET_ARCHIVE)
+
+            if (!entrySo.exists() || !entryMeta.exists()) {
+                Log.w(TAG, "history entry incomplete, skipping: ${entry.version}")
+                continue
+            }
+
+            // Restore this entry as active patch
+            if (patchFile.exists()) patchFile.delete()
+            if (metaFile.exists()) metaFile.delete()
+            if (assetsDir.exists()) assetsDir.deleteRecursively()
+            if (assetsArchive.exists()) assetsArchive.delete()
+
+            entrySo.renameTo(patchFile)
+            entryMeta.renameTo(metaFile)
+
+            val assetsArchiveRef = File(assetsHistoryDir, "${entry.assetsRef}/$ASSET_ARCHIVE")
+            if (assetsArchiveRef.exists()) {
+                assetsArchiveRef.copyTo(assetsArchive, overwrite = true)
+            }
+            if (entryAssets.exists()) {
+                entryAssets.renameTo(assetsDir)
+            } else if (assetsArchive.exists()) {
+                // Extract assets from archive if directory missing
+                try {
+                    ZipFile(assetsArchive).use { zip ->
+                        assetsDir.mkdirs()
+                        val entries = zip.entries()
+                        while (entries.hasMoreElements()) {
+                            val ze = entries.nextElement()
+                            if (!ze.isDirectory && ze.name.startsWith(PATCH_ASSETS_PREFIX)) {
+                                val relative = ze.name.removePrefix(PATCH_ASSETS_PREFIX)
+                                if (isSafeZipPath(relative)) {
+                                    extractZipEntry(zip, ze, File(assetsDir, relative))
+                                }
+                            }
+                        }
+                    }
+                } catch (e: Exception) {
+                    Log.w(TAG, "failed to extract assets from archive", e)
+                }
+            }
+
+            // Remove from history
+            val updatedHistory = history.filterNot { it.path == entry.path }
+            writeHistoryIndex(updatedHistory)
+            entryDir.deleteRecursively()
+
+            // Prune unused asset archives
+            pruneUnusedAssetArchives(updatedHistory)
+
+            CrashGuard(context).reset()
+            Log.i(TAG, "rolled back to previous patch: ${entry.version}")
+            return RollbackResult.SUCCESS
+        }
+
+        // All history entries blacklisted
+        Log.i(TAG, "all history entries blacklisted, falling back to base APK")
+        deletePatch()
+        CrashGuard(context).reset()
+        return RollbackResult.FALLBACK_TO_BASE
+    }
+
+    private fun pruneUnusedAssetArchives(validEntries: List<HistoryEntry>) {
+        val usedRefs = validEntries.map { it.assetsRef }.toSet()
+        assetsHistoryDir.listFiles()?.forEach { dir ->
+            if (dir.isDirectory && dir.name != "0") {
+                val ref = dir.name.toIntOrNull()
+                if (ref != null && ref !in usedRefs) {
+                    dir.deleteRecursively()
+                }
+            }
+        }
+    }
+
     fun rollback() {
         deletePatch()
         CrashGuard(context).reset()
@@ -658,6 +932,41 @@ internal class PatchManager(
             cleanupPreparedArtifacts(includePrevious = true)
             installMarkerFile.delete()
 
+            // Archive current patch to history BEFORE committing new one
+            var assetsRef = 0
+            if (patchFile.exists() && metaFile.exists()) {
+                // Read current meta to get its assetsRef
+                val currentMeta = readMeta()
+                val currentAssetsRef = currentMeta?.optInt("assetsRef", 0) ?: 0
+
+                // Check if new assets are different from current
+                val newAssetsChanged = finalAssets != null && assetsChanged(finalAssets)
+
+                if (newAssetsChanged) {
+                    // Save new assets to history and get new ref
+                    val history = readHistoryIndex()
+                    val nextAssetsRef = if (history.isEmpty()) 1 else (history.map { it.assetsRef }.maxOrNull() ?: 0) + 1
+                    val maxAssetHistory = PatcherConfig.maxAssetHistory(context)
+                    if (nextAssetsRef <= maxAssetHistory) {
+                        saveNewAssetsArchive(finalAssets, nextAssetsRef)
+                        assetsRef = nextAssetsRef
+                    } else {
+                        assetsRef = currentAssetsRef // reuse if at limit
+                    }
+                } else {
+                    // Reuse current assets reference
+                    assetsRef = currentAssetsRef
+                }
+
+                // Archive current patch to history
+                meta.put("assetsRef", assetsRef)
+                archiveCurrentPatchToHistory(meta)
+            } else {
+                // First patch ever - extract base assets
+                assetsRef = extractBaseAssetsIfNeeded()
+                meta.put("assetsRef", assetsRef)
+            }
+
             if (!finalSo.renameTo(pendingSo)) {
                 copyFile(finalSo, pendingSo)
                 finalSo.delete()
@@ -678,42 +987,12 @@ internal class PatchManager(
             writeTextSync(pendingMeta, meta.toString())
             writeTextSync(installMarkerFile, "installing")
 
-            if (patchFile.exists()) {
-                if (!patchFile.renameTo(previousSo)) {
-                    throw PatchInstallException(
-                        ApplyErrorCode.IO_ERROR,
-                        "rename ${patchFile.absolutePath} to previous failed"
-                    )
-                }
-                backedSo = true
-            }
-            if (metaFile.exists()) {
-                if (!metaFile.renameTo(previousMeta)) {
-                    throw PatchInstallException(
-                        ApplyErrorCode.IO_ERROR,
-                        "rename ${metaFile.absolutePath} to previous failed"
-                    )
-                }
-                backedMeta = true
-            }
-            if (assetsDir.exists()) {
-                if (!assetsDir.renameTo(previousAssets)) {
-                    throw PatchInstallException(
-                        ApplyErrorCode.IO_ERROR,
-                        "rename ${assetsDir.absolutePath} to previous failed"
-                    )
-                }
-                backedAssets = true
-            }
-            if (assetsArchive.exists()) {
-                if (!assetsArchive.renameTo(previousAssetsArchive)) {
-                    throw PatchInstallException(
-                        ApplyErrorCode.IO_ERROR,
-                        "rename ${assetsArchive.absolutePath} to previous failed"
-                    )
-                }
-                backedAssetsArchive = true
-            }
+            // No need to backup to .previous anymore since we archived to history
+            // Just clean up any existing .previous files
+            previousSo.delete()
+            previousMeta.delete()
+            previousAssets.deleteRecursively()
+            previousAssetsArchive.delete()
 
             if (!pendingSo.renameTo(patchFile)) {
                 throw PatchInstallException(

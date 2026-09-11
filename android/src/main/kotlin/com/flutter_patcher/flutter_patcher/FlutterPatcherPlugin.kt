@@ -94,6 +94,7 @@ class FlutterPatcherPlugin :
             "reportDartBootError" -> handleReportDartBootError(call, result)
             "applyPatch" -> handleApplyPatch(call, result)
             "rollback" -> handleRollback(result)
+            "rollbackToPrevious" -> handleRollbackToPrevious(result)
             "currentVersion" -> handleCurrentVersion(result)
             "lastBootDiagnostic" -> handleLastBootDiagnostic(result)
             "cacheDir" -> result.success(appContext.cacheDir.absolutePath)
@@ -125,7 +126,9 @@ class FlutterPatcherPlugin :
         val fields = call.argument<List<String>>("loaderFieldCandidates") ?: emptyList()
         val heuristic = call.argument<Boolean>("loaderFallbackHeuristic")
             ?: PatcherConfig.DEFAULT_LOADER_HEURISTIC
-        PatcherConfig.saveConfig(appContext, pk, max, strict, fields, heuristic)
+        val maxPatchHistory = call.argument<Int>("maxPatchHistory") ?: PatcherConfig.MAX_PATCH_HISTORY
+        val maxAssetHistory = call.argument<Int>("maxAssetHistory") ?: PatcherConfig.MAX_ASSET_HISTORY
+        PatcherConfig.saveConfig(appContext, pk, max, strict, fields, heuristic, maxPatchHistory, maxAssetHistory)
         result.success(null)
     }
 
@@ -158,6 +161,18 @@ class FlutterPatcherPlugin :
                 Log.e(TAG, "rollback error", e)
             }
             main.post { result.success(null) }
+        }.start()
+    }
+
+    private fun handleRollbackToPrevious(result: Result) {
+        Thread {
+            try {
+                val outcome = PatchManager(appContext).rollbackToPrevious()
+                main.post { result.success(outcome.name) }
+            } catch (e: Exception) {
+                Log.e(TAG, "rollbackToPrevious error", e)
+                main.post { result.success(RollbackResult.FALLBACK_TO_BASE.name) }
+            }
         }.start()
     }
 

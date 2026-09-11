@@ -23,6 +23,8 @@ internal object PatcherConfig {
     private const val KEY_STRICT_SIG = "strict_signature"
     private const val KEY_LOADER_FIELDS = "loader_field_candidates"
     private const val KEY_LOADER_HEURISTIC = "loader_fallback_heuristic"
+    private const val KEY_MAX_PATCH_HISTORY = "max_patch_history"
+    private const val KEY_MAX_ASSET_HISTORY = "max_asset_history"
 
     // ---- Runtime state keys (CrashGuard / PatchManager) ----
     const val KEY_CRASH_COUNT = "crash_count"
@@ -43,6 +45,10 @@ internal object PatcherConfig {
 
     // ---- Sentinels ----
     const val INVALID_VERSION_CODE = -1L
+
+    // ---- Patch history limits ----
+    const val MAX_PATCH_HISTORY = 4
+    const val MAX_ASSET_HISTORY = 4
 
     // ---- Defaults ----
     /**
@@ -88,7 +94,9 @@ internal object PatcherConfig {
         maxCrashCount: Int,
         strictSignature: Boolean,
         loaderFieldCandidates: List<String>,
-        loaderFallbackHeuristic: Boolean
+        loaderFallbackHeuristic: Boolean,
+        maxPatchHistory: Int = MAX_PATCH_HISTORY,
+        maxAssetHistory: Int = MAX_ASSET_HISTORY
     ) {
         prefs(context).edit()
             .putString(KEY_PUBLIC_KEY, publicKeyBase64)
@@ -96,6 +104,8 @@ internal object PatcherConfig {
             .putBoolean(KEY_STRICT_SIG, strictSignature)
             .putString(KEY_LOADER_FIELDS, encodeLoaderFieldCandidates(loaderFieldCandidates))
             .putBoolean(KEY_LOADER_HEURISTIC, loaderFallbackHeuristic)
+            .putInt(KEY_MAX_PATCH_HISTORY, maxPatchHistory.coerceAtLeast(0))
+            .putInt(KEY_MAX_ASSET_HISTORY, maxAssetHistory.coerceAtLeast(0))
             .apply()
     }
 
@@ -113,6 +123,12 @@ internal object PatcherConfig {
 
     fun loaderFallbackHeuristic(context: Context): Boolean =
         prefs(context).getBoolean(KEY_LOADER_HEURISTIC, DEFAULT_LOADER_HEURISTIC)
+
+    fun maxPatchHistory(context: Context): Int =
+        prefs(context).getInt(KEY_MAX_PATCH_HISTORY, MAX_PATCH_HISTORY)
+
+    fun maxAssetHistory(context: Context): Int =
+        prefs(context).getInt(KEY_MAX_ASSET_HISTORY, MAX_ASSET_HISTORY)
 
     /**
      * 读取当前宿主 APK 的 versionCode（API 28+ 用 longVersionCode，以下降级）。

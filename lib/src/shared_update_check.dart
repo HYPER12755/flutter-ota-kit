@@ -84,6 +84,17 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
   if (info == null) return ServerUpdateResult.upToDate();
 
   final storageUri = info.storageUri;
+  // Server signals rollback with ROLLBACK status and null/empty storageUri
+  if (info.status == 'ROLLBACK') {
+    return ServerUpdateResult(
+      isUpToDate: false,
+      patch: null,
+      status: AppUpdateStatus.rollback,
+      shouldForceUpdate: info.shouldForceUpdate,
+      id: info.id,
+      message: info.message,
+    );
+  }
   if (storageUri == null || storageUri.isEmpty) {
     return ServerUpdateResult.upToDate();
   }

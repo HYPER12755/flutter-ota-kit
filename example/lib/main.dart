@@ -207,7 +207,7 @@ class _HomePageState extends State<HomePage> {
                 border: Border.all(color: Colors.deepPurple.withValues(alpha: 0.3)),
               ),
               child: const Text(
-                'OTA v1.0.1 — Purple theme active',
+                'OTA v1.0.2 — Purple theme active (v1.0.0)',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.bold,
@@ -283,7 +283,7 @@ class _HomePageState extends State<HomePage> {
             //         icon: const Icon(Icons.chat_bubble_outline),
             //         label: const Text('Chat'),
             //         style: FilledButton.styleFrom(
-            //           backgroundColor: Colors.blue,
+            //           backgroundColor: Colors.deepPurple,
             //           padding: const EdgeInsets.symmetric(vertical: 14),
             //         ),
             //       ),
@@ -302,7 +302,7 @@ class _HomePageState extends State<HomePage> {
             //         icon: const Icon(Icons.videogame_asset),
             //         label: const Text('Game'),
             //         style: FilledButton.styleFrom(
-            //           backgroundColor: Colors.green,
+            //           backgroundColor: Colors.deepPurple,
             //           padding: const EdgeInsets.symmetric(vertical: 14),
             //         ),
             //       ),

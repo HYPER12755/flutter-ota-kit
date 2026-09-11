@@ -81,3 +81,5 @@ npm/flutter-ota/dart-src/
 *.snap
 .pubignore.bak
 npm/flutter-ota/_nazmiforreal-flutter-ota-0.1.15.tgz
+# Widget Preview related
+.widget_preview/
