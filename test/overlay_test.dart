@@ -1,219 +1,186 @@
-// Widget tests for the forced-update progress overlay.
+// Widget tests for the structured terminal forced-update overlay.
 
 import 'package:flutter/material.dart';
 import 'package:flutter_ota_kit/flutter_ota_kit.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Pumps [OtaProgressOverlay] inside a minimal Material host with the given
-/// initial state and a custom [MediaQuery] so goldens have a fixed size.
+/// True if any rendered `Text` or `RichText` in the tree contains [needle].
+/// `find.textContaining` does not traverse `RichText` spans, so meta rows and
+/// log lines (which are `RichText`) need this.
+bool _hasText(WidgetTester tester, String needle) {
+  for (final w in tester.allWidgets) {
+    if (w is Text && (w.data?.contains(needle) ?? false)) return true;
+    if (w is RichText) {
+      final span = w.text;
+      if (span is TextSpan && span.toPlainText().contains(needle)) return true;
+    }
+  }
+  return false;
+}
+
+
 Future<void> _pump(
   WidgetTester tester, {
   required ValueNotifier<OtaOverlayState> state,
-  bool dismissible = false,
+  VoidCallback? onRetry,
 }) async {
+  // A tall canvas so the scrollable body lays out without overflow.
+  tester.view.physicalSize = const Size(390, 844);
+  tester.view.devicePixelRatio = 1.0;
+  addTearDown(tester.view.resetPhysicalSize);
+  addTearDown(tester.view.resetDevicePixelRatio);
+
   await tester.pumpWidget(
     MaterialApp(
       home: Scaffold(
-        body: Stack(
-          children: [
-            OtaProgressOverlay(state: state, dismissible: dismissible),
-          ],
-        ),
+        body: OtaProgressOverlay(state: state, onRetry: onRetry),
       ),
     ),
   );
+  await tester.pump(const Duration(milliseconds: 80));
 }
 
 void main() {
-  group('OtaProgressOverlay', () {
-    testWidgets('renders indeterminate "Preparing update" before any phase', (
-      tester,
-    ) async {
+  group('OtaProgressOverlay (terminal)', () {
+    testWidgets('renders the section skeleton', (tester) async {
       final state = ValueNotifier(const OtaOverlayState());
       await _pump(tester, state: state);
-      expect(find.text('Preparing update'), findsOneWidget);
-      // No progress bar percentage visible.
-      expect(find.textContaining('%'), findsNothing);
-      // Card has a rounded shape and an elevation.
-      final cardFinder = find.byType(Container);
-      expect(cardFinder, findsWidgets);
+
+      expect(find.text('META'), findsOneWidget);
+      expect(find.text('STEPS'), findsOneWidget);
+      expect(find.text('PROGRESS'), findsOneWidget);
+      expect(find.text('LOG'), findsOneWidget);
+      // Title bar text.
+      expect(find.text('flutter-ota · forced update'), findsOneWidget);
+      // Running status pill (no error).
+      expect(find.text('RUNNING'), findsOneWidget);
+      expect(find.text('FAILED'), findsNothing);
     });
 
-    testWidgets(
-      'shows "Downloading update" + 0% for downloading with no fraction',
-      (tester) async {
-        final state = ValueNotifier(
-          const OtaOverlayState(phase: PatchApplyPhase.downloading),
-        );
-        await _pump(tester, state: state);
-        expect(find.text('Downloading update'), findsOneWidget);
-      },
-    );
-
-    testWidgets('shows percentage when fraction is known', (tester) async {
+    testWidgets('shows meta rows: channel, version, bundle, size',
+        (tester) async {
       final state = ValueNotifier(
         const OtaOverlayState(
           phase: PatchApplyPhase.downloading,
-          fraction: 0.42,
-        ),
-      );
-      await _pump(tester, state: state);
-      expect(find.text('Downloading update'), findsOneWidget);
-      expect(find.text('42%'), findsOneWidget);
-    });
-
-    testWidgets('shows version transition when both versions are known', (
-      tester,
-    ) async {
-      final state = ValueNotifier(
-        const OtaOverlayState(
-          phase: PatchApplyPhase.downloading,
-          fraction: 0.1,
-          currentVersion: '1.0.0',
-          targetVersion: '1.0.1',
-        ),
-      );
-      await _pump(tester, state: state);
-      expect(find.text('1.0.0  →  1.0.1'), findsOneWidget);
-    });
-
-    testWidgets('skips version line when current equals target', (
-      tester,
-    ) async {
-      final state = ValueNotifier(
-        const OtaOverlayState(
-          phase: PatchApplyPhase.downloading,
-          currentVersion: '1.0.1',
-          targetVersion: '1.0.1',
-        ),
-      );
-      await _pump(tester, state: state);
-      expect(find.text('1.0.0  →  1.0.1'), findsNothing);
-      expect(find.text('1.0.1'), findsOneWidget); // shows just the target
-    });
-
-    testWidgets('shows version line when only target is known', (tester) async {
-      final state = ValueNotifier(
-        const OtaOverlayState(
-          phase: PatchApplyPhase.downloading,
-          targetVersion: '1.0.1',
-        ),
-      );
-      await _pump(tester, state: state);
-      // No transition (no current), but no crash either.
-      expect(find.text('1.0.0  →  1.0.1'), findsNothing);
-    });
-
-    testWidgets('shows the server message when provided', (tester) async {
-      final state = ValueNotifier(
-        const OtaOverlayState(
-          phase: PatchApplyPhase.downloading,
-          message: 'Critical security fix',
-        ),
-      );
-      await _pump(tester, state: state);
-      expect(find.text('Critical security fix'), findsOneWidget);
-    });
-
-    testWidgets('omits the server message when empty', (tester) async {
-      final state = ValueNotifier(
-        const OtaOverlayState(phase: PatchApplyPhase.downloading, message: ''),
-      );
-      await _pump(tester, state: state);
-      expect(find.text(''), findsNothing);
-    });
-
-    testWidgets('error variant shows "Update failed" + hint', (tester) async {
-      final state = ValueNotifier(
-        const OtaOverlayState(
-          hasError: true,
-          errorText: 'md5 mismatch',
-          errorHint: 'Reopen the app to retry.',
-          currentVersion: '1.0.0',
-          targetVersion: '1.0.1',
-        ),
-      );
-      await _pump(tester, state: state);
-      expect(find.text('Update failed'), findsOneWidget);
-      expect(find.text('md5 mismatch'), findsOneWidget);
-      expect(find.text('Reopen the app to retry.'), findsOneWidget);
-    });
-
-    testWidgets('error variant uses default hint when none given', (
-      tester,
-    ) async {
-      final state = ValueNotifier(
-        const OtaOverlayState(hasError: true, errorText: 'io error'),
-      );
-      await _pump(tester, state: state);
-      expect(find.text('io error'), findsOneWidget);
-      expect(find.text('Close the app and reopen to retry.'), findsOneWidget);
-    });
-
-    testWidgets('updating state flows through all 3 phases', (tester) async {
-      final state = ValueNotifier(
-        const OtaOverlayState(
-          phase: PatchApplyPhase.downloading,
-          fraction: 0.0,
-          currentVersion: '1.0.0',
-          targetVersion: '1.0.1',
+          fraction: 0.62,
+          currentVersion: '1.4.0',
+          targetVersion: '1.4.1',
+          channel: 'production',
+          bundleHash: 'a1b2c3d4',
+          totalBytes: 8 * 1048576, // 8.0 MB
           message: 'New onboarding flow',
         ),
       );
       await _pump(tester, state: state);
-      expect(find.text('Downloading update'), findsOneWidget);
-      expect(find.text('0%'), findsOneWidget);
-      expect(find.text('1.0.0  →  1.0.1'), findsOneWidget);
+
+      expect(_hasText(tester, 'production'), isTrue);
+      expect(_hasText(tester, '1.4.0'), isTrue); // version + steps
+      expect(_hasText(tester, 'a1b2c3d4'), isTrue);
+      expect(_hasText(tester, '8.0 MB'), isTrue);
+      // Footer shows the deploy message when running.
       expect(find.text('New onboarding flow'), findsOneWidget);
-
-      // Advance to verifying.
-      state.value = state.value.copyWith(
-        phase: PatchApplyPhase.verifying,
-        fraction: 0.85,
-      );
-      await tester.pump();
-      expect(find.text('Verifying integrity'), findsOneWidget);
-      expect(find.text('85%'), findsOneWidget);
-
-      // Advance to finalizing.
-      state.value = state.value.copyWith(
-        phase: PatchApplyPhase.finalizing,
-        fraction: 1.0,
-      );
-      await tester.pump();
-      expect(find.text('Installing patch'), findsOneWidget);
-      expect(find.text('100%'), findsOneWidget);
     });
 
-    testWidgets('Semantics label announces phase', (tester) async {
+    testWidgets('active step shows the running percentage', (tester) async {
       final state = ValueNotifier(
         const OtaOverlayState(
           phase: PatchApplyPhase.downloading,
-          fraction: 0.5,
+          fraction: 0.62,
+          activeStep: 1,
         ),
       );
       await _pump(tester, state: state);
-      // We don't assert against a specific label because semantics
-      // concatenation is platform-dependent; we only verify that a Semantics
-      // node is present.
-      expect(find.byType(Semantics), findsWidgets);
+
+      // The active step's status chip + the progress bar suffix both read 62%.
+      expect(find.text('62%'), findsWidgets);
+      // Step 1 label present.
+      expect(find.text('Download bundle'), findsOneWidget);
+      // Earlier step marked done.
+      expect(find.text('done'), findsOneWidget);
+      // Later steps still waiting.
+      expect(find.text('wait'), findsWidgets);
+    });
+
+    testWidgets('error state flips pill, marks failed step, shows hint',
+        (tester) async {
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          hasError: true,
+          errorText: 'MD5 mismatch',
+          errorHint: 'Close the app and reopen to retry.',
+          currentVersion: '1.4.0',
+          targetVersion: '1.4.1',
+          activeStep: 2,
+          fraction: 0.88,
+        ),
+      );
+      await _pump(tester, state: state);
+
+      expect(find.text('FAILED'), findsOneWidget);
+      expect(find.text('RUNNING'), findsNothing);
+      // Failed step status chip.
+      expect(find.text('error'), findsOneWidget);
+      // Progress "phase" stat halts.
+      expect(find.text('halted'), findsOneWidget);
+      // Footer hint.
+      expect(find.text('Close the app and reopen to retry.'), findsOneWidget);
+    });
+
+    testWidgets('retry button appears with onRetry and fires', (tester) async {
+      var tapped = false;
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          hasError: true,
+          errorText: 'io error',
+          activeStep: 1,
+        ),
+      );
+      await _pump(tester, state: state, onRetry: () => tapped = true);
+
+      final retry = find.text('[ retry ]');
+      expect(retry, findsOneWidget);
+      await tester.tap(retry);
+      expect(tapped, isTrue);
+    });
+
+    testWidgets('no retry button when onRetry is null and canRetry is false',
+        (tester) async {
+      final state = ValueNotifier(
+        const OtaOverlayState(hasError: true, errorText: 'io error'),
+      );
+      await _pump(tester, state: state);
+      expect(find.text('[ retry ]'), findsNothing);
+    });
+
+    testWidgets('log lines render (tag + body split)', (tester) async {
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          phase: PatchApplyPhase.verifying,
+          activeStep: 2,
+          logs: [
+            LogLine('green', 'download complete ✓'),
+            LogLine('cyan', 'verify   md5 match ✓'),
+          ],
+        ),
+      );
+      await _pump(tester, state: state);
+
+      // Body of the split "verify   md5 match ✓" line (rendered as RichText).
+      expect(_hasText(tester, 'md5 match'), isTrue);
     });
   });
 
-  group('OtaOverlayManager', () {
-    // The manager is a singleton with global state, which makes it hard to
-    // test in isolation (a previous test in the same isolate can leave a
-    // disposed overlay host behind). We test the public surface only via
-    // the public widget tests above, which use the widget's own
-    // ValueListenableBuilder.
-
-    test('OtaOverlayState.copyWith preserves fields when not overridden', () {
+  group('OtaOverlayState.copyWith', () {
+    test('preserves fields when not overridden', () {
       const original = OtaOverlayState(
         phase: PatchApplyPhase.downloading,
         fraction: 0.5,
         message: 'hello',
         targetVersion: '1.0.1',
         currentVersion: '1.0.0',
+        totalBytes: 100,
+        bytesReceived: 50,
+        bytesPerSec: 10,
       );
       final copy = original.copyWith(fraction: 0.8);
       expect(copy.fraction, 0.8);
@@ -221,18 +188,19 @@ void main() {
       expect(copy.message, 'hello');
       expect(copy.targetVersion, '1.0.1');
       expect(copy.currentVersion, '1.0.0');
+      expect(copy.totalBytes, 100);
+      expect(copy.bytesReceived, 50);
+      expect(copy.bytesPerSec, 10);
     });
 
-    test(
-      'OtaOverlayState.copyWith can clear hasError by setting other fields',
-      () {
-        const original = OtaOverlayState(hasError: true, errorText: 'oops');
-        // copyWith cannot unset a bool (Dart's nullable param doesn't help);
-        // verify the field stays set when other fields are passed.
-        final copy = original.copyWith(fraction: 0.0);
-        expect(copy.hasError, isTrue);
-        expect(copy.errorText, 'oops');
-      },
-    );
+    test('sets hasError explicitly, leaves it otherwise', () {
+      const original = OtaOverlayState(hasError: true, errorText: 'oops');
+      final unchanged = original.copyWith(fraction: 0.0);
+      expect(unchanged.hasError, isTrue);
+      expect(unchanged.errorText, 'oops');
+
+      final cleared = original.copyWith(hasError: false);
+      expect(cleared.hasError, isFalse);
+    });
   });
 }

@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
@@ -21,11 +20,18 @@ class OtaOverlayState {
   final String? channel;
   final String? platform;
   final int? bytesPerSec;
+
+  /// Bytes downloaded so far (downloading phase only).
+  final int bytesReceived;
+
+  /// Total payload size in bytes, or 0 when unknown.
+  final int totalBytes;
+
   final List<LogLine> logs;
   final bool canRetry;
 
   /// Which step index is currently active (0-based). Steps that are done
-  /// get a green checkmark; the active step gets the braille spinner.
+  /// get a check; the active step gets the braille spinner.
   final int activeStep;
 
   const OtaOverlayState({
@@ -43,6 +49,8 @@ class OtaOverlayState {
     this.channel,
     this.platform,
     this.bytesPerSec,
+    this.bytesReceived = 0,
+    this.totalBytes = 0,
     this.logs = const [],
     this.canRetry = false,
     this.activeStep = 0,
@@ -62,6 +70,8 @@ class OtaOverlayState {
     String? channel,
     String? platform,
     int? bytesPerSec,
+    int? bytesReceived,
+    int? totalBytes,
     List<LogLine>? logs,
     bool? canRetry,
     int? activeStep,
@@ -81,6 +91,8 @@ class OtaOverlayState {
       channel: channel ?? this.channel,
       platform: platform ?? this.platform,
       bytesPerSec: bytesPerSec ?? this.bytesPerSec,
+      bytesReceived: bytesReceived ?? this.bytesReceived,
+      totalBytes: totalBytes ?? this.totalBytes,
       logs: logs ?? this.logs,
       canRetry: canRetry ?? this.canRetry,
       activeStep: activeStep ?? this.activeStep,
@@ -88,7 +100,12 @@ class OtaOverlayState {
   }
 }
 
-/// A single terminal log line with color tag.
+/// A single terminal log line with a color tag and an optional left-column tag.
+///
+/// [text] is the message. If it contains a leading token separated by 2+
+/// spaces (e.g. `'verify   passed ✓'`), the overlay renders the first token
+/// in the accent color and the rest in the body color, preserving the
+/// aligned key/value look. Plain lines render whole in [color].
 class LogLine {
   final String color;
   final String text;
@@ -98,34 +115,69 @@ class LogLine {
 
 const Object _unset = Object();
 
-/// The 5 steps shown during a forced update.
-const List<String> _stepLabels = [
-  'Initializing update',
-  'Downloading update',
-  'Verifying hash',
-  'Applying patch',
-  'Finalizing',
-];
-
-/// Returns the display label for step [i]. On error, step 3 shows
-/// "Skipping patch" instead of "Applying patch".
-String _stepLabel(int i, bool hasError) {
-  if (hasError && i == 3) return 'Skipping patch ✗';
-  return _stepLabels[i];
+/// GitHub-dark inspired palette for the terminal overlay.
+class _C {
+  static const bg = Color(0xFF0B0F14);
+  static const panel = Color(0xFF11161D);
+  static const inner = Color(0xFF0E141B);
+  static const head = Color(0xFF161C24);
+  static const border = Color(0xFF232A34);
+  static const sep = Color(0xFF1B222B);
+  static const logBg = Color(0xFF0A0E13);
+  static const green = Color(0xFF3FB950);
+  static const blue = Color(0xFF58A6FF);
+  static const cyan = Color(0xFF56D4DD);
+  static const yellow = Color(0xFFD29922);
+  static const red = Color(0xFFF85149);
+  static const text = Color(0xFFC9D1D9);
+  static const dim = Color(0xFF7D8794);
+  static const faint = Color(0xFF484F58);
 }
 
-/// Full-screen terminal-style forced-update overlay.
+const String _mono = 'monospace';
+
+/// The 5 steps shown during a forced update.
+const List<String> _stepLabels = [
+  'Initialize',
+  'Download bundle',
+  'Verify hash + signature',
+  'Install patch',
+  'Finalize & restart',
+];
+
+/// Named color -> swatch, used to resolve [LogLine.color].
+const Map<String, Color> _logColors = {
+  'green': _C.green,
+  'red': _C.red,
+  'yellow': _C.yellow,
+  'gray': _C.dim,
+  'white': _C.text,
+  'cyan': _C.cyan,
+  'success': _C.blue,
+};
+
+/// Full-screen, structured terminal-style forced-update overlay.
 ///
-/// Top half: 5-step progress with braille spinner / checkmarks.
-/// Bottom half: scrollable terminal log box.
+/// Sections, top to bottom:
+///  - Title bar (traffic lights + status pill)
+///  - META (channel / version / bundle / size)
+///  - STEPS (per-phase status list)
+///  - PROGRESS (monospace bar + speed / eta / phase)
+///  - LOG (scrolling colored feed)
+///  - Footer (deploy message, or error hint + retry)
 class OtaProgressOverlay extends StatefulWidget {
   final ValueNotifier<OtaOverlayState> state;
   final bool dismissible;
+
+  /// Called when the user taps the footer `[ retry ]` button in the error
+  /// state. When null, the button is shown only if [OtaOverlayState.canRetry].
+  final VoidCallback? onRetry;
 
   const OtaProgressOverlay({
     super.key,
     required this.state,
     this.dismissible = false,
+    this.onRetry,
   });
 
   @override
@@ -153,232 +205,60 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
     super.dispose();
   }
 
-  static const Map<String, Color> _logColors = {
-    'green': Color(0xFF3FB950),
-    'red': Color(0xFFF85149),
-    'yellow': Color(0xFFD29922),
-    'gray': Color(0xFF8B949E),
-    'white': Color(0xFFC9D1D9),
-    'cyan': Color(0xFF58A6FF),
-    'success': Color(0xFF79C0FF),
-  };
+  String _pct(double? f) =>
+      f == null ? '--%' : '${(f.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%';
+
+  String _mb(int bytes) => '${(bytes / 1048576).toStringAsFixed(1)} MB';
 
   @override
   Widget build(BuildContext context) {
     return ValueListenableBuilder<OtaOverlayState>(
       valueListenable: widget.state,
       builder: (context, s, _) {
-        final spinner = _braille[_spinnerIndex];
-        final pct = s.fraction;
-        final pctText = pct != null
-            ? '${(pct.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%'
-            : '';
-
         return Material(
-          color: const Color(0xFF0d1117),
+          color: _C.bg,
           child: SafeArea(
-            child: Column(
-              children: [
-                // ─── Top half: steps ───
-                Expanded(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        horizontal: 32, vertical: 24),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Title
-                        Center(
-                          child: Text(
-                            s.hasError ? 'Update failed' : 'Updating app',
-                            style: const TextStyle(
-                              fontFamily: 'monospace',
-                              fontSize: 20,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFFC9D1D9),
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        // Version line
-                        if (s.currentVersion != null &&
-                            s.targetVersion != null)
-                          Center(
-                            child: Text(
-                              '${s.currentVersion}  →  ${s.targetVersion}',
-                              style: const TextStyle(
-                                fontFamily: 'monospace',
-                                fontSize: 14,
-                                color: Color(0xFF58A6FF),
-                              ),
-                            ),
-                          ),
-                        const SizedBox(height: 32),
-                        // Steps
-                        ...List.generate(_stepLabels.length, (i) {
-                          final done = i < s.activeStep;
-                          final active = i == s.activeStep && !s.hasError;
-                          final failed = i == s.activeStep && s.hasError;
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 14),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 24,
-                                  child: done
-                                      ? const Icon(Icons.check_rounded,
-                                          size: 18,
-                                          color: Color(0xFF79C0FF))
-                                      : active
-                                          ? Text(
-                                              spinner,
-                                              style: const TextStyle(
-                                                fontFamily: 'monospace',
-                                                fontSize: 16,
-                                                color: Color(0xFF58A6FF),
-                                              ),
-                                            )
-                                          : failed
-                                              ? const Icon(Icons.close_rounded,
-                                                  size: 18,
-                                                  color: Color(0xFFF85149))
-                                              : Text(
-                                                  '${i + 1}',
-                                                  style: const TextStyle(
-                                                    fontFamily: 'monospace',
-                                                    fontSize: 14,
-                                                    color: Color(0xFF484F58),
-                                                  ),
-                                                ),
-                                ),
-                                const SizedBox(width: 12),
-                                Text(
-                                  _stepLabel(i, s.hasError),
-                                  style: TextStyle(
-                                    fontFamily: 'monospace',
-                                    fontSize: 14,
-                                    color: done
-                                        ? const Color(0xFF79C0FF)
-                                        : active
-                                            ? const Color(0xFFC9D1D9)
-                                            : failed
-                                                ? const Color(0xFFF85149)
-                                                : const Color(0xFF484F58),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          );
-                        }),
-                      ],
-                    ),
-                  ),
+            child: Padding(
+              padding: const EdgeInsets.all(16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: _C.panel,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: _C.border),
                 ),
-                // ─── Braille progress bar ───
-                if (pct != null)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 32),
-                    child: Column(
-                      children: [
-                        _BrailleProgressBar(fraction: pct),
-                        const SizedBox(height: 6),
-                        Text(
-                          pctText,
-                          style: const TextStyle(
-                            fontFamily: 'monospace',
-                            fontSize: 12,
-                            color: Color(0xFF8B949E),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                const SizedBox(height: 12),
-                // ─── Bottom half: terminal log ───
-                Expanded(
-                  child: Container(
-                    margin: const EdgeInsets.symmetric(horizontal: 16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF161B22),
-                      borderRadius: BorderRadius.circular(10),
-                      border: Border.all(color: const Color(0xFF30363D)),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Terminal header
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 14, vertical: 8),
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF21262D),
-                            borderRadius: BorderRadius.only(
-                              topLeft: Radius.circular(10),
-                              topRight: Radius.circular(10),
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              _dot(const Color(0xFFF85149)),
-                              const SizedBox(width: 6),
-                              _dot(const Color(0xFFD29922)),
-                              const SizedBox(width: 6),
-                              _dot(const Color(0xFF3FB950)),
-                              const SizedBox(width: 12),
-                              const Text(
-                                'ota-log',
-                                style: TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontSize: 11,
-                                  color: Color(0xFF8B949E),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        // Log lines
-                        Expanded(
-                          child: Padding(
-                            padding: const EdgeInsets.all(12),
-                            child: _TerminalLog(
-                              logs: s.logs,
-                              logColors: _logColors,
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                // Retry button (error only)
-                if (s.hasError && s.canRetry)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    child: TextButton(
-                      onPressed: () {},
-                      style: TextButton.styleFrom(
-                        foregroundColor: const Color(0xFF58A6FF),
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 32, vertical: 12),
-                        side: const BorderSide(color: Color(0xFF30363D)),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      child: const Text(
-                        '[ Retry ]',
-                        style: TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 14,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _titleBar(s),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        padding: const EdgeInsets.fromLTRB(16, 14, 16, 14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            _sectionLabel('META'),
+                            const SizedBox(height: 8),
+                            _metaBlock(s),
+                            const SizedBox(height: 18),
+                            _sectionLabel('STEPS'),
+                            const SizedBox(height: 8),
+                            _stepsBlock(s),
+                            const SizedBox(height: 18),
+                            _sectionLabel('PROGRESS'),
+                            const SizedBox(height: 8),
+                            _progressBlock(s),
+                            const SizedBox(height: 18),
+                            _sectionLabel('LOG'),
+                            const SizedBox(height: 8),
+                            _logBlock(s),
+                          ],
                         ),
                       ),
                     ),
-                  )
-                else
-                  const SizedBox(height: 48),
-              ],
+                    _footer(s),
+                  ],
+                ),
+              ),
             ),
           ),
         );
@@ -386,99 +266,352 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
     );
   }
 
-  Widget _dot(Color color) => Container(
-        width: 12,
-        height: 12,
-        decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+  // ── Title bar ─────────────────────────────────────────────────────────
+  Widget _titleBar(OtaOverlayState s) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+        decoration: const BoxDecoration(
+          color: _C.head,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+          border: Border(bottom: BorderSide(color: _C.border)),
+        ),
+        child: Row(
+          children: [
+            _dot(_C.red),
+            const SizedBox(width: 6),
+            _dot(_C.yellow),
+            const SizedBox(width: 6),
+            _dot(_C.green),
+            const SizedBox(width: 12),
+            const Flexible(
+              child: Text(
+                'flutter-ota · forced update',
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                    color: _C.text, fontFamily: _mono, fontSize: 12),
+              ),
+            ),
+            const SizedBox(width: 8),
+            _pill(
+              s.hasError ? 'FAILED' : 'RUNNING',
+              s.hasError ? _C.red : _C.green,
+            ),
+          ],
+        ),
       );
-}
 
-/// Braille-character progress bar with animated spinner at the leading edge.
-///
-/// Smoothly interpolates over ~4 seconds so the bar visually catches up
-/// to the actual download percentage.
-class _BrailleProgressBar extends StatefulWidget {
-  final double fraction;
-  const _BrailleProgressBar({required this.fraction});
-
-  @override
-  State<_BrailleProgressBar> createState() => _BrailleProgressBarState();
-}
-
-class _BrailleProgressBarState extends State<_BrailleProgressBar> {
-  int _spinIdx = 0;
-  Timer? _spinTimer;
-  double _displayFraction = 0;
-  DateTime? _lastUpdate;
-
-  static const _spinner = ['⠋', '⠙', '⠹', '⠸', '⠼', '⠴', '⠦', '⠧', '⠇', '⠏'];
-
-  @override
-  void initState() {
-    super.initState();
-    _displayFraction = widget.fraction;
-    _lastUpdate = DateTime.now();
-    _spinTimer = Timer.periodic(const Duration(milliseconds: 50), (_) {
-      if (!mounted) return;
-      setState(() {
-        _spinIdx = (_spinIdx + 1) % _spinner.length;
-
-        // Smooth interpolation: reach target in ~4 seconds
-        // Use time-based lerp for consistent speed regardless of tick rate
-        final now = DateTime.now();
-        final dt = _lastUpdate != null
-            ? now.difference(_lastUpdate!).inMilliseconds / 1000.0
-            : 0.05;
-        _lastUpdate = now;
-
-        final diff = widget.fraction - _displayFraction;
-        if (diff > 0.001) {
-          // Lerp ~25% of remaining distance per frame → ~4s to reach 99%
-          final speed = diff * (1 - math.pow(0.75, dt * 20));
-          _displayFraction = (_displayFraction + speed).clamp(0.0, 1.0);
-        } else {
-          _displayFraction = widget.fraction;
-        }
-      });
-    });
-  }
-
-  @override
-  void didUpdateWidget(covariant _BrailleProgressBar oldWidget) {
-    super.didUpdateWidget(oldWidget);
-  }
-
-  @override
-  void dispose() {
-    _spinTimer?.cancel();
-    super.dispose();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    const total = 30;
-    final filled = (_displayFraction.clamp(0.0, 1.0) * total).floor();
-    final empty = total - filled - 1;
-    final spinChar = _spinner[_spinIdx];
-
-    return Text(
-      '${'⣿' * filled}$spinChar${'⠀' * empty}',
-      style: const TextStyle(
-        fontFamily: 'monospace',
-        fontSize: 14,
-        color: Color(0xFF58A6FF),
-        letterSpacing: 0,
+  // ── META ──────────────────────────────────────────────────────────────
+  Widget _metaBlock(OtaOverlayState s) {
+    final rows = <List<String>>[
+      if (s.channel != null) ['channel', s.channel!],
+      if (s.currentVersion != null && s.targetVersion != null)
+        ['version', '${s.currentVersion}  →  ${s.targetVersion}']
+      else if (s.targetVersion != null)
+        ['version', s.targetVersion!],
+      if (s.bundleHash != null) ['bundle', s.bundleHash!],
+      if (s.totalBytes > 0) ['size', _mb(s.totalBytes)],
+    ];
+    if (rows.isEmpty) rows.add(['status', 'preparing…']);
+    return _panelBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final r in rows)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2),
+              child: RichText(
+                text: TextSpan(
+                  style: const TextStyle(fontFamily: _mono, fontSize: 13),
+                  children: [
+                    TextSpan(
+                        text: '${r[0].padRight(9)} ',
+                        style: const TextStyle(color: _C.dim)),
+                    TextSpan(
+                        text: r[1],
+                        style: TextStyle(
+                            color: r[0] == 'version' ? _C.blue : _C.text)),
+                  ],
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
+
+  // ── STEPS ─────────────────────────────────────────────────────────────
+  Widget _stepsBlock(OtaOverlayState s) {
+    final spinner = _braille[_spinnerIndex];
+    return _panelBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: List.generate(_stepLabels.length, (i) {
+          final done = i < s.activeStep;
+          final active = i == s.activeStep && !s.hasError;
+          final failed = i == s.activeStep && s.hasError;
+          final pending = i > s.activeStep;
+
+          final Color color = failed
+              ? _C.red
+              : done
+                  ? _C.green
+                  : active
+                      ? _C.blue
+                      : _C.faint;
+
+          final String glyph = failed
+              ? '✗'
+              : done
+                  ? '✓'
+                  : active
+                      ? spinner
+                      : '·';
+
+          final String status = failed
+              ? 'error'
+              : done
+                  ? 'done'
+                  : active
+                      ? _pct(s.fraction)
+                      : 'wait';
+
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 3),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 18,
+                  child: Text(glyph,
+                      style: TextStyle(
+                          color: color, fontFamily: _mono, fontSize: 14)),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    _stepLabels[i],
+                    style: TextStyle(
+                      color: pending ? _C.faint : _C.text,
+                      fontFamily: _mono,
+                      fontSize: 13,
+                      fontWeight: active ? FontWeight.w600 : FontWeight.w400,
+                    ),
+                  ),
+                ),
+                Text(
+                  status,
+                  style: TextStyle(
+                    color: color,
+                    fontFamily: _mono,
+                    fontSize: 12,
+                    fontFeatures: const [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ],
+            ),
+          );
+        }),
+      ),
+    );
+  }
+
+  // ── PROGRESS ──────────────────────────────────────────────────────────
+  Widget _progressBlock(OtaOverlayState s) {
+    const total = 34;
+    final frac = (s.fraction ?? 0).clamp(0.0, 1.0);
+    final filled = (frac * total).round();
+    final bar = '${'█' * filled}${'░' * (total - filled)}';
+
+    final speed = (s.bytesPerSec != null && s.bytesPerSec! > 0)
+        ? '${(s.bytesPerSec! / 1048576).toStringAsFixed(1)} MB/s'
+        : '—';
+    String eta = '—';
+    if (s.bytesPerSec != null &&
+        s.bytesPerSec! > 0 &&
+        s.totalBytes > s.bytesReceived) {
+      final secs = ((s.totalBytes - s.bytesReceived) / s.bytesPerSec!).ceil();
+      eta = '${secs}s';
+    }
+    final phase = s.hasError
+        ? 'halted'
+        : (s.phase?.name ?? 'preparing');
+
+    return _panelBox(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          RichText(
+            text: TextSpan(
+              style: const TextStyle(fontFamily: _mono, fontSize: 13),
+              children: [
+                TextSpan(
+                    text: bar,
+                    style: TextStyle(color: s.hasError ? _C.red : _C.blue)),
+                TextSpan(
+                    text: '  ${_pct(s.fraction)}',
+                    style: const TextStyle(
+                        color: _C.text, fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              _stat('speed', speed),
+              _stat('eta', eta),
+              _stat('phase', phase),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ── LOG ───────────────────────────────────────────────────────────────
+  Widget _logBlock(OtaOverlayState s) {
+    return Container(
+      height: 132,
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: _C.logBg,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: _C.sep),
+      ),
+      child: _TerminalLog(logs: s.logs),
+    );
+  }
+
+  // ── Footer ────────────────────────────────────────────────────────────
+  Widget _footer(OtaOverlayState s) {
+    final showRetry = s.hasError && (widget.onRetry != null || s.canRetry);
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      decoration: const BoxDecoration(
+        color: _C.head,
+        borderRadius: BorderRadius.vertical(bottom: Radius.circular(12)),
+        border: Border(top: BorderSide(color: _C.border)),
+      ),
+      child: s.hasError
+          ? Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    s.errorHint ?? 'Close the app and reopen to retry.',
+                    style: const TextStyle(
+                        color: _C.dim, fontFamily: _mono, fontSize: 12),
+                  ),
+                ),
+                if (showRetry)
+                  GestureDetector(
+                    onTap: widget.onRetry,
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 14, vertical: 7),
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(7),
+                        border: Border.all(color: _C.border),
+                      ),
+                      child: const Text('[ retry ]',
+                          style: TextStyle(
+                              color: _C.blue,
+                              fontFamily: _mono,
+                              fontSize: 13)),
+                    ),
+                  ),
+              ],
+            )
+          : Row(
+              children: [
+                const Text('›',
+                    style: TextStyle(
+                        color: _C.green, fontFamily: _mono, fontSize: 13)),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    (s.message != null && s.message!.isNotEmpty)
+                        ? s.message!
+                        : 'Applying update, please keep the app open…',
+                    style: const TextStyle(
+                        color: _C.dim, fontFamily: _mono, fontSize: 12),
+                  ),
+                ),
+              ],
+            ),
+    );
+  }
+
+  // ── helpers ─────────────────────────────────────────────────────────
+  Widget _sectionLabel(String t) => Row(
+        children: [
+          Text(t,
+              style: const TextStyle(
+                color: _C.dim,
+                fontFamily: _mono,
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 1.5,
+              )),
+          const SizedBox(width: 10),
+          const Expanded(child: Divider(color: _C.sep, height: 1)),
+        ],
+      );
+
+  Widget _panelBox({required Widget child}) => Container(
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: _C.inner,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: _C.sep),
+        ),
+        child: child,
+      );
+
+  Widget _stat(String k, String v) => Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(k,
+                style: const TextStyle(
+                    color: _C.faint, fontFamily: _mono, fontSize: 10)),
+            const SizedBox(height: 2),
+            Text(v,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                    color: _C.text, fontFamily: _mono, fontSize: 12)),
+          ],
+        ),
+      );
+
+  Widget _dot(Color c) => Container(
+        width: 11,
+        height: 11,
+        decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+      );
+
+  Widget _pill(String t, Color c) => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+        decoration: BoxDecoration(
+          color: c.withValues(alpha: 0.15),
+          borderRadius: BorderRadius.circular(6),
+          border: Border.all(color: c.withValues(alpha: 0.5)),
+        ),
+        child: Text(t,
+            style: TextStyle(
+                color: c,
+                fontFamily: _mono,
+                fontSize: 10,
+                fontWeight: FontWeight.w700,
+                letterSpacing: 0.5)),
+      );
 }
 
-/// Scrollable terminal log view — no prefix, auto-scrolls to bottom.
+/// Scrollable terminal log view — auto-scrolls to bottom on new lines.
+///
+/// A line whose text has a leading token followed by 2+ spaces is rendered
+/// with the token in its tag color and the remainder in the body color.
 class _TerminalLog extends StatefulWidget {
   final List<LogLine> logs;
-  final Map<String, Color> logColors;
 
-  const _TerminalLog({required this.logs, required this.logColors});
+  const _TerminalLog({required this.logs});
 
   @override
   State<_TerminalLog> createState() => _TerminalLogState();
@@ -511,22 +644,44 @@ class _TerminalLogState extends State<_TerminalLog> {
 
   @override
   Widget build(BuildContext context) {
+    final logs = widget.logs.isEmpty
+        ? const [LogLine('gray', 'status   waiting for events…')]
+        : widget.logs;
     return ListView.builder(
       controller: _controller,
-      itemCount: widget.logs.length,
+      itemCount: logs.length,
       itemBuilder: (context, i) {
-        final line = widget.logs[i];
-        final color = widget.logColors[line.color] ?? widget.logColors['gray']!;
-        return Padding(
-          padding: const EdgeInsets.only(bottom: 4),
-          child: Text(
+        final line = logs[i];
+        final color = _logColors[line.color] ?? _C.dim;
+
+        // Split "tag   rest" (2+ spaces) into an accent tag + body.
+        final match = RegExp(r'^(\S+)(\s{2,})(.*)$').firstMatch(line.text);
+        final Widget content;
+        if (match != null) {
+          content = RichText(
+            text: TextSpan(
+              style: const TextStyle(fontFamily: _mono, fontSize: 12),
+              children: [
+                TextSpan(
+                    text: '${match.group(1)!.padRight(8)} ',
+                    style: TextStyle(color: color)),
+                TextSpan(
+                    text: match.group(3),
+                    style: const TextStyle(color: _C.text)),
+              ],
+            ),
+          );
+        } else {
+          content = Text(
             line.text,
             style: TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 12,
-              color: color,
-            ),
-          ),
+                fontFamily: _mono, fontSize: 12, color: color),
+          );
+        }
+
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 3),
+          child: content,
         );
       },
     );
@@ -546,6 +701,10 @@ class OtaOverlayManager {
   OverlayEntry? _entry;
   bool _disposed = false;
   DateTime? _startTime;
+
+  // Download-speed tracking.
+  int _lastBytes = 0;
+  DateTime? _lastBytesAt;
 
   OverlayState? Function()? _resolver;
 
@@ -581,11 +740,13 @@ class OtaOverlayManager {
     if (overlay == null) return null;
 
     _startTime = DateTime.now();
+    _lastBytes = 0;
+    _lastBytesAt = null;
 
     final logs = <LogLine>[
       if (channel != null) LogLine('gray', 'channel  $channel'),
       if (platform != null) LogLine('gray', 'platform $platform'),
-      if (bundleHash != null) LogLine('gray', 'hash     $bundleHash'),
+      if (bundleHash != null) LogLine('gray', 'bundle   $bundleHash'),
       if (gitCommit != null) LogLine('gray', 'commit   $gitCommit'),
       if (commitMessage != null && commitMessage.isNotEmpty)
         LogLine('cyan', 'msg      $commitMessage'),
@@ -643,39 +804,57 @@ class OtaOverlayManager {
 
     final newStep = _phaseToStep(progress.phase);
 
-    // Log phase transitions with staggered delays
+    // Compute download speed from byte deltas.
+    int? bytesPerSec = s.bytesPerSec;
+    if (progress.phase == PatchApplyPhase.downloading &&
+        progress.bytesReceived > 0) {
+      final now = DateTime.now();
+      if (_lastBytesAt != null && progress.bytesReceived > _lastBytes) {
+        final dt = now.difference(_lastBytesAt!).inMilliseconds / 1000.0;
+        if (dt > 0) {
+          bytesPerSec = ((progress.bytesReceived - _lastBytes) / dt).round();
+        }
+      }
+      _lastBytes = progress.bytesReceived;
+      _lastBytesAt = now;
+    }
+
+    // Log phase transitions with staggered delays.
     if (s.phase != progress.phase) {
       switch (progress.phase) {
         case PatchApplyPhase.downloading:
-          _log('gray', 'status   connecting...');
-          _delayedLog(300, 'gray', 'status   fetching metadata...');
+          _log('gray', 'status   connecting…');
+          _delayedLog(300, 'gray', 'status   fetching metadata…');
           _delayedLog(700, 'cyan', 'resolve  download url');
-          _delayedLog(1100, 'gray', 'status   downloading...');
+          _delayedLog(1100, 'gray', 'status   downloading…');
           break;
         case PatchApplyPhase.verifying:
-          _log('cyan', 'verify   checking hash...');
-          _delayedLog(400, 'cyan', 'verify   checking signature...');
+          _log('cyan', 'verify   checking hash…');
+          _delayedLog(400, 'cyan', 'verify   checking signature…');
           _delayedLog(800, 'success', 'verify   passed ✓');
           break;
         case PatchApplyPhase.finalizing:
-          _log('gray', 'status   staging files...');
-          _delayedLog(500, 'gray', 'status   installing...');
-          _delayedLog(1000, 'gray', 'status   finalizing...');
+          _log('gray', 'status   staging files…');
+          _delayedLog(500, 'gray', 'status   installing…');
+          _delayedLog(1000, 'gray', 'status   finalizing…');
           break;
       }
     }
 
-    // Log download progress with size
+    // Log download progress with size.
     if (progress.phase == PatchApplyPhase.downloading &&
         pctText.isNotEmpty &&
         progress.totalBytes > 0) {
       final sizeMB = (progress.totalBytes / 1048576).toStringAsFixed(1);
-      _log('gray', 'data     ${sizeMB}MB  $pctText');
+      _log('gray', 'download ${sizeMB}MB  $pctText');
     }
 
     _state.value = _state.value.copyWith(
       phase: progress.phase,
       fraction: progress.fraction,
+      bytesReceived: progress.bytesReceived,
+      totalBytes: progress.totalBytes > 0 ? progress.totalBytes : null,
+      bytesPerSec: bytesPerSec,
       activeStep: newStep,
     );
   }
@@ -692,13 +871,13 @@ class OtaOverlayManager {
     if (_disposed || _entry == null) return;
     if (hasError) {
       _log('red', 'error    ${errorText ?? 'unknown'}');
-      _log('yellow', 'hint     close and reopen to retry');
+      _log('yellow', 'action   rolling back to base apk');
     } else {
       _log('success', 'done     patch installed ✓');
-      _delayedLog(300, 'cyan', 'status   restarting...');
+      _delayedLog(300, 'cyan', 'status   restarting…');
     }
 
-    // Calculate remaining time to enforce minimum duration
+    // Calculate remaining time to enforce minimum duration.
     final elapsed = _startTime != null
         ? DateTime.now().difference(_startTime!)
         : _minDuration;
@@ -721,7 +900,8 @@ class OtaOverlayManager {
     });
   }
 
-  /// Shows a toast notification on the forced-update overlay when a rollback occurs.
+  /// Shows a toast notification on the forced-update overlay when a rollback
+  /// occurs.
   void showRollbackToast({
     required String message,
     required String previousVersion,
@@ -730,7 +910,6 @@ class OtaOverlayManager {
     final overlay = _overlayState ?? _resolver?.call();
     if (overlay == null) return;
 
-    // Create a temporary toast overlay on top of existing overlay
     final toastEntry = OverlayEntry(
       builder: (context) => Positioned(
         bottom: 100,
@@ -794,7 +973,8 @@ class OtaOverlayManager {
   }
 }
 
-/// Handle returned by [OtaOverlayManager.begin] to update / dismiss the overlay.
+/// Handle returned by [OtaOverlayManager.begin] to update / dismiss the
+/// overlay.
 class OtaOverlayHandle {
   OtaOverlayHandle._(this._manager);
 

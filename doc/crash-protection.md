@@ -145,6 +145,18 @@ attribute a *post-first-frame* native crash to the patch — without
 it we'd only catch failures before the patch-loading flag was
 cleared.
 
+**Boot window bound.** A recorded crash only counts against the patch
+when it happened within `BOOT_CRASH_WINDOW_MS` (30s) of the recorded
+boot start (`markBooting` stores a `boot_started_at` timestamp next to
+the pid). A `REASON_CRASH` / `REASON_ANR` / `REASON_CRASH_NATIVE` that
+fired long after a healthy boot is treated as an ordinary runtime
+failure and does **not** trip the circuit breaker. Without this bound a
+crash or ANR hours into a healthy session would be charged to the patch
+on the next cold start, deleting it and silently reverting the app to
+the pre-OTA build. If the boot timestamp is missing (e.g. state written
+by an older SDK build), the SDK conservatively falls back to charging
+the patch.
+
 ### Android 10 and below
 
 Android 10 and below do not have `ApplicationExitInfo`. The SDK falls

@@ -48,7 +48,8 @@ export 'src/ota_progress_overlay.dart'
         OtaOverlayManager,
         OtaOverlayState,
         OtaProgressOverlay,
-        OtaOverlayHandle;
+        OtaOverlayHandle,
+        LogLine;
 
 export 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart';
 export 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
@@ -858,20 +859,38 @@ class FlutterPatcher {
     );
 
     if (!applied.ok) {
-      // Blacklist the failed patch so it is never retried.
+      // Only blacklist on *deterministic* failures — a bad payload that will
+      // fail identically no matter how many times we retry. Transient failures
+      // (network drop, timeout, low disk, unclassified) must NOT be blacklisted:
+      // doing so would permanently pin the device off a perfectly good patch
+      // after a single flaky download, and it would never be retried. Those are
+      // simply retried on the next `checkAndApplyUpdates`.
+      final error = applied.error;
+      const deterministic = {
+        PatchApplyError.md5Mismatch,
+        PatchApplyError.signatureInvalid,
+        PatchApplyError.assetPackageInvalid,
+        PatchApplyError.unsupportedAbi,
+        PatchApplyError.invalidArgs,
+      };
       final patchVersion = result.patch!.version;
       final patchMd5 = result.patch!.md5;
-      if (patchVersion.isNotEmpty) {
-        _log('applyUpdate: patch failed (${applied.error?.name}), blacklisting $patchVersion');
+      if (error != null &&
+          deterministic.contains(error) &&
+          patchVersion.isNotEmpty) {
+        _log('applyUpdate: patch failed (${error.name}), blacklisting $patchVersion');
         try {
           await PatcherChannel.reportApplyFailure(
             version: patchVersion,
             md5: patchMd5,
-            reason: applied.error?.name ?? 'APPLY_FAILED',
+            reason: error.name,
           );
         } catch (e, s) {
           _log('applyUpdate: failed to blacklist $patchVersion: $e', s);
         }
+      } else {
+        _log('applyUpdate: patch failed (${error?.name}); transient, not '
+            'blacklisting (will retry next check)');
       }
     }
 

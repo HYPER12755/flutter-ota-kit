@@ -17,10 +17,12 @@ class BuildCommand extends FlutterPatcherCommand {
       )
       ..addMultiOption(
         'assets',
+        abbr: 'A',
         help: 'Asset keys to include as overlay updates (repeatable).',
       )
       ..addOption(
         'version',
+        abbr: 'V',
         help: 'Patch version string (stored in manifest.version).',
       )
       ..addOption(

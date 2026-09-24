@@ -75,6 +75,14 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
 
   @override
   Future<List<String>> getChannels() async {
+    // Try the dedicated `channels` collection first. It exists (the schema
+    // installer creates it) but is NOT populated by deploy/promote — those only
+    // touch `bundles`. So an empty result here does NOT mean "no channels"; it
+    // means the collection is unused. Fall through to deriving channels from the
+    // bundles themselves (matching Supabase's `get_channels`, which is
+    // bundle-derived). Previously this returned the empty list on success and
+    // never reached the fallback, so `channel list` always showed "(no
+    // channels)" even with live bundles.
     try {
       final res = await client.listRecords<dynamic>(
         config.channelsCollection,
@@ -82,24 +90,27 @@ class _PocketBaseDatabase implements AbstractDatabasePlugin {
         perPage: 200,
         sort: 'name',
       );
-      return res.items
+      final named = res.items
           .map((j) => (j as Map)['name'] as String? ?? '')
           .where((s) => s.isNotEmpty)
           .toList();
+      if (named.isNotEmpty) return named;
     } catch (_) {
-      // Fallback: extract distinct channels from bundles.
-      final res = await client.listRecords<PocketBaseBundleRow>(
-        config.bundlesCollection,
-        PocketBaseBundleRow.fromJson,
-        perPage: 500,
-        sort: '-created',
-      );
-      final channels = <String>{};
-      for (final b in res.items) {
-        if (b.channel.isNotEmpty) channels.add(b.channel);
-      }
-      return channels.toList()..sort();
+      // channels collection may not exist; fall through to bundle-derived.
     }
+
+    // Fallback: distinct channels from the bundles collection.
+    final res = await client.listRecords<PocketBaseBundleRow>(
+      config.bundlesCollection,
+      PocketBaseBundleRow.fromJson,
+      perPage: 500,
+      sort: '-created',
+    );
+    final channels = <String>{};
+    for (final b in res.items) {
+      if (b.channel.isNotEmpty) channels.add(b.channel);
+    }
+    return channels.toList()..sort();
   }
 
   // ----- Single bundle -----

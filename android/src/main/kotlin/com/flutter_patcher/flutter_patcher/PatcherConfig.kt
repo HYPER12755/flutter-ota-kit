@@ -35,6 +35,13 @@ internal object PatcherConfig {
      *  Unused on API < 30 — that path uses the naive "patch_loading=true ⇒ crash" rule. */
     const val KEY_LAST_BOOTING_PID = "last_booting_pid"
 
+    /** Wall-clock time (epoch millis) when the patched process began booting, written together
+     *  with [KEY_LAST_BOOTING_PID] at markBooting. Used on API 30+ to bound crash attribution:
+     *  a crash is only treated as a *patch boot* failure when it occurred within
+     *  [BOOT_CRASH_WINDOW_MS] of this timestamp. Prevents an unrelated runtime crash/ANR hours
+     *  into a healthy session from tripping the circuit breaker and reverting the patch. */
+    const val KEY_BOOT_STARTED_AT = "boot_started_at"
+
     // ---- File layout ----
     const val PATCH_DIR = "flutter_patcher"
     const val PATCH_FILENAME = "libapp_patch.so"
@@ -61,6 +68,21 @@ internal object PatcherConfig {
     const val DEFAULT_MAX_CRASH = 1
     const val DEFAULT_STRICT_SIG = true
     const val DEFAULT_LOADER_HEURISTIC = false
+
+    /**
+     * How long after boot start a process death still counts as a *patch boot*
+     * failure (API 30+ ExitInfo path). Deaths later than this are treated as
+     * ordinary runtime exits and NOT charged against the patch.
+     *
+     * Rationale: once the app has rendered its first frame and run for a while,
+     * a later crash/ANR/force-stop is not evidence that the patch is bad. Before
+     * this bound, any REASON_CRASH / REASON_ANR / REASON_CRASH_NATIVE recorded
+     * for the last booting pid — even hours into a healthy session — was counted,
+     * so the circuit breaker would delete the patch and the app would silently
+     * revert to the pre-OTA build. 30s comfortably covers real boot-time crashes
+     * while excluding steady-state failures.
+     */
+    const val BOOT_CRASH_WINDOW_MS = 30_000L
 
     fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)

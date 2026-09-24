@@ -1,3 +1,55 @@
+## Unreleased
+
+### Fixed
+
+- **PocketBase `getChannels` always reported no channels.** The PocketBase
+  database plugin queried the dedicated `channels` collection first and returned
+  on success — but `deploy`/`promote` only ever write to `bundles`, so
+  `channels` stays empty and the method returned `[]`, making `flutter-ota
+  channel list` show "(no channels)" even with live bundles. It now treats an
+  empty `channels` collection as "unused" and falls through to deriving distinct
+  channels from the `bundles` collection, matching Supabase's bundle-derived
+  `get_channels`. Added full PocketBase database + storage plugin test suites
+  (20 tests) covering append/get, channel derivation, filtered pagination,
+  `getUpdateInfo` app-version + fingerprint branching, update/delete, and the
+  storage upload/exists/download/getDownloadUrl/readText/list/delete round-trip,
+  bringing PocketBase to parity with the other backends' coverage.
+
+- **OTA silently reverting hours after a successful update.** The Android crash
+  guard's `ApplicationExitInfo` path (API 30+) charged *any* recorded
+  `REASON_CRASH` / `REASON_CRASH_NATIVE` / `REASON_ANR` for the last booting pid
+  against the patch — even a crash or ANR that happened long after a healthy
+  boot. On the next cold start the circuit breaker saw that as a boot failure,
+  deleted the patch, and the app reverted to the pre-OTA build. Crash
+  attribution is now bounded to a boot window
+  (`PatcherConfig.BOOT_CRASH_WINDOW_MS`, 30s): a crash outside that window is
+  treated as a normal runtime failure and no longer reverts a working patch.
+  `markBooting` now records a boot-start timestamp (`boot_started_at`) alongside
+  the pid; `reset` / `markBootSuccess` manage it accordingly. Added
+  `CrashGuardTest` covering the boot-window rule.
+
+- **Transient apply failures permanently blacklisted a good patch.**
+  `applyUpdate` blacklisted the patch on *any* apply failure, including
+  `network` / `ioError` / `unknown`. A single flaky download would pin the
+  device off a perfectly good bundle forever (it's skipped on every later
+  check). Blacklisting is now limited to deterministic failures
+  (`md5Mismatch`, `signatureInvalid`, `assetPackageInvalid`, `unsupportedAbi`,
+  `invalidArgs`); transient failures are just retried on the next check.
+
+- **Corrupted / truncated downloads not retried.** A payload whose MD5 didn't
+  match returned immediately instead of retrying, so a single CDN blip or
+  truncated body surfaced as a hard failure. MD5 mismatch is now retried with
+  backoff (like a network error), since it's almost always a bad transfer; a
+  signature failure (bytes intact, signature wrong) still fails fast. The
+  streamer also now hard-fails a download whose byte count doesn't match the
+  server's `Content-Length`, catching silently truncated bodies before install.
+
+- **Cross-origin redirects on the patch URL broke downloads.**
+  `HttpURLConnection` won't auto-follow HTTPS→HTTP or cross-host redirects, so a
+  presigned S3/R2/CDN URL that returns a 30x silently wrote the redirect body as
+  the "patch" (then failing MD5). Redirects are now followed manually (up to 5,
+  resolving relative `Location` headers).
+
 ## 0.1.15
 
 - Release 2026-09-10

@@ -38,6 +38,31 @@ internal class CrashGuard(private val context: Context) {
 
     companion object {
         private const val TAG = "FlutterPatcher/Guard"
+
+        /**
+         * Pure decision: should a real crash reason be charged against the patch?
+         *
+         * Only crashes within [PatcherConfig.BOOT_CRASH_WINDOW_MS] of boot start
+         * count as patch-boot failures. A crash long after a healthy boot is a
+         * runtime failure and must NOT trip the breaker (that was the bug causing
+         * a working OTA to silently revert hours later).
+         *
+         * When [bootStartedAt] or [crashTimestamp] is unknown (<= 0) we cannot
+         * bound it, so we conservatively charge the patch (preserves the old
+         * fail-fast behavior for that edge).
+         */
+        @JvmStatic
+        fun isWithinBootWindow(
+            bootStartedAt: Long,
+            crashTimestamp: Long,
+            windowMs: Long = PatcherConfig.BOOT_CRASH_WINDOW_MS,
+        ): Boolean {
+            if (bootStartedAt <= 0L || crashTimestamp <= 0L) return true
+            val elapsed = crashTimestamp - bootStartedAt
+            // Negative elapsed (clock skew / stale record) → treat as in-window.
+            if (elapsed < 0L) return true
+            return elapsed <= windowMs
+        }
     }
 
     private val sp = PatcherConfig.prefs(context)
@@ -52,8 +77,9 @@ internal class CrashGuard(private val context: Context) {
         val threshold = PatcherConfig.maxCrashCount(context)
         val patchLoading = sp.getBoolean(PatcherConfig.KEY_PATCH_LOADING, false)
         val lastPid = sp.getInt(PatcherConfig.KEY_LAST_BOOTING_PID, -1)
+        val bootStartedAt = sp.getLong(PatcherConfig.KEY_BOOT_STARTED_AT, 0L)
 
-        val verdict = classifyPreviousSession(patchLoading, lastPid)
+        val verdict = classifyPreviousSession(patchLoading, lastPid, bootStartedAt)
         if (verdict.isCrash) {
             val count = recordCrashAndMaybeTrip(verdict.reasonName, onTrip)
             if (count >= threshold) return false
@@ -62,6 +88,7 @@ internal class CrashGuard(private val context: Context) {
             sp.edit()
                 .putBoolean(PatcherConfig.KEY_PATCH_LOADING, false)
                 .remove(PatcherConfig.KEY_LAST_BOOTING_PID)
+                .remove(PatcherConfig.KEY_BOOT_STARTED_AT)
                 .commit()
             Log.i(TAG, "previous session ended without crash (${verdict.reasonName})")
         }
@@ -115,16 +142,18 @@ internal class CrashGuard(private val context: Context) {
         sp.edit()
             .putBoolean(PatcherConfig.KEY_PATCH_LOADING, true)
             .putInt(PatcherConfig.KEY_LAST_BOOTING_PID, Process.myPid())
+            .putLong(PatcherConfig.KEY_BOOT_STARTED_AT, System.currentTimeMillis())
             .commit()
     }
 
     /**
      * Dart 首帧渲染完成：补丁可信，立即清 patch_loading + crash_count。
      *
-     * 注意：故意 **不清** [PatcherConfig.KEY_LAST_BOOTING_PID]。下次冷启动
-     * [shouldLoadPatch] 仍可用这个 pid 查 [ApplicationExitInfo]，从而捕捉首帧
-     * 后才发生的 native crash / ANR —— 那一刻 patch_loading 已清，不能再作为
-     * 崩溃信号。pid 在 [shouldLoadPatch] 处理完一次会话后清除。
+     * 注意：故意 **不清** [PatcherConfig.KEY_LAST_BOOTING_PID] / [PatcherConfig.KEY_BOOT_STARTED_AT]。
+     * 下次冷启动 [shouldLoadPatch] 仍可用这个 pid 查 [ApplicationExitInfo]，从而捕捉首帧
+     * 后短时间内（[PatcherConfig.BOOT_CRASH_WINDOW_MS] 以内）才发生的 native crash / ANR —— 那一刻
+     * patch_loading 已清，不能再作为崩溃信号。pid + 时间戳在 [shouldLoadPatch]
+     * 处理完一次会话后清除。
      */
     fun markBootSuccess() {
         sp.edit()
@@ -139,30 +168,54 @@ internal class CrashGuard(private val context: Context) {
             .putBoolean(PatcherConfig.KEY_PATCH_LOADING, false)
             .putInt(PatcherConfig.KEY_CRASH_COUNT, 0)
             .remove(PatcherConfig.KEY_LAST_BOOTING_PID)
+            .remove(PatcherConfig.KEY_BOOT_STARTED_AT)
             .apply()
     }
 
     /**
      * 综合 [patchLoading] 与 [lastPid] 判定上次会话是否崩溃。
      *
-     * - API 30+ 且有 pid 记录 → 优先用 [ApplicationExitInfo] 精确分类。覆盖首帧
-     *   前后所有崩溃；用户主动关闭 / 系统 OOM 等不计崩溃。
+     * - API 30+ 且有 pid 记录 → 优先用 [ApplicationExitInfo] 精确分类。**但只把发生在
+     *   启动窗口内（距 [bootStartedAt] 不超过 [PatcherConfig.BOOT_CRASH_WINDOW_MS]）的
+     *   崩溃计入补丁失败**：首帧后长时间运行才发生的 crash/ANR 属于正常运行期故障，
+     *   与补丁无关，不应触发熔断回滚。用户主动关闭 / 系统 OOM 等也不计崩溃。
      * - API < 30 或 ExitInfo 拿不到记录 → 退回到 [patchLoading] 兜底信号。
      *   patchLoading=true（首帧前死了）→ 崩溃；patchLoading=false（首帧后死的，
      *   或本就没启动过）→ 非崩溃。
      */
-    private fun classifyPreviousSession(patchLoading: Boolean, lastPid: Int): ExitVerdict {
+    private fun classifyPreviousSession(
+        patchLoading: Boolean,
+        lastPid: Int,
+        bootStartedAt: Long,
+    ): ExitVerdict {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && lastPid > 0) {
             val record = queryExitInfo(lastPid)
             if (record != null) {
-                val isCrash = when (record.reason) {
+                val isCrashReason = when (record.reason) {
                     ApplicationExitInfo.REASON_CRASH,
                     ApplicationExitInfo.REASON_CRASH_NATIVE,
                     ApplicationExitInfo.REASON_ANR,
                     ApplicationExitInfo.REASON_INITIALIZATION_FAILURE -> true
                     else -> false
                 }
-                return ExitVerdict(isCrash, reasonNameApi30(record.reason))
+                val reasonName = reasonNameApi30(record.reason)
+                if (!isCrashReason) {
+                    return ExitVerdict(false, reasonName)
+                }
+                // A real crash reason — but only charge it against the patch if it
+                // happened close to boot. A crash hours into a healthy session is a
+                // runtime bug, not a bad patch; counting it would revert a working OTA.
+                if (!isWithinBootWindow(bootStartedAt, record.timestamp)) {
+                    Log.i(
+                        TAG,
+                        "crash ($reasonName) at ts=${record.timestamp} is outside the " +
+                            "${PatcherConfig.BOOT_CRASH_WINDOW_MS}ms boot window " +
+                            "(bootStartedAt=$bootStartedAt); treating as runtime " +
+                            "failure, not charging the patch"
+                    )
+                    return ExitVerdict(false, "${reasonName}_LATE")
+                }
+                return ExitVerdict(true, reasonName)
             }
             // ExitInfo 队列已被新进程挤出（罕见）：退回到 patchLoading 兜底
         }
@@ -191,6 +244,7 @@ internal class CrashGuard(private val context: Context) {
             .putInt(PatcherConfig.KEY_CRASH_COUNT, 0)
             .putBoolean(PatcherConfig.KEY_PATCH_LOADING, false)
             .remove(PatcherConfig.KEY_LAST_BOOTING_PID)
+            .remove(PatcherConfig.KEY_BOOT_STARTED_AT)
             .commit()
     }
 

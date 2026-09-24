@@ -37,10 +37,12 @@ class DeployCommand extends FlutterPatcherCommand {
     argParser.addFlag('force', abbr: 'f', help: 'Force the update on clients.');
     argParser.addOption(
       'target-app-version',
+      abbr: 't',
       help: 'Semver range target (XOR with fingerprint-hash).',
     );
     argParser.addOption(
       'fingerprint-hash',
+      abbr: 'F',
       help: 'Fingerprint hash target (XOR with target-app-version).',
     );
     argParser.addOption(
@@ -50,6 +52,7 @@ class DeployCommand extends FlutterPatcherCommand {
     );
     argParser.addOption(
       'git-commit-hash',
+      abbr: 'g',
       help: 'Git commit hash (auto-detected).',
     );
     argParser.addOption(

@@ -72,6 +72,7 @@ internal class PatchManager(
         private const val CONNECT_TIMEOUT_MS = 10_000
         private const val READ_TIMEOUT_MS = 30_000
         private const val MAX_RETRIES = 3
+        private const val MAX_REDIRECTS = 5
         private const val PROGRESS_EMIT_INTERVAL_MS = 200L
 
         private const val MODE_FULL = "full"
@@ -382,6 +383,10 @@ internal class PatchManager(
         val downloaded = File(patchDir, "temp_download.bin")
         var lastNetworkError: String? = null
         var actualMd5: String? = null
+        // Set when the last failure was a content/MD5 mismatch rather than a
+        // transport error, so we can surface the more precise MD5_MISMATCH after
+        // exhausting retries instead of a generic NETWORK error.
+        var lastFailureWasMd5 = false
 
         for (attempt in 1..MAX_RETRIES) {
             try {
@@ -393,11 +398,30 @@ internal class PatchManager(
                 val verifiedMd5 = SignatureVerifier.md5(downloaded)
                 if (md5.isNotBlank()) {
                     if (!verifiedMd5.equals(md5, ignoreCase = true)) {
-                        downloaded.delete()
-                        return ApplyResult.failure(
-                            ApplyErrorCode.MD5_MISMATCH,
-                            "expected=$md5 actual=$verifiedMd5"
+                        // A mismatch is almost always a corrupted/partial download
+                        // (CDN blip, truncated body). Treat it as retryable: a fresh
+                        // download usually yields the correct bytes. Only fail hard
+                        // once retries are exhausted (handled after the loop).
+                        Log.w(
+                            TAG,
+                            "attempt=$attempt md5 mismatch: expected=$md5 actual=$verifiedMd5"
                         )
+                        lastNetworkError = "md5 mismatch: expected=$md5 actual=$verifiedMd5"
+                        lastFailureWasMd5 = true
+                        downloaded.delete()
+                        stagingDir.deleteRecursively()
+                        if (attempt < MAX_RETRIES) {
+                            val backoff = 2000L * (1L shl (attempt - 1))
+                            try {
+                                Thread.sleep(backoff)
+                            } catch (_: InterruptedException) {
+                                return ApplyResult.failure(
+                                    ApplyErrorCode.NETWORK,
+                                    "interrupted during backoff"
+                                )
+                            }
+                        }
+                        continue
                     }
                     val publicKey = PatcherConfig.publicKey(context)
                     val strictSignature = PatcherConfig.strictSignature(context)
@@ -405,6 +429,9 @@ internal class PatchManager(
                             verifiedMd5.lowercase(), signature, publicKey, strictSignature
                         )
                     ) {
+                        // MD5 already matched, so the bytes are intact — a signature
+                        // failure is deterministic and re-downloading won't help.
+                        // Fail fast.
                         downloaded.delete()
                         return ApplyResult.failure(
                             ApplyErrorCode.SIGNATURE_INVALID,
@@ -415,10 +442,12 @@ internal class PatchManager(
                     Log.w(TAG, "expected md5 empty, skip md5 & signature verify")
                 }
                 actualMd5 = verifiedMd5.lowercase()
+                lastFailureWasMd5 = false
                 break
             } catch (e: Exception) {
                 Log.w(TAG, "attempt=$attempt failed: ${e.message}", e)
                 lastNetworkError = e.message
+                lastFailureWasMd5 = false
                 downloaded.delete()
                 stagingDir.deleteRecursively()
                 if (attempt < MAX_RETRIES) {
@@ -435,10 +464,17 @@ internal class PatchManager(
             }
         }
 
-        val verifiedMd5 = actualMd5 ?: return ApplyResult.failure(
-            ApplyErrorCode.NETWORK,
-            "download failed after $MAX_RETRIES attempts: $lastNetworkError"
-        )
+        val verifiedMd5 = actualMd5 ?: return if (lastFailureWasMd5) {
+            ApplyResult.failure(
+                ApplyErrorCode.MD5_MISMATCH,
+                "download corrupted after $MAX_RETRIES attempts: $lastNetworkError"
+            )
+        } else {
+            ApplyResult.failure(
+                ApplyErrorCode.NETWORK,
+                "download failed after $MAX_RETRIES attempts: $lastNetworkError"
+            )
+        }
 
         progress?.invoke(Phase.FINALIZING, 0L, 0L)
         val targetVersionCode = serverTargetVc ?: currentVc
@@ -1333,16 +1369,39 @@ internal class PatchManager(
         dest: File,
         onBytes: ((received: Long, total: Long) -> Unit)?
     ) {
-        val conn = url.openConnection() as HttpURLConnection
-        try {
-            conn.connectTimeout = CONNECT_TIMEOUT_MS
-            conn.readTimeout = READ_TIMEOUT_MS
-            conn.requestMethod = "GET"
-            val code = conn.responseCode
-            if (code !in 200..299) throw RuntimeException("HTTP $code")
-            streamToFile(conn.inputStream, dest, conn.contentLengthLong, onBytes)
-        } finally {
-            conn.disconnect()
+        var current = url
+        var redirects = 0
+        while (true) {
+            val conn = current.openConnection() as HttpURLConnection
+            try {
+                conn.connectTimeout = CONNECT_TIMEOUT_MS
+                conn.readTimeout = READ_TIMEOUT_MS
+                conn.requestMethod = "GET"
+                // Handle redirects manually so we can follow an https→http→https
+                // chain and, crucially, cross-protocol redirects that
+                // HttpURLConnection refuses to auto-follow (e.g. S3/R2/CDN 301/302
+                // to a different host or scheme). Without this a presigned URL that
+                // 30x-redirects silently yields the redirect HTML as the "patch",
+                // which then fails MD5 and looks like a corrupt bundle.
+                conn.instanceFollowRedirects = false
+                val code = conn.responseCode
+                if (code in 300..399) {
+                    val location = conn.getHeaderField("Location")
+                        ?: throw RuntimeException("HTTP $code with no Location header")
+                    if (++redirects > MAX_REDIRECTS) {
+                        throw RuntimeException("too many redirects (> $MAX_REDIRECTS)")
+                    }
+                    // Resolve relative Location against the current URL.
+                    current = URL(current, location)
+                    conn.disconnect()
+                    continue
+                }
+                if (code !in 200..299) throw RuntimeException("HTTP $code")
+                streamToFile(conn.inputStream, dest, conn.contentLengthLong, onBytes)
+                return
+            } finally {
+                conn.disconnect()
+            }
         }
     }
 
@@ -1383,6 +1442,14 @@ internal class PatchManager(
                 }
                 output.fd.sync()
             }
+        }
+        // Guard against a silently truncated body (connection dropped mid-stream,
+        // proxy cut it off). When the server advertised a Content-Length, the
+        // written file must match it exactly. Throwing here routes into the retry
+        // loop; without md5 this is the only line of defense against installing a
+        // half-downloaded patch.
+        if (total > 0 && received != total) {
+            throw IOException("incomplete download: got $received of $total bytes")
         }
         onBytes?.invoke(received, total)
     }

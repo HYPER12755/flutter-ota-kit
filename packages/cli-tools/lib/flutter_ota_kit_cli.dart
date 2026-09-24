@@ -85,13 +85,15 @@ Future<int> run(List<String> args) async {
     final msg = e.message;
 
     // Missing subcommand → show the command's own help + suggestions.
+    // Handles nested paths too (e.g. "flutter-ota pocketbase records"), not
+    // just single-word commands.
     if (msg.startsWith('Missing subcommand')) {
-      final match = RegExp(r'"flutter-ota (\w+)"').firstMatch(msg);
+      final match = RegExp(r'"flutter-ota ([^"]+)"').firstMatch(msg);
       if (match != null) {
-        final cmd = runner.commands[match.group(1)];
+        final cmd = _resolveCommandPath(runner, match.group(1)!.split(' '));
         if (cmd != null) {
           _printMissingSubcommand(cmd);
-          return 0;
+          return 64;
         }
       }
     }
@@ -103,7 +105,7 @@ Future<int> run(List<String> args) async {
     }
 
     // Unknown command → fuzzy-match and suggest.
-    final unknownMatch = RegExp(r'Could not find a command named "?(\w+)"?')
+    final unknownMatch = RegExp(r'Could not find a command named "?([\w-]+)"?')
         .firstMatch(msg);
     if (unknownMatch != null) {
       final typed = unknownMatch.group(1)!;
@@ -111,14 +113,15 @@ Future<int> run(List<String> args) async {
       return 64;
     }
 
-    // Unknown subcommand → suggest closest subcommand.
+    // Unknown subcommand → suggest closest subcommand. Handles nested parents
+    // (e.g. "... named "nope" for "flutter-ota pocketbase records"").
     final subMatch = RegExp(
-      r'Could not find a subcommand named "?(\w+)"? for "?flutter-ota (\w+)"?',
+      r'Could not find a subcommand named "?([\w-]+)"? for "?flutter-ota ([^"]+)"?',
     ).firstMatch(msg);
     if (subMatch != null) {
       final subTyped = subMatch.group(1)!;
-      final parentName = subMatch.group(2)!;
-      final parentCmd = runner.commands[parentName];
+      final parentPath = subMatch.group(2)!.trim().split(' ');
+      final parentCmd = _resolveCommandPath(runner, parentPath);
       if (parentCmd != null) {
         _printUnknownSubcommand(parentCmd, subTyped);
         return 64;
@@ -131,6 +134,22 @@ Future<int> run(List<String> args) async {
     stderr.writeln(e.usage);
     return 64;
   }
+}
+
+/// Walk a space-separated command path (e.g. `["pocketbase", "records"]`)
+/// from the runner down through nested subcommands. Returns the resolved
+/// [Command], or null if any segment is unknown.
+Command<int>? _resolveCommandPath(
+  FlutterPatcherRunner runner,
+  List<String> path,
+) {
+  if (path.isEmpty) return null;
+  Command<int>? cmd = runner.commands[path.first];
+  for (final segment in path.skip(1)) {
+    if (cmd == null) return null;
+    cmd = cmd.subcommands[segment];
+  }
+  return cmd;
 }
 
 /// Show a helpful "unknown command" message with fuzzy-match suggestions.
@@ -213,6 +232,7 @@ void _printUnknownCommand(FlutterPatcherRunner runner, String typed) {
 /// Show a helpful "unknown subcommand" message with suggestions.
 void _printUnknownSubcommand(Command<int> parent, String typed) {
   final subNames = parent.subcommands.keys.toList();
+  final parentPath = _commandPath(parent);
 
   // Find closest subcommands.
   final suggestions = subNames
@@ -221,14 +241,14 @@ void _printUnknownSubcommand(Command<int> parent, String typed) {
 
   stderr.writeln('');
   stderr.writeln(
-    '  ${_red('✗')} Unknown subcommand: ${_red(typed)} for ${_cyan('flutter-ota ${parent.name}')}',
+    '  ${_red('✗')} Unknown subcommand: ${_red(typed)} for ${_cyan('flutter-ota $parentPath')}',
   );
   stderr.writeln('');
 
   if (suggestions.isNotEmpty) {
     stderr.writeln('  ${_cyan('Did you mean?')}');
     for (final s in suggestions.take(3)) {
-      stderr.writeln('    ${_green(s)}');
+      stderr.writeln('    ${_green('$parentPath $s')}');
     }
     stderr.writeln('');
   }
@@ -239,22 +259,35 @@ void _printUnknownSubcommand(Command<int> parent, String typed) {
 /// Show a helpful "missing subcommand" message with all subcommand suggestions.
 void _printMissingSubcommand(Command<int> parent) {
   final subNames = parent.subcommands.keys.toList()..sort();
+  final parentPath = _commandPath(parent);
 
   stderr.writeln('');
   stderr.writeln(
-    '  ${_red('✗')} Missing subcommand for ${_cyan('flutter-ota ${parent.name}')}',
+    '  ${_red('✗')} Missing subcommand for ${_cyan('flutter-ota $parentPath')}',
   );
   stderr.writeln('');
 
   if (subNames.isNotEmpty) {
     stderr.writeln('  ${_cyan('Available subcommands:')}');
     for (final s in subNames) {
-      stderr.writeln('    ${_green('${parent.name} $s')}');
+      stderr.writeln('    ${_green('$parentPath $s')}');
     }
     stderr.writeln('');
   }
 
   parent.printUsage();
+}
+
+/// Full space-separated path of a command (e.g. `pocketbase records`),
+/// walking up the `parent` chain. The runner itself has no name in the chain.
+String _commandPath(Command<int> command) {
+  final parts = <String>[command.name];
+  var p = command.parent;
+  while (p != null) {
+    parts.insert(0, p.name);
+    p = p.parent;
+  }
+  return parts.join(' ');
 }
 
 // ── Minimal Levenshtein distance ──────────────────────────────────────────────

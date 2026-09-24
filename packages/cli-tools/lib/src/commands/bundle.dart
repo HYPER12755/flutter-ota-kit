@@ -151,7 +151,7 @@ class BundleShowCommand extends FlutterPatcherCommand {
           ? 'Backend provider [detected: $detected].'
           : 'Backend provider.',
     );
-    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('id', abbr: 'i', help: 'Bundle id.');
   }
 
   final FlutterPatcherConfig? config;
@@ -201,7 +201,7 @@ class BundleDeleteCommand extends FlutterPatcherCommand {
           ? 'Backend provider [detected: $detected].'
           : 'Backend provider.',
     );
-    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('id', abbr: 'i', help: 'Bundle id.');
     argParser.addFlag(
       'keep-storage',
       help: 'Do not delete the storage object.',
@@ -252,7 +252,7 @@ class BundleDisableCommand extends FlutterPatcherCommand {
           ? 'Backend provider [detected: $detected].'
           : 'Backend provider.',
     );
-    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('id', abbr: 'i', help: 'Bundle id.');
   }
 
   final FlutterPatcherConfig? config;
@@ -290,7 +290,7 @@ class BundleEnableCommand extends FlutterPatcherCommand {
           ? 'Backend provider [detected: $detected].'
           : 'Backend provider.',
     );
-    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('id', abbr: 'i', help: 'Bundle id.');
   }
 
   final FlutterPatcherConfig? config;
@@ -328,7 +328,7 @@ class BundleForceCommand extends FlutterPatcherCommand {
           ? 'Backend provider [detected: $detected].'
           : 'Backend provider.',
     );
-    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('id', abbr: 'i', help: 'Bundle id.');
     argParser.addFlag(
       'off',
       help: 'Clear the force-update flag instead of setting it.',
@@ -377,7 +377,7 @@ class BundlePromoteCommand extends FlutterPatcherCommand {
           ? 'Backend provider [detected: $detected].'
           : 'Backend provider.',
     );
-    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('id', abbr: 'i', help: 'Bundle id.');
     argParser.addOption('channel', abbr: 'c', help: 'Target channel.');
   }
 
@@ -426,7 +426,7 @@ class BundleUpdateCommand extends FlutterPatcherCommand {
           ? 'Backend provider [detected: $detected].'
           : 'Backend provider.',
     );
-    argParser.addOption('id', help: 'Bundle id.');
+    argParser.addOption('id', abbr: 'i', help: 'Bundle id.');
     argParser.addOption('message', abbr: 'm', help: 'New release message.');
     argParser.addOption(
       'target-version',

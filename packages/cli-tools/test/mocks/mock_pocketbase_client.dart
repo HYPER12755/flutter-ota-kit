@@ -19,6 +19,9 @@ class MockPocketBaseClient implements PocketBaseClient {
   String? _password;
 
   @override
+  String get authToken => (_email != null && _password != null) ? 'mock-token' : '';
+
+  @override
   void adminCredentials(String email, String password) {
     _email = email;
     _password = password;
