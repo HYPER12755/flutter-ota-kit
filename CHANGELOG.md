@@ -1,3 +1,25 @@
+## 0.2.1
+
+### Fixed
+
+- **Forced-update overlay polish.** The progress bar is now a real widget that
+  stays on one line (it no longer wraps when the panel is narrow) and animates
+  smoothly toward its target instead of snapping. Steps advance forward-only
+  (no jumping between install/finalize) and `activeStep` is clamped, so an
+  out-of-order or out-of-range native event can't make the list flicker or
+  throw. Verify/install/finalize now show an indeterminate sliding bar + a live
+  "working" spinner rather than a frozen 0%, so nothing looks hung at
+  initialization or right before restart. On success every step completes and
+  the phase reads "restarting". Download speed is smoothed (EMA), ETA rolls to
+  minutes past 60s, the per-percent log line is throttled to ~every 10%, and
+  the log feed is capped.
+
+### Changed
+
+- **`flutter-ota init` no longer hardcodes a version.** It now runs
+  `flutter pub add flutter_ota_kit` (falling back to an unpinned dependency) so
+  scaffolded apps always get the latest published SDK.
+
 ## 0.2.0
 
 ### Changed

@@ -168,6 +168,54 @@ void main() {
       // Body of the split "verify   md5 match ✓" line (rendered as RichText).
       expect(_hasText(tester, 'md5 match'), isTrue);
     });
+
+    testWidgets('restarting state completes every step + shows restarting phase',
+        (tester) async {
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          phase: PatchApplyPhase.finalizing,
+          restarting: true,
+          fraction: 1.0,
+          currentVersion: '1.4.0',
+          targetVersion: '1.4.1',
+          activeStep: 5,
+        ),
+      );
+      await _pump(tester, state: state);
+
+      // No step is left "working"/"wait" — all are done.
+      expect(find.text('wait'), findsNothing);
+      expect(find.text('working'), findsNothing);
+      // Phase stat reads "restarting".
+      expect(find.text('restarting'), findsOneWidget);
+    });
+
+    testWidgets('non-download active phase shows a working spinner, not a %',
+        (tester) async {
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          phase: PatchApplyPhase.verifying,
+          activeStep: 2, // Verify step active, no fraction
+        ),
+      );
+      await _pump(tester, state: state);
+
+      // The active verify step must not display a frozen "0%".
+      expect(find.text('0%'), findsNothing);
+    });
+
+    testWidgets('out-of-range activeStep never throws / clamps into the list',
+        (tester) async {
+      final state = ValueNotifier(
+        const OtaOverlayState(
+          phase: PatchApplyPhase.finalizing,
+          activeStep: 99, // absurd index from a bad native event
+        ),
+      );
+      await _pump(tester, state: state);
+      // Renders without a range error; the last step is the active one.
+      expect(find.text('Finalize & restart'), findsOneWidget);
+    });
   });
 
   group('OtaOverlayState.copyWith', () {

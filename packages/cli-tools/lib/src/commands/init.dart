@@ -314,24 +314,52 @@ class InitCommand extends FlutterPatcherCommand {
       warn('pubspec.yaml not found; skipping dependency injection.');
       return;
     }
-    var content = pubspec.readAsStringSync();
+    final content = pubspec.readAsStringSync();
     if (content.contains(RegExp(r'^\s*flutter_ota_kit\s*:', multiLine: true))) {
       step('pubspec.yaml already references flutter_ota_kit');
       return;
     }
-    const dep = '  flutter_ota_kit: ^0.1.4\n';
+    // Prefer `flutter pub add`, which resolves the LATEST published version and
+    // writes a proper caret constraint — so the CLI never hardcodes (and never
+    // goes stale on) a version number.
+    final exe = _flutterOrDart();
+    if (exe != null) {
+      final res = Process.runSync(exe, ['pub', 'add', 'flutter_ota_kit']);
+      if (res.exitCode == 0) {
+        step('Added `flutter_ota_kit` (latest) via `$exe pub add`');
+        return;
+      }
+      warn('`$exe pub add flutter_ota_kit` failed; falling back to a manual '
+          'edit. Run it yourself if the constraint looks wrong.');
+    }
+    // Fallback: append an unpinned dependency so `pub get` picks the latest
+    // compatible release. Still no hardcoded version.
     final marker = '\ndependencies:';
     final idx = content.indexOf(marker);
     if (idx == -1) {
-      warn(
-        'Could not find a `dependencies:` block; add `flutter_ota_kit` manually.',
-      );
+      warn('Could not find a `dependencies:` block; add `flutter_ota_kit` '
+          'manually (run `flutter pub add flutter_ota_kit`).');
       return;
     }
     final insertAt = idx + marker.length;
-    content = content.replaceRange(insertAt, insertAt, '\n$dep');
-    pubspec.writeAsStringSync(content);
-    step('Added `flutter_ota_kit` dependency to pubspec.yaml');
+    final updated =
+        content.replaceRange(insertAt, insertAt, '\n  flutter_ota_kit: any\n');
+    pubspec.writeAsStringSync(updated);
+    step('Added `flutter_ota_kit` dependency to pubspec.yaml '
+        '(run `flutter pub get` to resolve the latest version)');
+  }
+
+  /// Resolve the `flutter` executable (preferred) or `dart` for `pub add`.
+  String? _flutterOrDart() {
+    for (final exe in const ['flutter', 'dart']) {
+      try {
+        final r = Process.runSync(exe, ['--version']);
+        if (r.exitCode == 0) return exe;
+      } catch (_) {
+        // not on PATH; try next
+      }
+    }
+    return null;
   }
 
   void _addInternetPermission() {

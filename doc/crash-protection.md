@@ -1,7 +1,5 @@
 # Crash protection
 
-**English** | [简体中文](crash-protection-zh.md)
-
 How `flutter_ota_kit` automatically rolls back when a patch goes wrong,
 and how it prevents the same bad patch from being loaded again.
 
@@ -389,13 +387,16 @@ To verify the rollback path works on a real device:
 
 ```bash
 # 1. Apply a known-good patch first (so the install path is exercised)
-flutter-ota build --name 1.0.1 --platform android --arch x86_64
+flutter-ota build --apk build/app/outputs/flutter-apk/app-release.apk \
+  --version 1.0.1 --target-version-code 100
 flutter-ota deploy -b supabase -s dist -c production -p android \
   --target-app-version 1.0.0 --force
 
 # 2. Now deliberately break a Dart file and build again
 echo "void main() => throw 'intentional crash';" > lib/main.dart
-flutter-ota build --name 1.0.2
+flutter build apk --release
+flutter-ota build --apk build/app/outputs/flutter-apk/app-release.apk \
+  --version 1.0.2 --target-version-code 100
 flutter-ota deploy -b supabase -s dist -c production -p android \
   --target-app-version 1.0.0 --force
 

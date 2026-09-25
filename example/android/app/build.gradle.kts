@@ -7,7 +7,10 @@ plugins {
 android {
     namespace = "com.example.flutter_ota_kit_example"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // Pin to the NDK actually installed on this machine (27.0.12077973). The
+    // default 28.2.x is present but has an unreadable source.properties (I/O
+    // error) and cannot be re-fetched (read-only SDK dir).
+    ndkVersion = "27.0.12077973"
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17

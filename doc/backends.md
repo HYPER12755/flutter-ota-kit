@@ -1,17 +1,15 @@
 # Backends
 
-`flutter_ota_kit` ships **five first-party backends** — four cloud-native
-(Supabase / Postgres / Cloudflare / AWS) and one self-hosted
-(PocketBase). On the device, you select one with
-`FlutterPatcher.configureSupabase(...)` / `configurePostgres(...)` /
-`configureCloudflare(...)` / `configureAws(...)` /
-`configurePocketBase(...)`. On the CLI, `flutter-ota init <backend>`
-writes `.flutter_ota_kit/config.json` and the generated setup file.
+`flutter_ota_kit` ships **five first-party backends** in one package — four
+cloud-native (Supabase / Postgres / Cloudflare / AWS) and one self-hosted
+(PocketBase). There's nothing extra to add to `pubspec.yaml`: you configure the
+one you use on the device with `FlutterPatcher.configureSupabase(...)` /
+`configurePostgres(...)` / `configureCloudflare(...)` / `configureAws(...)` /
+`configurePocketBase(...)`, and on the CLI with `flutter-ota init <backend>`.
 
-You can also skip the built-in sources entirely and build a
-`ServerUpdateResult` yourself from your own update / staging / auth
-protocol — the runtime (verification, staging, crash protection,
-rollback) is identical regardless of where the patch came from.
+You can also skip the built-in sources entirely and build a `ServerUpdateResult`
+yourself from your own protocol — the runtime (verification, staging, crash
+protection, rollback) is identical regardless of where the patch came from.
 
 ---
 
@@ -23,9 +21,9 @@ once you've picked.
 | You have... | Pick |
 |-------------|------|
 | A Supabase project, or want zero provisioning | **Supabase** (fully automated) |
-| A Postgres database handy, no cloud account | **Postgres** (run 2 SQL files) |
+| A Postgres database handy, no cloud account | **Postgres** (run SQL migrations) |
 | Cloudflare Workers / R2 stack | **Cloudflare** (D1 + R2) |
-| AWS account, want IAM-controlled access | **AWS** (S3 + DynamoDB) |
+| AWS account, want IAM-controlled access | **AWS** (S3, optional CloudFront) |
 | Nothing, want a single-binary self-hosted option | **PocketBase** (~15MB Go binary) |
 | Custom protocol / update flow | Build your own (see [Custom update source](api-reference.md#custom-update-source)) |
 
@@ -37,32 +35,37 @@ distance.
 
 ## The plugin model
 
-The CLI and the device SDK share one design:
+`flutter_ota_kit` is a **single package** — all five backends are bundled in and
+you configure the one you use. The device SDK and the CLI share one design:
 
-- **Device SDK** — every `configureX` builds a `*UpdateSource` that
-  performs the update check and returns a single `ServerUpdateResult`.
-  The rest of the SDK only understands `ServerUpdateResult`, so
-  verification, staging, crash protection, and rollback behave the
-  same for all 5 backends.
-- **CLI** — `resolveBackend(config)` (in
-  `packages/cli-tools/lib/src/backend.dart`) picks a database plugin +
-  a node-storage profile per provider:
+- **Device SDK** — every `configureX` builds an internal `*UpdateSource` that
+  performs the update check and returns a single `ServerUpdateResult`. The rest
+  of the SDK only understands `ServerUpdateResult`, so verification, staging,
+  crash protection, and rollback behave identically across all five backends.
+- **CLI** — `resolveBackend(config)` picks a database plugin + a storage profile
+  per provider:
 
-| Backend     | Database plugin             | Storage profile     | Required at migrate time?       |
-|-------------|-----------------------------|---------------------|---------------------------------|
-| supabase    | `supabaseDatabase`          | `supabaseStorage`   | **Yes** — fully automated       |
-| postgres    | `postgresDatabase`          | `postgresStorage`   | Run 2 SQL files manually        |
-| cloudflare  | `d1Database`                | `r2Storage`         | Run `wrangler` commands         |
-| aws         | `s3Database`                | `s3Storage`         | Run AWS CLI / Terraform steps   |
-| pocketbase  | `pocketbaseDatabase`       | `pocketbaseStorage` | **Yes** — fully automated       |
+| Backend    | Database plugin      | Storage profile     | Migrate |
+|------------|----------------------|---------------------|---------|
+| supabase   | `supabaseDatabase`   | `supabaseStorage`   | **Automated** |
+| postgres   | `postgresDatabase`   | `postgresStorage`   | Applies SQL |
+| cloudflare | `d1Database`         | `r2Storage`         | Creates D1/R2, runs SQL |
+| aws        | `s3Database`         | `s3Storage`         | No SQL (bucket auto-created) |
+| pocketbase | `pocketbaseDatabase` | `pocketbaseStorage` | **Automated** |
 
-All five are first-party plugins under `plugins/`. The PocketBase plugin
-is unique in that the CLI also ships a prebuilt PB binary that it can
-download and run on your behalf — see [`pocketbase`](cli-reference.md#pocketbase).
+The PocketBase plugin is unique in that the CLI can also download and run a
+prebuilt PB binary for you — see [`pocketbase`](cli-reference.md#pocketbase).
 
-There is also a **web console** (`flutter-ota console`) that gives you
-a UI to view, edit, and deploy bundles via the sidecar server. It's
-backend-agnostic and works with all 5.
+There is also a **web console** (`flutter-ota console`) for viewing, editing,
+and deploying bundles; it's backend-agnostic.
+
+> **A note on device credentials.** Only Supabase's **anon key** is designed to
+> ship inside an app (public, RLS-protected). Embedding Cloudflare / AWS /
+> PocketBase / Postgres credentials in a public APK exposes them to anyone who
+> unzips the app. For public-store apps, front those backends with your own
+> server (or a Cloudflare Worker / Lambda) that holds the secret and speaks the
+> update protocol. For internal / enterprise / MDM-distributed apps the
+> direct-credential mode is usually fine.
 
 ---
 
@@ -122,13 +125,14 @@ Pick this if you already have a Postgres database handy and don't
 need a cloud provider.
 
 - Needs a reachable Postgres database.
-- `migrate postgres` prints the SQL to create the `bundles` and
-  `flutter_ota_kit_storage` tables — run it manually.
-- Bundle metadata lives in Postgres; the artifact bytes live in a
-  `bytea` column.
-- If you do not expose the `flutter_ota_kit_storage` table over
-  HTTP, set `servingBaseUrl` to a proxy that fronts it (or put a
-  PostgREST layer in front).
+- `migrate postgres` applies the SQL to create the `bundles` /
+  `bundle_patches` / storage tables (tracked in a `_flutter_ota_kit_migrations`
+  table), or use `--dry-run` to print it.
+- Bundle metadata lives in Postgres; the artifact bytes live in a `bytea`
+  column.
+- Because Postgres can't serve bytes over HTTP itself, set `servingBaseUrl` to a
+  proxy (or PostgREST layer) that fronts the storage table for device
+  downloads.
 
 | Pros | Cons |
 |------|------|
@@ -162,7 +166,7 @@ FlutterPatcher.configurePostgres(PostgresUpdateConfig(
 
 ```bash
 flutter-ota init postgres
-flutter-ota migrate postgres    # prints SQL; run it manually
+flutter-ota migrate postgres --database-url postgres://…   # applies SQL
 flutter-ota deploy -b postgres -s dist -c production -p android \
   --target-app-version 1.0.0 --force
 ```
@@ -226,11 +230,12 @@ flutter-ota deploy -b cloudflare -s dist -c production -p android \
 Pick this if you already have an AWS account and want IAM-controlled
 access to your update infrastructure.
 
-- `migrate aws` prints the S3 bucket + DB setup (AWS CLI /
-  Terraform). The CLI does not create AWS resources automatically —
-  that's an IAM decision your account owner should approve.
-- Bundle metadata lives in an S3-backed blob "database"; artifacts
-  live in S3, optionally fronted by CloudFront for a custom domain.
+- `migrate aws` needs no SQL — AWS stores bundle metadata as JSON objects in
+  S3 (an `update.json` per channel/platform/version), so the bucket/prefix is
+  created on first `deploy`. `migrate aws` just prints the recommended IAM /
+  bucket setup.
+- Bundle metadata lives in an S3-backed blob "database"; artifacts live in S3,
+  optionally fronted by CloudFront for a custom domain + signed URLs.
 
 | Pros | Cons |
 |------|------|
@@ -240,9 +245,8 @@ access to your update infrastructure.
 | ECS / Lambda / Fargate friendly | — |
 
 **CLI env vars:** `AWS_BUCKET`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`,
-`AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT` (optional), `AWS_BASE_PATH`
-(optional), `AWS_SESSION_TOKEN` (optional, for STS), and
-`AWS_CLOUDFRONT_DISTRIBUTION_ID` (optional, custom domain).
+`AWS_SECRET_ACCESS_KEY`, `AWS_ENDPOINT` (optional, e.g. MinIO), `AWS_BASE_PATH`
+(optional), `AWS_SESSION_TOKEN` (optional, for STS).
 
 **Device:**
 

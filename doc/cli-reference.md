@@ -1,435 +1,341 @@
-# CLI Reference — `flutter-ota`
+# CLI Reference
 
-The `flutter-ota` CLI (npm `@_nazmiforreal/flutter-ota`) scaffolds your
-project, provisions backends, builds patches, and deploys them. Every
-command accepts `-v, --verbose` (full error stack traces) and `-h, --help`.
+The `flutter-ota` CLI builds patches, deploys them to your backend, and manages
+bundles / channels / rollbacks — mirroring the `hot-updater` workflow.
 
-`flutter-ota --help` is the live, authoritative flag list. This page
-documents what each command does and the common usage patterns — read
-this to know which command to reach for.
-
----
-
-## Quick reference (the 5 you'll use)
-
-| Command | What it does | When you reach for it |
-|---------|--------------|------------------------|
-| `init <backend>` | Scaffold the project | Once per project, or when switching backends |
-| `migrate <backend>` | Create the tables, buckets, RPCs | Once per backend, or after a schema change |
-| `build` | Make a `patch.zip` from your latest APK | Every release |
-| `deploy` | Push `patch.zip` to your backend, register a bundle | Every release |
-| `doctor` | Sanity-check the env + backend | When something doesn't work |
-
-The other 11 commands are for fine-grained control (rollback, channel
-management, key management, storage inspection, etc.). They're
-documented below.
-
----
-
-## Global flags
-
-| Flag | Effect |
-|------|--------|
-| `-v, --verbose` | Print full error stack traces |
-| `-h, --help` | Print usage for the current command |
-
-Every command reads `.env` for the same env vars as the SDK does
-(see [Configuration](configuration.md)). Pass `--dart-define-from-file=.env`
-to `flutter build` (the SDK build step, not `flutter-ota build`) so
-secrets reach the compiled app.
-
----
-
-## `init <backend>`
-
-Scaffold a project for one of the 5 supported backends
-(`supabase` / `postgres` / `cloudflare` / `aws` / `pocketbase`).
-
-What it does, in order:
-
-1. Writes `.flutter_ota_kit/config.json` — CLI working state
-2. Writes `.env` at the project root with placeholder values
-3. Ensures `flutter_ota_kit:` is in `pubspec.yaml`
-4. Adds `INTERNET` to `android/app/src/main/AndroidManifest.xml`
-5. Generates `lib/flutter_ota_kit_setup.dart`
-6. Adds `.flutter_ota_kit/` and `.env` to `.gitignore`
-
-| Flag | Abbr | Default | Meaning |
-|------|------|---------|---------|
-| `--provider` | `-p` | positional | Backend (same as the first positional arg) |
-| `--channel` | `-c` | `production` | Default channel |
-| `--platform` | | `android` | Default platform |
-| `--source` | `-s` | `./dist` | Default deploy source dir |
-| `--global` | | off | Write to `~/.flutter_ota_kit/config.json` instead of project |
-| `--force` | `-f` | off | Overwrite an existing config |
+## Install
 
 ```bash
-flutter-ota init supabase
-flutter-ota init postgres --channel staging
-flutter-ota init pocketbase        # the newest backend, single-binary self-hosted
+npm install -g @_nazmiforreal/flutter-ota
+flutter-ota --help
 ```
 
----
-
-## `migrate <backend>`
-
-Provision the backend's tables, RPCs, and storage. What gets created:
-
-| Backend | What `migrate` does |
-|---------|---------------------|
-| `supabase` | Runs the SQL migration, creates the `bundles` table, `get_update_info_*` RPCs, and the public `bundles` storage bucket. **Fully automatic** with the Management API key. |
-| `postgres` | Prints the SQL files in `plugins/postgres/sql/` for you to run against your database. |
-| `cloudflare` | Prints the `wrangler` commands to create the D1 database, run migrations, and configure the R2 bucket. |
-| `aws` | Prints the S3 / DynamoDB / RDS commands. **Does not** create AWS resources automatically — that's an IAM decision. |
-| `pocketbase` | No separate `migrate` needed; the `pocketbase install` + `pocketbase serve` commands install the schema. |
-
-| Flag | Abbr | Meaning |
-|------|------|---------|
-| `--backend` | `-b` | Backend (same as positional) |
-| `--database-url` | | Postgres: override DB connection string (default: `POSTGRES_HOST` env) |
-| `--management-key` | | Supabase Management API key (default: `SUPABASE_MANAGEMENT_KEY` env) |
-| `--migrations-dir` | | Override the directory of `.sql` files to run |
-| `--dry-run` | `-d` | Print the migrations instead of applying them |
+A prebuilt `linux-x64` binary ships in the package. On other platforms the CLI
+is compiled on install from bundled Dart source, which requires the **Flutter
+SDK** (the CLI depends on the `flutter_ota_kit` Flutter package). During local
+development you can also run it straight from source:
 
 ```bash
-flutter-ota migrate supabase
-flutter-ota migrate postgres --dry-run     # show the SQL without applying
-flutter-ota migrate cloudflare
+dart run bin/flutter_ota_kit.dart <command>   # from packages/cli-tools
 ```
 
----
+## Invocation
 
-## `build`
+```
+flutter-ota <command> [subcommand] [flags]
+```
 
-Build a `patch.zip` from your latest Flutter build.
+Global option: `-v, --verbose` — print full error stack traces.
 
-Typical flow:
+Help works at every level, including nested subcommands:
 
 ```bash
-# 1. Build the release APK (this is what the patch is diffed from)
-flutter build apk --release --target-platform android-x64
+flutter-ota --help
+flutter-ota bundle --help
+flutter-ota bundle list --help
+flutter-ota pocketbase records list --help
+```
 
-# 2. Pack it
-flutter-ota build --name 1.0.1 --platform android --arch x86_64
+## Config resolution
 
-# 3. Deploy it
+Every backend-touching command resolves settings with this precedence:
+
+```
+explicit flag  >  environment variable  >  .flutter_ota_kit/config.json  >  built-in default
+```
+
+Config file search order:
+1. `./.flutter_ota_kit/config.json` (project — written by `init`)
+2. `~/.flutter_ota_kit/config.json` (global — `init --global`)
+
+Secrets (service-role keys, DB passwords, tokens) belong in your shell
+environment or `.env`, **not** in the committed config. See
+[Configuration](configuration.md) for the full env-var list per backend.
+
+---
+
+## Commands
+
+| Command | Purpose |
+|---------|---------|
+| `init` | Scaffold config + integration files for a backend |
+| `config` | Get / set / list configuration values |
+| `keys` | Generate an Ed25519 signing keypair |
+| `doctor` | Diagnose the environment + backend connectivity |
+| `fingerprint` | Compute a deterministic build fingerprint |
+| `build` | Pack a release APK into a device-ready `patch.zip` |
+| `deploy` | Upload a bundle + register it on the backend |
+| `bundle` | Manage bundles (list/show/delete/disable/enable/force/promote/update) |
+| `channel` | Manage channels (list/get/set) |
+| `rollback` | Roll a channel back to a previous bundle |
+| `storage` | Inspect / delete stored bundle objects |
+| `migrate` | Run backend schema migrations |
+| `console` | Open the web console |
+| `pocketbase` | Manage a local PocketBase instance |
+
+---
+
+### `init`
+
+Scaffold `.flutter_ota_kit/config.json`, an `.env` template, and
+`lib/flutter_ota_kit_setup.dart`; add `INTERNET` permission and gitignore
+entries.
+
+```bash
+flutter-ota init supabase        # backend as first positional arg
+flutter-ota init                 # interactive picker on a TTY
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-p, --provider` | `supabase` | Backend (also accepted as the first positional arg): `supabase` / `postgres` / `cloudflare` / `aws` / `pocketbase` |
+| `-c, --channel` | `production` | Default channel |
+| `--platform` | `android` | Default platform |
+| `-s, --source` | `./dist` | Default deploy source |
+| `--global` | — | Write the global `~/.flutter_ota_kit` config (no scaffolding) |
+| `-f, --force` | — | Overwrite an existing config |
+
+---
+
+### `build`
+
+Pack a release APK into `dist/patch.zip` (+ `manifest.json`). Includes every ABI
+found in the APK by default, so one bundle serves all devices.
+
+```bash
+flutter-ota build \
+  --apk build/app/outputs/flutter-apk/app-release.apk \
+  --version 1.0.1 \
+  --target-version-code 100
+```
+
+| Flag | Description |
+|------|-------------|
+| `-a, --apk` | **Required.** Release APK to extract `libapp.so` + assets from |
+| `-V, --version` | **Required.** Patch version string (stored in `manifest.version`) |
+| `-t, --target-version-code` | **Required.** versionCode of the APK users already have |
+| `-A, --assets` | Asset key(s) to overlay (repeatable; `@file` reads a list) |
+| `--abi` | Restrict to one ABI (e.g. `arm64-v8a`); default = all in the APK |
+| `-o, --out` | Output dir (default `dist`) |
+
+---
+
+### `deploy`
+
+Upload the bundle to storage and register it in the database.
+
+```bash
 flutter-ota deploy -b supabase -s dist -c production -p android \
-  --target-app-version 1.0.0 --force
+  --target-app-version 1.0.0 --force -m "hotfix: crash on login"
 ```
 
-| Flag | Abbr | Default | Meaning |
-|------|------|---------|---------|
-| `--arch` | `-a` | host arch | Target ABI: `x86_64`, `arm64-v8a`, `armeabi-v7a` |
-| `--name` | | app version | The patch's `version` field (e.g. `1.0.1`) |
-| `--target-version` | `-t` | host versionCode | The host APK's `versionCode` (from `pubspec.yaml`) |
-| `--source` | | `./dist` | Build output dir to pack (default: just-built APK location) |
-| `--platform` | `-p` | `android` | Platform tag |
-| `--channel` | `-c` | `production` | Channel tag |
-| `--output` | `-o` | `./dist` | Where to write `patch.zip` |
-| `--key` | `-k` | | Ed25519 private key file (PEM) to sign the bundle |
-| `--assets` | | none | Comma-separated list of asset paths to include (since 0.1.3) |
-| `--abi` | | host ABIs | Restrict the patch to specific ABIs (smaller patches for mixed-ABI fleets) |
-
-```bash
-# Single-ABI patch (smaller, for ARM-only fleet)
-flutter-ota build --name 1.0.1 --arch arm64-v8a --abi arm64-v8a
-
-# With assets
-flutter-ota build --name 1.0.1 \
-  --assets assets/hero.png,assets/icons/home.svg,assets/strings/zh.json
-
-# Signed patch
-flutter-ota build --name 1.0.1 --key ./keys/release.pem
-```
+| Flag | Description |
+|------|-------------|
+| `-b, --backend` | Backend provider (defaults to configured one) |
+| `-s, --source` | Source dir or `patch.zip` to upload |
+| `-c, --channel` | Target channel |
+| `-p, --platform` | Platform (default `android`) |
+| `-m, --message` | Release message (shown in the forced-update UI) |
+| `-f, --force` | Force the update on clients |
+| `-t, --target-app-version` | Semver target (XOR with fingerprint) |
+| `-F, --fingerprint-hash` | Fingerprint target (XOR with app version) |
+| `-k, --key` | Ed25519 private key file — signs the bundle |
+| `-g, --git-commit-hash` | Git commit (auto-detected if omitted) |
+| `-i, --bundle-id` | Explicit bundle id (uuidv7 by default) |
 
 ---
 
-## `deploy`
-
-Upload `dist/patch.zip` to the configured backend and register a
-bundle record. Returns the bundle id.
-
-| Flag | Abbr | Default | Meaning |
-|------|------|---------|---------|
-| `--backend` | `-b` | from config | `supabase` / `postgres` / `cloudflare` / `aws` / `pocketbase` |
-| `--source` | `-s` | `./dist` | Directory containing `patch.zip` |
-| `--channel` | `-c` | from config | Target channel |
-| `--platform` | `-p` | `android` | Platform tag |
-| `--message` | `-m` | `''` | Release note (shown in the forced-update overlay) |
-| `--force` | `-f` | off | Mark the bundle as forced-update. The app auto-restarts on the user's device when the SDK detects it. |
-| `--target-app-version` | | host app version | Which app version this bundle applies to. **Must match** the user's installed `pubspec.yaml` `version:` field. |
-| `--fingerprint-hash` | | | Alternative to `--target-app-version` for fingerprint-strategy targeting. |
-| `--key` | `-k` | | Ed25519 private key file to sign the bundle |
-| `--git-commit-hash` | | auto-detect | `git rev-parse HEAD` if omitted |
-| `--bundle-id` | `-i` | uuidv7 | Explicit bundle id (default: random uuidv7) |
+### `bundle`
 
 ```bash
-# Standard deploy (next cold start)
-flutter-ota deploy -b supabase -s dist -c production -p android \
-  --target-app-version 1.0.0
-
-# Forced update (auto-restart on the user's device)
-flutter-ota deploy -b supabase -s dist -c production -p android \
-  --target-app-version 1.0.0 --force -m "critical security fix"
+flutter-ota bundle list -c production
+flutter-ota bundle show   -i <uuid>
+flutter-ota bundle force  -i <uuid>          # force; --off to clear
+flutter-ota bundle promote -i <uuid> -c beta
+flutter-ota bundle update -i <uuid> -m "new note" --enabled true
+flutter-ota bundle disable -i <uuid>
+flutter-ota bundle delete  -i <uuid> [--keep-storage]
 ```
 
----
-
-## `channel`
-
-Manage release channels. Subcommands: `list`, `get`, `set`.
-
-| Subcommand | Flags | Effect |
-|------------|-------|--------|
-| `channel list` | `-b` | List all channels on the backend |
-| `channel get` | `-b`, `-c` | Show the currently-live bundle on a channel |
-| `channel set` | `-b`, `-c` | Set the default channel (persists into `config.json`) |
-
-```bash
-flutter-ota channel list
-flutter-ota channel get -b supabase -c production
-flutter-ota channel set -c beta    # next deploy will land on 'beta'
-```
-
----
-
-## `bundle`
-
-Inspect and manage registered bundles. This is the read/write
-interface to the `bundles` table on your backend.
-
-| Subcommand | Key flags | Effect |
-|------------|-----------|--------|
-| `bundle list` | `-b`, `-c`, `-p`, `--enabled`, `-l/--limit` | List bundles (filterable) |
-| `bundle show` | `-b`, `--id` | Show one bundle's full record |
-| `bundle delete` | `-b`, `--id`, `--keep-storage` | Delete a bundle; `--keep-storage` keeps the `patch.zip` in the storage bucket |
-| `bundle enable` | `-b`, `--id` | Re-enable a disabled bundle |
-| `bundle disable` | `-b`, `--id` | Mark a bundle as disabled (the SDK won't return it) |
-| `bundle force` | `-b`, `--id`, `--off` | Set or clear (`--off`) the forced-update flag |
-| `bundle promote` | `-b`, `--id`, `-c` | Promote a bundle to a different channel |
-| `bundle update` | `-b`, `--id`, `-m`, `--target-version`, `--enabled` | Edit a bundle's metadata in-place |
-
-```bash
-# List the 5 most recent bundles on production
-flutter-ota bundle list -b supabase -c production -l 5
-
-# Disable a bad bundle without deleting it
-flutter-ota bundle disable -b supabase --id 01a059a6-...
-
-# Force-promote a candidate to production
-flutter-ota bundle promote -b supabase --id 01a059a6-... -c production
-```
-
----
-
-## `config`
-
-Read/write the project (or global) `config.json`. Subcommands: `get`,
-`set`, `list`.
-
-| Subcommand | Flags | Effect |
-|------------|-------|--------|
-| `config get` | `-k/--key` (dot-path, e.g. `supabase.url`) | Read one value |
-| `config set` | `-k/--key`, `--value` | Set one value |
-| `config list` | — | Dump the whole `config.json` |
-
-```bash
-flutter-ota config list
-flutter-ota config get -k supabase.bucket
-flutter-ota config set -k channel -v beta
-```
-
-`config.json` stores CLI working state — the service-role key, the
-default channel, the default platform, etc. It is **git-ignored**.
-
----
-
-## `keys`
-
-Generate, inspect, and persist Ed25519 keypairs for bundle signing.
-
-```bash
-flutter-ota keys                  # show current public key (or generate one)
-flutter-ota keys --save           # persist public key into project config
-flutter-ota keys --global         # same, but into ~/.flutter_ota_kit
-```
-
-The keypair is stored in `~/.flutter_ota_kit/keys.json` (git-ignored).
-The public half is what your app's `init(publicKeyBase64: ...)` reads
-at build time. The private half is what `build --key` and `deploy --key`
-use to sign.
-
-For the device side, see [Architecture → Patch signing](architecture.md#patch-signing)
-for the full flow.
-
----
-
-## `rollback`
-
-Roll a channel back to a previous bundle. This is a **server-side**
-rollback: it changes the channel's `current_bundle` pointer so the next
-update-check returns the older bundle.
-
-| Flag | Abbr | Meaning |
-|------|------|---------|
-| `--backend` | `-b` | backend provider |
-| `--channel` | `-c` | channel to roll back |
-| `--bundle-id` | `-i` | roll back to this specific bundle id |
-| `--platform` | `-p` | platform filter (default: all) |
-
-```bash
-# Roll production back to the previous stable bundle
-flutter-ota rollback -b supabase -c production --bundle-id 01a059a5-...
-```
-
-This is **not** the same as `FlutterPatcher.rollback()` in the SDK,
-which is a local operation that deletes the patch on the user's device.
-The CLI's `rollback` changes the server's view; the device's
-`FlutterPatcher.rollback()` clears the local state.
-
----
-
-## `pocketbase`
-
-Manage a local PocketBase instance. PocketBase is unique among the
-backends — the CLI ships a prebuilt PB binary and can install/serve
-it for you, so a single command gives you a fully working backend.
-
-| Subcommand | Effect |
-|------------|--------|
-| `pocketbase install` | Download the right PB binary for the current platform to `~/.flutter_ota_kit/pocketbase/<version>/` |
-| `pocketbase serve` | Start a local PB instance, install the flutter_ota_kit schema, and wait for SIGINT to stop |
-| `pocketbase stop` | Hint (kill the `serve` process via Ctrl+C) |
-| `pocketbase status` | Show installed PB version and binary path |
-
-| Flag | Default | Meaning |
-|------|---------|---------|
-| `--version` | `0.22.21` | PB version to install |
-| `--port` | `8090` | HTTP port |
-| `--host` | `127.0.0.1` | Bind address (use `0.0.0.0` for LAN access) |
-| `--data-dir` | `~/.flutter_ota_kit/pocketbase/<version>/` | PB data dir (the `pb_data` equivalent) |
-| `--admin-email` | from env | Bootstrap admin email (required for `serve`) |
-| `--admin-password` | from env | Bootstrap admin password (required for `serve`) |
-| `--install-hooks` | `true` | Copy bundled JS hooks into `pb_data/pb_hooks/` on start |
-
-```bash
-# Install PB locally
-flutter-ota pocketbase install
-
-# Start PB with admin creds (from .env or shell)
-POCKETBASE_ADMIN_EMAIL=admin@local.dev POCKETBASE_ADMIN_PASSWORD=secret \
-  flutter-ota pocketbase serve --port 8090
-
-# Then point your project at it:
-# .env
-#   POCKETBASE_URL=http://127.0.0.1:8090
-#   POCKETBASE_ADMIN_EMAIL=admin@local.dev
-#   POCKETBASE_ADMIN_PASSWORD=secret
-
-flutter-ota init pocketbase
-flutter-ota migrate pocketbase    # (no-op; serve installs the schema)
-flutter-ota build --name 1.0.1
-flutter-ota deploy -b pocketbase -s dist -c production -p android \
-  --target-app-version 1.0.0 --force
-```
-
-For production, point `POCKETBASE_URL` at your own PB instance
-(self-hosted or in the cloud) and skip the CLI's local server.
-
----
-
-## `console`
-
-Open the web-based admin UI for the configured backend.
-
-```bash
-flutter-ota console            # opens in your default browser if --open
-flutter-ota console --no-open  # just print the URL
-```
-
-The console is a Flutter web app served from `packages/console/`. It
-talks to the local sidecar server (`flutter_ota_kit_cli`'s built-in
-admin API on port 3000 by default) which proxies to your real
-backend. Bundles, channels, storage, and deploys are all editable in
-the UI.
-
----
-
-## `doctor`
-
-Validate the local environment and backend connectivity. Run this when
-something doesn't work.
-
-```bash
-flutter-ota doctor
-# Output:
-#   ✓ Dart 3.13.2
-#   ✓ Supabase URL reachable
-#   ✓ service-role key valid
-#   ✓ bundles table exists
-#   ✓ bundles bucket exists
-#   ✓ channel list: production, staging, beta
-```
-
-| Flag | Abbr | Meaning |
-|------|------|---------|
-| `--backend` | `-b` | Force a specific backend check (otherwise: the one in `config.json`) |
-
-For PocketBase, `doctor` also checks the binary is installed at
-`~/.flutter_ota_kit/pocketbase/<version>/` and probes the health
-endpoint.
-
----
-
-## `fingerprint`
-
-Compute the build fingerprint hash used by `UpdateStrategy.fingerprint`
-targeting. This is a per-build content hash (not the Android `fingerprintHash`
-of the app) that lets you target devices by their exact APK content.
-
-| Flag | Abbr | Default | Meaning |
-|------|------|---------|---------|
-| `--source` | `-s` | `./dist` | Directory to fingerprint (the build output) |
-
-```bash
-flutter-ota fingerprint -s dist
-# Output: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
-```
-
-Use the hash as `--fingerprint-hash` on `deploy` to target only devices
-running an APK with that exact build.
-
----
-
-## `storage`
-
-Inspect / delete raw storage objects. This bypasses the bundle
-abstraction and operates on the underlying storage bucket directly —
-useful for cleaning up orphans after a failed `deploy`.
+All subcommands accept `-b, --backend`. Common flags:
 
 | Subcommand | Flags |
 |------------|-------|
-| `storage list` | `-b/--backend`, `--prefix` |
-| `storage delete` | `-b/--backend`, `--uri` |
+| `list` | `-c, --channel` · `-p, --platform` · `--enabled <true\|false>` · `-l, --limit` (default 20) |
+| `show` | `-i, --id` (required) |
+| `delete` | `-i, --id` · `--keep-storage` |
+| `disable` / `enable` | `-i, --id` |
+| `force` | `-i, --id` · `--off` (clear instead of set) |
+| `promote` | `-i, --id` · `-c, --channel` |
+| `update` | `-i, --id` · `-m, --message` · `--target-version` · `--enabled <true\|false>` · `-f, --force <true\|false>` |
+
+---
+
+### `channel`
 
 ```bash
-# List orphan objects (not referenced by any bundle)
-flutter-ota storage list -b supabase --prefix bundles/
-
-# Delete a specific object
-flutter-ota storage delete -b supabase --uri supabase-storage://bundles/abc.zip
+flutter-ota channel list
+flutter-ota channel get -c production
+flutter-ota channel set -c production -i <uuid>
 ```
 
-**Use with care** — deleting a storage object that's still referenced
-by a bundle leaves the bundle in a broken state.
+| Subcommand | Flags |
+|------------|-------|
+| `list` | `-b, --backend` |
+| `get` | `-c, --channel` |
+| `set` | `-c, --channel` · `-i, --bundle-id` |
+
+---
+
+### `rollback`
+
+Disable the latest enabled bundle on a channel (or roll back to a specific one).
+
+```bash
+flutter-ota rollback -c production
+flutter-ota rollback -c production -i <uuid>
+```
+
+| Flag | Description |
+|------|-------------|
+| `-b, --backend` | Backend provider |
+| `-c, --channel` | **Required.** Channel to roll back |
+| `-i, --bundle-id` | Roll back to this specific bundle |
+| `-p, --platform` | Platform filter |
+
+---
+
+### `storage`
+
+```bash
+flutter-ota storage list --prefix bundles
+flutter-ota storage delete --key bundles/<id>/patch.zip
+flutter-ota storage delete --uri <full-storage-uri>
+```
+
+| Subcommand | Flags |
+|------------|-------|
+| `list` | `-b, --backend` · `--prefix` |
+| `delete` | `-b, --backend` · `--key` (repeatable) · `--uri` |
+
+---
+
+### `migrate`
+
+Provision the backend schema.
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=… flutter-ota migrate supabase   # fully automated
+flutter-ota migrate postgres --database-url postgres://…
+flutter-ota migrate cloudflare                             # creates D1/R2, runs SQL
+flutter-ota migrate aws                                    # no SQL — informational
+flutter-ota migrate pocketbase                             # installs the PB schema
+flutter-ota migrate supabase --dry-run                     # print instead of apply
+```
+
+| Flag | Description |
+|------|-------------|
+| `-b, --backend` | Backend provider |
+| `-d, --dry-run` | Print migrations instead of applying |
+| `--database-url` | Postgres connection string (or `DATABASE_URL`) |
+| `--management-key` | Supabase Management API key (or `SUPABASE_MANAGEMENT_KEY`) — no separate Postgres connection needed |
+| `--migrations-dir` | Directory of ordered `*.sql` files |
+| `--account-id` / `--api-token` / `--d1-database-id` / `--r2-bucket` | Cloudflare (or `CLOUDFLARE_*` / `R2_BUCKET`) |
+| `--pocketbase-url` / `--pocketbase-admin-email` / `--pocketbase-admin-password` | PocketBase (or `POCKETBASE_*`) |
+
+Per-backend behavior: **supabase** uses the Management API or a Postgres
+connection (and ensures the storage bucket); **postgres** applies SQL and tracks
+it in `_flutter_ota_kit_migrations`; **cloudflare** creates the D1 DB if needed,
+runs SQL, ensures the R2 bucket; **aws** has no SQL (bucket/prefix auto-created
+on first deploy); **pocketbase** installs the collection schema.
+
+---
+
+### `keys`
+
+Generate an Ed25519 keypair for signing bundles.
+
+```bash
+flutter-ota keys              # print a private/public keypair
+flutter-ota keys --save       # also persist the public key into the config
+```
+
+Sign at deploy time with `deploy --key <private-key-file>`; put the public key
+in your app via `FlutterPatcher.init(publicKeyBase64: '…')`.
+
+---
+
+### `fingerprint`
+
+```bash
+flutter-ota fingerprint --source ./dist
+```
+
+| Flag | Default | Description |
+|------|---------|-------------|
+| `-s, --source` | `./dist` | Directory to fingerprint |
+
+---
+
+### `doctor`
+
+```bash
+flutter-ota doctor -b supabase
+```
+
+Checks the environment and backend connectivity; prints the channel list when
+the backend is reachable.
+
+---
+
+### `config`
+
+```bash
+flutter-ota config get supabase.url
+flutter-ota config set supabase.bucket bundles
+flutter-ota config list
+```
+
+| Subcommand | Flags |
+|------------|-------|
+| `get` | `-k, --key` (or positional key) |
+| `set` | `-k, --key` · `--value` (or two positional args) |
+| `list` | — |
+
+---
+
+### `console`
+
+```bash
+flutter-ota console          # print the console URL
+flutter-ota console --open   # launch with `flutter run -d chrome`
+```
+
+---
+
+### `pocketbase`
+
+Manage a local single-binary PocketBase backend. Subcommands: `install`,
+`serve`, `stop`, `status`, `backup`, `export`, `import`, `admin`, `migrate`,
+`health`, `logs`, `records`, `collections`, `settings`, `sql`, `crons`,
+`query`, `config`. Several have their own nested subcommands (e.g.
+`pocketbase backup create|list|delete|restore`, `pocketbase records
+list|get|create|update|delete|batch`).
+
+```bash
+flutter-ota pocketbase install
+flutter-ota pocketbase serve --admin-email a@b.c --admin-password '…'
+flutter-ota pocketbase status
+flutter-ota pocketbase records list --help    # per-subcommand help
+```
+
+See [Backends → PocketBase](backends.md) for the end-to-end setup.
 
 ---
 
 ## See also
 
-- [Configuration](configuration.md) — every env var, `.env` format, resolution order
-- [Backends](backends.md) — per-backend setup with copy-paste commands
-- [Developer Guide](developer-guide.md) — full workflow reference
-- [Architecture](architecture.md) — internals, signing, advanced config
-- [Production Playbook](production-playbook.md) — staged rollout,
-  diagnostic reporting, emergency rollback
+- [Getting Started](getting-started.md) — the 5-minute path
+- [Backends](backends.md) — per-backend setup + env vars
+- [Configuration](configuration.md) — precedence + full env-var list
+- [Production Playbook](production-playbook.md) — staged rollout + rollback

@@ -46,7 +46,7 @@ when no prebuilt matches.
 Add it to your app's `pubspec.yaml` (the `flutter-ota init` command does this for you):
 ```yaml
 dependencies:
-  flutter_ota_kit: ^0.1.4
+  flutter_ota_kit: ^0.2.0
 ```
 
 ---
@@ -151,18 +151,24 @@ A patch is built from a **Flutter build** of your app and then diffed into a
 `patch.zip`:
 
 ```bash
-# 1. Build the APK / app bundle for the target ABI
+# 1. Build the release APK
 flutter build apk --release
 
-# 2. Pack it into a patch (uses the current app version as the patch version)
-flutter-ota build --name 1.0.1 --platform android --arch x86_64
+# 2. Pack it into a device-ready patch (all ABIs by default;
+#    --target-version-code = the versionCode users already have)
+flutter-ota build \
+  --apk build/app/outputs/flutter-apk/app-release.apk \
+  --version 1.0.1 \
+  --target-version-code 100
 # outputs dist/patch.zip
 ```
 
-You can also use the SDK helper directly:
+You can also invoke the bundled packer directly:
 
 ```bash
-dart run flutter_ota_kit:pack --name 1.0.1 --platform android --arch x86_64 --source build/app/outputs/flutter-apk/
+dart run flutter_ota_kit:pack \
+  --apk build/app/outputs/flutter-apk/app-release.apk \
+  --version 1.0.1 --target-version-code 100
 ```
 
 The build artifacts are written to `dist/` by default (configurable via the

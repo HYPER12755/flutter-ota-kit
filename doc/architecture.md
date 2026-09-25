@@ -424,12 +424,10 @@ version, the patch is rejected and the base APK runs.
 
 Compatibility matrix (last verified):
 
-| Flutter | SDK  | Notes                                      |
-|---------|------|--------------------------------------------|
-| 3.19.x  | 0.1.5+| Loader hook stable                          |
-| 3.27.x  | 0.1.5+| Loader hook stable, Material 3 recommended |
-| 3.32.x  | 0.1.7+| Verified end-to-end                         |
-| 3.47.x  | 0.1.9+| Current                                     |
+| Flutter | flutter_ota_kit | Notes |
+|---------|-----------------|-------|
+| 3.19.x – 3.32.x | 0.1.x | Loader hook stable (multi-package era) |
+| 3.47.x+ | 0.2.0 | Current — single-package release |
 
 If you upgrade Flutter, expect to need a new release. Old patches
 expire after the upgrade.

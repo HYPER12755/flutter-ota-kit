@@ -48,7 +48,8 @@ The first time, pick the one that matches your day job:
   SQL files yourself, but it's the most "just a database" option.
 - **Cloudflare** if you're on the Workers/R2 stack. D1 + R2, prints
   `wrangler` commands.
-- **AWS** if you already have an AWS account. S3 + DynamoDB / RDS.
+- **AWS** if you already have an AWS account. S3 (metadata as JSON objects +
+  artifacts), optional CloudFront.
 - **PocketBase** if you want a single-binary self-hosted backend with
   zero cloud account. The CLI ships PocketBase + installs the schema
   for you.
@@ -245,7 +246,7 @@ bucket. For other backends:
 
 - **Postgres** — prints SQL to run against your database
 - **Cloudflare** — prints `wrangler` commands (D1 + R2)
-- **AWS** — prints S3 + DynamoDB / RDS commands
+- **AWS** — no SQL; the S3 bucket/prefix is created on first deploy
 
 **Verify:** `supabase` dashboard should now show a `bundles` table and a
 `bundles` storage bucket. Or run `flutter-ota doctor` — if the backend
@@ -300,11 +301,14 @@ baseline) and push it to Supabase:
 
 ```bash
 # 1. Rebuild the release APK (the patch is diffed from this output)
-flutter build apk --release --target-platform android-x64 \
-  --dart-define-from-file=.env
+flutter build apk --release --dart-define-from-file=.env
 
-# 2. Pack it into dist/patch.zip
-flutter-ota build --name 1.0.1 --platform android --arch x86_64
+# 2. Pack it into dist/patch.zip (all ABIs; --target-version-code = the
+#    versionCode of the APK your users already have installed)
+flutter-ota build \
+  --apk build/app/outputs/flutter-apk/app-release.apk \
+  --version 1.0.1 \
+  --target-version-code 100
 
 # 3. Push it. --force = zero-click, auto-restart on the client.
 export SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxxxxxxx
@@ -316,7 +320,8 @@ What each flag means:
 
 | Flag | Why |
 |------|-----|
-| `--name 1.0.1` | A distinct version. Bump it on every deploy; the SDK's loop guard skips a bundle whose version already equals the installed one. |
+| `--version 1.0.1` | A distinct patch version. Bump it on every deploy; the SDK's loop guard skips a bundle whose version already equals the installed one. |
+| `--target-version-code 100` | The versionCode of the APK your users already have. The patch only applies to that host build. |
 | `--target-app-version 1.0.0` | The bundle applies to baseline `1.0.0` (whatever your pubspec `version` is). Patches are bound to a base version, so a `1.0.1` patch won't apply to a `1.0.2` user. |
 | `--force` | The app must apply + restart immediately (zero clicks). Without it, the bundle is staged and applies on the next cold start. |
 | `-m "first hot fix"` | A human-readable message stored on the bundle. Your app can show this in a "what's new" dialog or in the SDK's forced-update overlay. |

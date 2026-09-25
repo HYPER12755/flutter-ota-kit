@@ -15,18 +15,23 @@ creds and command names for the others.
 ## 1. Install
 
 ```bash
-# Runtime SDK (the package your app depends on)
+# Runtime SDK — a single package with every backend built in
 flutter pub add flutter_ota_kit
 
 # CLI (builds patches + deploys to your backend)
 npm install -g @_nazmiforreal/flutter-ota
 
-flutter-ota --version
+flutter-ota --help
 ```
 
-**Troubleshoot:** if `flutter-ota` says "command not found", your
-`npm bin -g` isn't on `$PATH`. The `npm install` output prints the
-exact export line.
+> **One package.** As of v0.2.0 there are no separate
+> `flutter_ota_kit_supabase` / `_postgres` / `_cloudflare` / `_aws` /
+> `_pocketbase` packages — all five backends ship inside `flutter_ota_kit`.
+
+**Troubleshoot:** if `flutter-ota` says "command not found", your global npm
+bin dir isn't on `$PATH` (the `npm install` output prints the export line). The
+CLI needs the **Flutter SDK** available to build from source on first run
+(a prebuilt linux-x64 binary ships in the package).
 
 ---
 
@@ -105,7 +110,7 @@ flutter-ota migrate postgres
 # Cloudflare: prints wrangler commands
 flutter-ota migrate cloudflare
 
-# AWS: prints S3 + DynamoDB / RDS commands
+# AWS: no SQL migrations — the S3 bucket/prefix is created on first deploy
 flutter-ota migrate aws
 
 # PocketBase: downloads PB + installs schema
@@ -123,11 +128,14 @@ are wrong or the network blocked the connection.
 
 ```bash
 # 1. Build the release APK with secrets injected
-flutter build apk --release --target-platform android-x64 \
-  --dart-define-from-file=.env
+flutter build apk --release --dart-define-from-file=.env
 
-# 2. Pack the diff against the baseline (versionCode is from pubspec.yaml)
-flutter-ota build --name 1.0.1 --platform android --arch x86_64
+# 2. Pack the release APK into a device-ready patch.zip (all ABIs by default;
+#    --target-version-code is the versionCode of the APK users already have)
+flutter-ota build \
+  --apk build/app/outputs/flutter-apk/app-release.apk \
+  --version 1.0.1 \
+  --target-version-code 100
 
 # 3. Push to your backend
 export SUPABASE_SERVICE_ROLE_KEY=sb_secret_xxx   # CLI only

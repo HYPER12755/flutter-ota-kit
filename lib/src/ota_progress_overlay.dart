@@ -30,6 +30,10 @@ class OtaOverlayState {
   final List<LogLine> logs;
   final bool canRetry;
 
+  /// True once the patch is installed and the app is about to cold-restart.
+  /// Drives the final "restarting" phase label + the completed steps list.
+  final bool restarting;
+
   /// Which step index is currently active (0-based). Steps that are done
   /// get a check; the active step gets the braille spinner.
   final int activeStep;
@@ -53,6 +57,7 @@ class OtaOverlayState {
     this.totalBytes = 0,
     this.logs = const [],
     this.canRetry = false,
+    this.restarting = false,
     this.activeStep = 0,
   });
 
@@ -74,6 +79,7 @@ class OtaOverlayState {
     int? totalBytes,
     List<LogLine>? logs,
     bool? canRetry,
+    bool? restarting,
     int? activeStep,
   }) {
     return OtaOverlayState(
@@ -95,6 +101,7 @@ class OtaOverlayState {
       totalBytes: totalBytes ?? this.totalBytes,
       logs: logs ?? this.logs,
       canRetry: canRetry ?? this.canRetry,
+      restarting: restarting ?? this.restarting,
       activeStep: activeStep ?? this.activeStep,
     );
   }
@@ -341,14 +348,21 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
   // ── STEPS ─────────────────────────────────────────────────────────────
   Widget _stepsBlock(OtaOverlayState s) {
     final spinner = _braille[_spinnerIndex];
+    // When restarting, every step is complete. Otherwise the active index is
+    // clamped into range so an out-of-bounds activeStep can never leave the
+    // list looking stuck or skip the visible progression.
+    final int activeIndex = s.restarting
+        ? _stepLabels.length
+        : s.activeStep.clamp(0, _stepLabels.length - 1);
+
     return _panelBox(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: List.generate(_stepLabels.length, (i) {
-          final done = i < s.activeStep;
-          final active = i == s.activeStep && !s.hasError;
-          final failed = i == s.activeStep && s.hasError;
-          final pending = i > s.activeStep;
+          final done = i < activeIndex;
+          final active = i == activeIndex && !s.hasError && !s.restarting;
+          final failed = i == activeIndex && s.hasError;
+          final pending = i > activeIndex;
 
           final Color color = failed
               ? _C.red
@@ -366,13 +380,21 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
                       ? spinner
                       : '·';
 
-          final String status = failed
-              ? 'error'
-              : done
-                  ? 'done'
-                  : active
-                      ? _pct(s.fraction)
-                      : 'wait';
+          // Only the downloading step shows a percentage. Verify / install /
+          // finalize have no meaningful fraction, so they show a live "working"
+          // spinner instead of a frozen number — nothing looks hung.
+          final String status;
+          if (failed) {
+            status = 'error';
+          } else if (done) {
+            status = 'done';
+          } else if (active) {
+            final showPct = s.phase == PatchApplyPhase.downloading &&
+                s.fraction != null;
+            status = showPct ? _pct(s.fraction) : 'working $spinner';
+          } else {
+            status = 'wait';
+          }
 
           return Padding(
             padding: const EdgeInsets.symmetric(vertical: 3),
@@ -415,11 +437,6 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
 
   // ── PROGRESS ──────────────────────────────────────────────────────────
   Widget _progressBlock(OtaOverlayState s) {
-    const total = 34;
-    final frac = (s.fraction ?? 0).clamp(0.0, 1.0);
-    final filled = (frac * total).round();
-    final bar = '${'█' * filled}${'░' * (total - filled)}';
-
     final speed = (s.bytesPerSec != null && s.bytesPerSec! > 0)
         ? '${(s.bytesPerSec! / 1048576).toStringAsFixed(1)} MB/s'
         : '—';
@@ -428,31 +445,54 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
         s.bytesPerSec! > 0 &&
         s.totalBytes > s.bytesReceived) {
       final secs = ((s.totalBytes - s.bytesReceived) / s.bytesPerSec!).ceil();
-      eta = '${secs}s';
+      eta = secs >= 60 ? '${(secs / 60).ceil()}m' : '${secs}s';
     }
     final phase = s.hasError
         ? 'halted'
-        : (s.phase?.name ?? 'preparing');
+        : (s.restarting ? 'restarting' : (s.phase?.name ?? 'preparing'));
+
+    // A determinate fraction is only meaningful while downloading with a known
+    // Content-Length. Verifying / finalizing / unknown-size downloads render an
+    // indeterminate (sliding) bar so nothing ever looks stuck at 0%.
+    final bool determinate = !s.hasError &&
+        s.phase == PatchApplyPhase.downloading &&
+        s.fraction != null;
+    final double? frac = s.hasError
+        ? (s.fraction ?? 0)
+        : (determinate ? s.fraction : null);
 
     return _panelBox(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          RichText(
-            text: TextSpan(
-              style: const TextStyle(fontFamily: _mono, fontSize: 13),
-              children: [
-                TextSpan(
-                    text: bar,
-                    style: TextStyle(color: s.hasError ? _C.red : _C.blue)),
-                TextSpan(
-                    text: '  ${_pct(s.fraction)}',
-                    style: const TextStyle(
-                        color: _C.text, fontWeight: FontWeight.w700)),
-              ],
-            ),
+          Row(
+            children: [
+              // The bar is a real widget (never wraps), and animates smoothly
+              // between values instead of snapping.
+              Expanded(
+                child: _ProgressBar(
+                  fraction: frac,
+                  color: s.hasError ? _C.red : _C.blue,
+                ),
+              ),
+              const SizedBox(width: 10),
+              SizedBox(
+                width: 44,
+                child: Text(
+                  determinate ? _pct(s.fraction) : '',
+                  textAlign: TextAlign.right,
+                  style: const TextStyle(
+                    fontFamily: _mono,
+                    fontSize: 13,
+                    color: _C.text,
+                    fontWeight: FontWeight.w700,
+                    fontFeatures: [FontFeature.tabularFigures()],
+                  ),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 12),
           Row(
             children: [
               _stat('speed', speed),
@@ -604,6 +644,133 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
       );
 }
 
+/// A single-line progress bar that never wraps.
+///
+/// - When [fraction] is non-null it's a determinate bar that animates smoothly
+///   between values (no snapping / jumping).
+/// - When [fraction] is null it's an indeterminate sliding bar, so
+///   verify/install/finalize (which have no meaningful percentage) never look
+///   frozen at 0%.
+///
+/// It's a real painted widget with a fixed height inside an [Expanded], so it
+/// always stays on one line regardless of width — unlike the old
+/// character-string bar, which wrapped when it didn't fit.
+class _ProgressBar extends StatefulWidget {
+  final double? fraction;
+  final Color color;
+
+  const _ProgressBar({required this.fraction, required this.color});
+
+  @override
+  State<_ProgressBar> createState() => _ProgressBarState();
+}
+
+class _ProgressBarState extends State<_ProgressBar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _indeterminate = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
+
+  // Smoothed determinate value so the bar eases toward the target instead of
+  // snapping. Monotonic — it never visually goes backwards.
+  double _shown = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _shown = widget.fraction ?? 0;
+    if (widget.fraction == null) _indeterminate.repeat();
+  }
+
+  @override
+  void didUpdateWidget(covariant _ProgressBar old) {
+    super.didUpdateWidget(old);
+    if (widget.fraction == null) {
+      if (!_indeterminate.isAnimating) _indeterminate.repeat();
+    } else {
+      if (_indeterminate.isAnimating) _indeterminate.stop();
+      final target = widget.fraction!.clamp(0.0, 1.0);
+      if (target >= _shown) _shown = target; // forward-only
+    }
+  }
+
+  @override
+  void dispose() {
+    _indeterminate.dispose();
+    super.dispose();
+  }
+
+  static const _height = 8.0;
+  static const _track = Color(0xFF161C24);
+
+  @override
+  Widget build(BuildContext context) {
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(99),
+      child: SizedBox(
+        height: _height,
+        child: ColoredBox(
+          color: _track,
+          child: widget.fraction == null
+              ? _indeterminateBar()
+              : _determinateBar(),
+        ),
+      ),
+    );
+  }
+
+  Widget _determinateBar() {
+    return LayoutBuilder(
+      builder: (context, c) => TweenAnimationBuilder<double>(
+        // Ease toward the smoothed target; short duration keeps it responsive
+        // but never snappy.
+        tween: Tween(end: _shown),
+        duration: const Duration(milliseconds: 400),
+        curve: Curves.easeOut,
+        builder: (context, v, _) => Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            width: (c.maxWidth * v.clamp(0.0, 1.0)),
+            decoration: BoxDecoration(
+              color: widget.color,
+              borderRadius: BorderRadius.circular(99),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _indeterminateBar() {
+    return LayoutBuilder(
+      builder: (context, c) => AnimatedBuilder(
+        animation: _indeterminate,
+        builder: (context, _) {
+          const segment = 0.35; // 35% wide moving segment
+          final t = _indeterminate.value; // 0..1
+          final left = (t * (1 + segment)) - segment; // slides in from the left
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Padding(
+              padding: EdgeInsets.only(
+                left: (left.clamp(0.0, 1.0)) * c.maxWidth,
+              ),
+              child: Container(
+                width: segment * c.maxWidth,
+                decoration: BoxDecoration(
+                  color: widget.color,
+                  borderRadius: BorderRadius.circular(99),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
 /// Scrollable terminal log view — auto-scrolls to bottom on new lines.
 ///
 /// A line whose text has a leading token followed by 2+ spaces is rendered
@@ -706,6 +873,10 @@ class OtaOverlayManager {
   int _lastBytes = 0;
   DateTime? _lastBytesAt;
 
+  /// Last 10%-bucket we emitted a "download NN%" log line for, to throttle the
+  /// feed. -1 = none yet.
+  int _lastLoggedPctBucket = -1;
+
   OverlayState? Function()? _resolver;
 
   /// Minimum time the overlay stays visible (7 seconds).
@@ -742,6 +913,7 @@ class OtaOverlayManager {
     _startTime = DateTime.now();
     _lastBytes = 0;
     _lastBytesAt = null;
+    _lastLoggedPctBucket = -1;
 
     final logs = <LogLine>[
       if (channel != null) LogLine('gray', 'channel  $channel'),
@@ -775,9 +947,13 @@ class OtaOverlayManager {
   void _log(String color, String text) {
     if (_disposed) return;
     final current = _state.value;
-    _state.value = current.copyWith(
-      logs: [...current.logs, LogLine(color, text)],
-    );
+    final next = [...current.logs, LogLine(color, text)];
+    // Cap the feed so a long session can't grow it without bound.
+    const maxLines = 200;
+    final capped = next.length > maxLines
+        ? next.sublist(next.length - maxLines)
+        : next;
+    _state.value = current.copyWith(logs: capped);
   }
 
   /// Map phase to step index.
@@ -802,24 +978,37 @@ class OtaOverlayManager {
         ? '${(pct.clamp(0.0, 1.0) * 100).toStringAsFixed(0)}%'
         : '';
 
-    final newStep = _phaseToStep(progress.phase);
+    // Step index derived from phase, but forced to move only forward so an
+    // out-of-order or duplicate native event can never make the steps jump
+    // backwards or flicker.
+    final phaseStep = _phaseToStep(progress.phase);
+    final newStep = phaseStep < s.activeStep ? s.activeStep : phaseStep;
 
-    // Compute download speed from byte deltas.
+    // Compute a smoothed download speed from byte deltas. A single sample can
+    // spike wildly (buffered reads), so we blend with the previous value.
     int? bytesPerSec = s.bytesPerSec;
     if (progress.phase == PatchApplyPhase.downloading &&
         progress.bytesReceived > 0) {
       final now = DateTime.now();
       if (_lastBytesAt != null && progress.bytesReceived > _lastBytes) {
         final dt = now.difference(_lastBytesAt!).inMilliseconds / 1000.0;
-        if (dt > 0) {
-          bytesPerSec = ((progress.bytesReceived - _lastBytes) / dt).round();
+        if (dt > 0.05) {
+          final sample =
+              ((progress.bytesReceived - _lastBytes) / dt).round();
+          // Exponential moving average → the speed/ETA read-out stops jumping.
+          bytesPerSec = bytesPerSec == null || bytesPerSec == 0
+              ? sample
+              : (bytesPerSec * 0.6 + sample * 0.4).round();
+          _lastBytes = progress.bytesReceived;
+          _lastBytesAt = now;
         }
+      } else {
+        _lastBytes = progress.bytesReceived;
+        _lastBytesAt = now;
       }
-      _lastBytes = progress.bytesReceived;
-      _lastBytesAt = now;
     }
 
-    // Log phase transitions with staggered delays.
+    // Log phase transitions once, with staggered detail lines.
     if (s.phase != progress.phase) {
       switch (progress.phase) {
         case PatchApplyPhase.downloading:
@@ -841,12 +1030,17 @@ class OtaOverlayManager {
       }
     }
 
-    // Log download progress with size.
+    // Throttle the "download NN%" log so a fast download doesn't spam dozens of
+    // lines (which made the feed scroll frantically). One line per ~10%.
     if (progress.phase == PatchApplyPhase.downloading &&
         pctText.isNotEmpty &&
         progress.totalBytes > 0) {
-      final sizeMB = (progress.totalBytes / 1048576).toStringAsFixed(1);
-      _log('gray', 'download ${sizeMB}MB  $pctText');
+      final bucket = ((progress.fraction ?? 0) * 10).floor();
+      if (bucket != _lastLoggedPctBucket) {
+        _lastLoggedPctBucket = bucket;
+        final sizeMB = (progress.totalBytes / 1048576).toStringAsFixed(1);
+        _log('gray', 'download ${sizeMB}MB  $pctText');
+      }
     }
 
     _state.value = _state.value.copyWith(
@@ -884,11 +1078,16 @@ class OtaOverlayManager {
     final remaining = _minDuration - elapsed;
     final delay = remaining.isNegative ? Duration.zero : remaining;
 
+    // On success mark ALL steps complete + flag restarting, so the steps list
+    // finishes cleanly (every ✓, phase = "restarting") instead of freezing on
+    // whatever step the last native progress event happened to leave active.
     _state.value = _state.value.copyWith(
       hasError: hasError,
       errorText: errorText,
       canRetry: hasError,
-      activeStep: hasError ? _state.value.activeStep : 4,
+      restarting: !hasError,
+      fraction: hasError ? null : 1.0,
+      activeStep: hasError ? _state.value.activeStep : _stepLabels.length,
     );
 
     final entry = _entry;
