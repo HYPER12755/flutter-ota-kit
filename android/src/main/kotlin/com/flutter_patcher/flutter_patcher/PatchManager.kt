@@ -613,14 +613,22 @@ internal class PatchManager(
     }
 
     private fun extractBaseAssetsIfNeeded(): Int {
-        // Extract base APK assets to assets/0/ if not already done
+        // Store the base APK's flutter_assets as a single archive for rollback.
+        // We keep ONLY the compressed archive (not an uncompressed mirror dir):
+        // the previous implementation left both `assets/0/` (uncompressed) AND
+        // `assets/0/flutter_assets.apk` (zip) on disk — two full copies of every
+        // bundled asset. The uncompressed copy is never read (rollback re-extracts
+        // from the archive), so it was pure waste.
         if (!baseAssetsArchive.exists()) {
             baseAssetsArchive.parentFile?.mkdirs()
+            val tmp = File(assetsHistoryDir, "0.tmp")
             try {
-                copyInstalledFlutterAssets(File(assetsHistoryDir, "0"))
-                writeFlutterAssetsArchive(File(assetsHistoryDir, "0"), baseAssetsArchive)
+                copyInstalledFlutterAssets(tmp)
+                writeFlutterAssetsArchive(tmp, baseAssetsArchive)
             } catch (e: Exception) {
                 Log.w(TAG, "failed to extract base assets", e)
+            } finally {
+                tmp.deleteRecursively()
             }
         }
         return 0
@@ -998,8 +1006,19 @@ internal class PatchManager(
                 meta.put("assetsRef", assetsRef)
                 archiveCurrentPatchToHistory(meta)
             } else {
-                // First patch ever - extract base assets
-                assetsRef = extractBaseAssetsIfNeeded()
+                // First patch ever.
+                //
+                // Only extract the base APK's flutter_assets (as a rollback
+                // reference) when this patch actually ships assets. A Dart-only
+                // (code-only) patch never overlays assets, so extracting the
+                // whole base asset tree here is pure waste — it was the main
+                // cause of a first code-patch ballooning app storage by 100s of
+                // MB. Code-only patches load assets straight from the APK.
+                assetsRef = if (finalAssets != null) {
+                    extractBaseAssetsIfNeeded()
+                } else {
+                    0
+                }
                 meta.put("assetsRef", assetsRef)
             }
 

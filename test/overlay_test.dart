@@ -120,8 +120,6 @@ void main() {
       expect(find.text('RUNNING'), findsNothing);
       // Failed step status chip.
       expect(find.text('error'), findsOneWidget);
-      // Progress "phase" stat halts.
-      expect(find.text('halted'), findsOneWidget);
       // Footer hint.
       expect(find.text('Close the app and reopen to retry.'), findsOneWidget);
     });
@@ -169,8 +167,7 @@ void main() {
       expect(_hasText(tester, 'md5 match'), isTrue);
     });
 
-    testWidgets('restarting state completes every step + shows restarting phase',
-        (tester) async {
+    testWidgets('restarting state completes every step', (tester) async {
       final state = ValueNotifier(
         const OtaOverlayState(
           phase: PatchApplyPhase.finalizing,
@@ -183,14 +180,12 @@ void main() {
       );
       await _pump(tester, state: state);
 
-      // No step is left "working"/"wait" — all are done.
+      // No step is left "working…"/"wait" — all are done.
       expect(find.text('wait'), findsNothing);
-      expect(find.text('working'), findsNothing);
-      // Phase stat reads "restarting".
-      expect(find.text('restarting'), findsOneWidget);
+      expect(find.text('working…'), findsNothing);
     });
 
-    testWidgets('non-download active phase shows a working spinner, not a %',
+    testWidgets('non-download active phase shows working…, not a %',
         (tester) async {
       final state = ValueNotifier(
         const OtaOverlayState(
@@ -202,6 +197,7 @@ void main() {
 
       // The active verify step must not display a frozen "0%".
       expect(find.text('0%'), findsNothing);
+      expect(find.text('working…'), findsOneWidget);
     });
 
     testWidgets('out-of-range activeStep never throws / clamps into the list',

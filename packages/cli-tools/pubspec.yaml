@@ -22,7 +22,7 @@ dependencies:
   # merged `flutter_ota_kit` package under lib/src/pkg/. The CLI depends on the
   # single package instead of eight. NOTE: `flutter_ota_kit` is a Flutter plugin,
   # so building the CLI now requires the Flutter SDK (not just the Dart SDK).
-  flutter_ota_kit: ^0.2.1
+  flutter_ota_kit: ^0.2.2
   http: ^1.2.0
   shelf: ^1.4.0
 

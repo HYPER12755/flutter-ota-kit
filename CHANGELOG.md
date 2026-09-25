@@ -1,3 +1,25 @@
+## 0.2.2
+
+### Fixed
+
+- **App storage ballooning after the first patch (100s of MB).** A first
+  code-only (Dart-only) patch was extracting the base APK's entire
+  `flutter_assets/` tree even though a code patch never overlays assets. That
+  extraction is now skipped for Dart-only patches. Additionally,
+  `extractBaseAssetsIfNeeded` no longer leaves an uncompressed mirror of the
+  asset tree on disk alongside its zip — it keeps only the compressed archive
+  (extracted to a temp dir that is deleted), removing a full duplicate copy of
+  every bundled asset.
+
+- **Forced-update overlay polish.** Removed the `speed / eta / phase` stat row:
+  the ETA was derived from a jittery byte-rate and was often wrong, and "phase"
+  duplicated the STEPS list (the "phases jumping at the bottom"). Removed the
+  progress bar's indeterminate sliding animation that ran after the download
+  completed (the line that moved side-to-side during verify/install). The bar is
+  now purely determinate — it fills during download and rests at 100% through
+  verify/install/finalize. Active non-download steps show a steady "working…"
+  instead of a spinning glyph in the status column.
+
 ## 0.2.1
 
 ### Fixed
