@@ -10,14 +10,28 @@ SRC="$ROOT"
 echo "Vendoring Dart source from $SRC into $DST"
 
 rm -rf "$DST"
-mkdir -p "$DST/packages" "$DST/plugins"
+mkdir -p "$DST/packages"
 
-for p in packages/core packages/cli-tools; do
-  cp -R "$SRC/$p" "$DST/$p"
+# Single-package layout (v0.2.0+): the former sub-packages (core, plugin-core,
+# client, and the supabase/postgres/cloudflare/aws/pocketbase backends) now live
+# INSIDE the root `flutter_ota_kit` package under lib/src/pkg/. So we only vendor
+# the root package + the CLI. The CLI depends on the root via a path override.
+#
+# We copy the root package's publishable pieces (lib, android, pubspec, etc.)
+# and the CLI. `example/` and build artifacts are dropped.
+mkdir -p "$DST/root"
+for item in lib android bin pubspec.yaml analysis_options.yaml LICENSE README.md; do
+  [ -e "$SRC/$item" ] && cp -R "$SRC/$item" "$DST/root/$item"
 done
-for p in plugins/cloudflare plugins/plugin-core plugins/postgres plugins/aws plugins/supabase plugins/pocketbase; do
-  cp -R "$SRC/$p" "$DST/$p"
-done
+cp -R "$SRC/packages/cli-tools" "$DST/packages/cli-tools"
+
+# Repoint the CLI's `flutter_ota_kit` path override at the vendored root copy.
+CLI_PUBSPEC="$DST/packages/cli-tools/pubspec.yaml"
+if [ -f "$CLI_PUBSPEC" ]; then
+  # dependency_overrides -> flutter_ota_kit -> path: ../.. becomes ../../root
+  perl -0pi -e 's{(flutter_ota_kit:\s*\n\s*path:\s*)\.\.\/\.\.}{${1}../../root}g' "$CLI_PUBSPEC" 2>/dev/null || \
+    sed -i 's|path: \.\./\.\.|path: ../../root|' "$CLI_PUBSPEC"
+fi
 
 # Drop tooling/lock artifacts so `dart pub get` resolves fresh on install.
 find "$DST" -name pubspec.lock -delete
@@ -26,7 +40,8 @@ find "$DST" -name build -type d -prune -exec rm -rf {} +
 find "$DST" -name .git -type d -prune -exec rm -rf {} +
 find "$DST" -name coverage -type d -prune -exec rm -rf {} +
 
-# Sync migration SQL files so the binary can find them at ../migrations/<backend>/
+# Sync migration SQL files so the binary can find them at ../migrations/<backend>/.
+# The SQL/DDL data still lives in the (non-Dart) plugins/* data dirs in the repo.
 MIG_DST="$(cd "$(dirname "$0")/.." && pwd)/migrations"
 rm -rf "$MIG_DST"
 

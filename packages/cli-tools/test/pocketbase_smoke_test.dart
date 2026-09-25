@@ -1,4 +1,4 @@
-import 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart';
+import 'package:flutter_ota_kit/src/pkg/pocketbase/flutter_ota_kit_pocketbase.dart';
 import 'package:test/test.dart';
 
 import 'mocks/mock_pocketbase_client.dart' as pb;

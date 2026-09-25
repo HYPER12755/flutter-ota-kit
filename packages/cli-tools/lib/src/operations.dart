@@ -2,8 +2,8 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:crypto/crypto.dart';
-import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart';
-import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart';
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart';
+import 'package:flutter_ota_kit/src/pkg/plugin_core/flutter_ota_kit_plugin_core.dart';
 
 import 'backend.dart';
 import 'sign.dart';

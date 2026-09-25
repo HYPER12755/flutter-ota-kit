@@ -1,13 +1,13 @@
 import 'dart:convert';
 import 'dart:io';
 
-import 'package:flutter_ota_kit_aws/flutter_ota_kit_aws.dart';
+import 'package:flutter_ota_kit/src/pkg/aws/flutter_ota_kit_aws.dart';
 import 'package:postgres/postgres.dart';
-import 'package:flutter_ota_kit_cloudflare/flutter_ota_kit_cloudflare.dart';
-import 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart';
-import 'package:flutter_ota_kit_postgres/flutter_ota_kit_postgres.dart';
+import 'package:flutter_ota_kit/src/pkg/cloudflare/flutter_ota_kit_cloudflare.dart';
+import 'package:flutter_ota_kit/src/pkg/pocketbase/flutter_ota_kit_pocketbase.dart';
+import 'package:flutter_ota_kit/src/pkg/postgres/flutter_ota_kit_postgres.dart';
 
-import 'package:flutter_ota_kit_supabase/flutter_ota_kit_supabase.dart';
+import 'package:flutter_ota_kit/src/pkg/supabase/flutter_ota_kit_supabase.dart';
 import 'package:path/path.dart' as p;
 
 /// Resolved configuration for the flutter_ota_kit CLI.

@@ -1,6 +1,6 @@
 import 'dart:io';
 
-import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart';
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart';
 
 import '../backend.dart';
 import '../cli_base.dart';

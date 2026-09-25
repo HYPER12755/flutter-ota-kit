@@ -8,6 +8,7 @@ publish_to: none
 
 environment:
   sdk: '>=3.13.2 <4.0.0'
+  flutter: '>=3.47.2'
 
 dependencies:
   args: '>=2.4.0 <3.0.0'
@@ -17,13 +18,11 @@ dependencies:
   collection: ^1.18.0
   cryptography: ^2.7.0
   postgres: ^3.4.0
-  flutter_ota_kit_core: ^0.1.6
-  flutter_ota_kit_plugin_core: ^0.0.8
-  flutter_ota_kit_supabase: ^0.1.8
-  flutter_ota_kit_postgres: ^0.1.7
-  flutter_ota_kit_cloudflare: ^0.1.7
-  flutter_ota_kit_aws: ^0.1.7
-  flutter_ota_kit_pocketbase: ^0.1.4
+  # All former sub-packages (core, plugin-core, backends) now live inside the
+  # merged `flutter_ota_kit` package under lib/src/pkg/. The CLI depends on the
+  # single package instead of eight. NOTE: `flutter_ota_kit` is a Flutter plugin,
+  # so building the CLI now requires the Flutter SDK (not just the Dart SDK).
+  flutter_ota_kit: ^0.2.0
   http: ^1.2.0
   shelf: ^1.4.0
 
@@ -31,17 +30,5 @@ dev_dependencies:
   test: ^1.25.0
 
 dependency_overrides:
-  flutter_ota_kit_core:
-    path: ../core
-  flutter_ota_kit_plugin_core:
-    path: ../../plugins/plugin-core
-  flutter_ota_kit_supabase:
-    path: ../../plugins/supabase
-  flutter_ota_kit_postgres:
-    path: ../../plugins/postgres
-  flutter_ota_kit_cloudflare:
-    path: ../../plugins/cloudflare
-  flutter_ota_kit_aws:
-    path: ../../plugins/aws
-  flutter_ota_kit_pocketbase:
-    path: ../../plugins/pocketbase
+  flutter_ota_kit:
+    path: ../..

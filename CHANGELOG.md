@@ -1,4 +1,20 @@
-## Unreleased
+## 0.2.0
+
+### Changed
+
+- **Single-package consolidation (BREAKING for direct sub-package imports).**
+  The former sub-packages `flutter_ota_kit_core`, `flutter_ota_kit_plugin_core`,
+  `flutter_ota_kit_client`, and the `flutter_ota_kit_{supabase,postgres,
+  cloudflare,aws,pocketbase}` backends are now bundled directly inside
+  `flutter_ota_kit` (under `lib/src/pkg/`). Depend on the single `flutter_ota_kit`
+  package — the separate `flutter_ota_kit_*` packages are no longer required.
+  The public API (`FlutterPatcher`, `configureSupabase/Postgres/Cloudflare/Aws/
+  PocketBase`, overlay, etc.) is unchanged; only code that imported the internal
+  `package:flutter_ota_kit_<x>/...` libraries directly must switch to
+  `package:flutter_ota_kit/flutter_ota_kit.dart`.
+- The CLI (`flutter_ota_kit_cli`, shipped via the `flutter-ota` npm wrapper) now
+  depends on the merged `flutter_ota_kit` package and therefore requires the
+  Flutter SDK to build from source (previously Dart-only).
 
 ### Fixed
 

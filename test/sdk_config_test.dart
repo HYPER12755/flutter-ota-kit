@@ -3,9 +3,9 @@
 import 'dart:async';
 
 import 'package:flutter_ota_kit/flutter_ota_kit.dart';
-import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart'
     show Bundle, GetBundlesArgs, Platform, UpdateInfo, UpdateStrategy;
-import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
+import 'package:flutter_ota_kit/src/pkg/plugin_core/flutter_ota_kit_plugin_core.dart'
     show
         DatabaseBundleQueryOptions,
         DatabasePlugin,

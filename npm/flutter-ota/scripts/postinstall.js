@@ -4,13 +4,15 @@
 // Post-install: ensure a runnable flutter-ota binary exists next to the
 // launcher for the current platform+arch. If a prebuilt
 // `flutter-ota-<os>-<arch>` binary ships in `bin/`, use it. Otherwise, when
-// the Dart SDK is present, compile one from the bundled Dart source so the
+// the Flutter SDK is present, compile one from the bundled Dart source so the
 // package works on architectures we did not prebuild (e.g. arm64).
 //
-// We explicitly run `dart pub get` first so dependency resolution is reliable
-// (a stale/locked tree would otherwise fail to fetch packages). If compilation
-// cannot be performed we warn (and exit 0) rather than failing the whole npm
-// install — the launcher prints a clear "how to build" message at runtime.
+// NOTE (v0.2.0+): the CLI now depends on the merged `flutter_ota_kit` package,
+// which is a Flutter plugin. Dependency resolution therefore needs the Flutter
+// SDK (`flutter pub get`), not just the Dart SDK. The compiled executable
+// itself is still a plain Dart binary (the CLI only touches the pure-Dart
+// backend code, not Flutter widgets). If Flutter is unavailable we warn and
+// exit 0 rather than failing the whole npm install.
 
 const { spawnSync } = require('child_process');
 const fs = require('fs');
@@ -50,11 +52,13 @@ if (fs.existsSync(target)) {
 }
 
 const dartCheck = spawnSync('dart', ['--version'], { stdio: 'ignore' });
-if (dartCheck.status !== 0) {
+const flutterCheck = spawnSync('flutter', ['--version'], { stdio: 'ignore' });
+if (dartCheck.status !== 0 || flutterCheck.status !== 0) {
   console.warn(
-    `flutter-ota: Dart SDK not found; skipping build. Provide a prebuilt ` +
+    `flutter-ota: Flutter SDK not found; skipping build. Provide a prebuilt ` +
       `binary (bin/flutter-ota-${platformName}-${archName}${ext}) or install ` +
-      'the Dart SDK (https://dart.dev).',
+      'the Flutter SDK (https://flutter.dev). The CLI depends on the ' +
+      '`flutter_ota_kit` Flutter package, so `flutter pub get` is required.',
   );
   process.exit(0);
 }
@@ -64,13 +68,13 @@ if (!fs.existsSync(path.join(cliDir, 'pubspec.yaml'))) {
   process.exit(0);
 }
 
-console.log('flutter-ota: resolving Dart dependencies (dart pub get)...');
-const getRes = spawnSync('dart', ['pub', 'get'], { stdio: 'inherit', cwd: cliDir });
+console.log('flutter-ota: resolving dependencies (flutter pub get)...');
+const getRes = spawnSync('flutter', ['pub', 'get'], { stdio: 'inherit', cwd: cliDir });
 if (getRes.status !== 0) {
   console.error(
-    'flutter-ota: `dart pub get` failed (check your network / Dart version). ' +
-      `To build manually:\n  cd ${cliDir} && dart compile exe bin/flutter_ota_kit.dart ` +
-      `-o ${target}`,
+    'flutter-ota: `flutter pub get` failed (check your network / Flutter version). ' +
+      `To build manually:\n  cd ${cliDir} && flutter pub get && dart compile exe ` +
+      `bin/flutter_ota_kit.dart -o ${target}`,
   );
   process.exit(0);
 }

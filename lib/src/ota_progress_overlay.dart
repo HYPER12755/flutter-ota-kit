@@ -1,7 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
-import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart'
     show PatchApplyPhase, PatchApplyProgress;
 
 /// Snapshot of the forced-update progress overlay's visual state.

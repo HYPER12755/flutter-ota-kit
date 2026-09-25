@@ -1,5 +1,5 @@
 import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
-import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart';
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart';
 
 import '../ui/ui.dart';
 

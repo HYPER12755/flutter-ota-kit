@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ota_kit/flutter_ota_kit.dart';
-import 'chat_list_screen.dart';
-import 'game_screen.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

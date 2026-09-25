@@ -22,7 +22,7 @@ export 'src/util.dart';
 
 // Re-export the PocketBase client so CLI commands can probe PB health
 // without pulling the plugin in separately.
-export 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart'
+export 'package:flutter_ota_kit/src/pkg/pocketbase/flutter_ota_kit_pocketbase.dart'
     show PocketBaseClient;
 
 export 'src/commands/init.dart';

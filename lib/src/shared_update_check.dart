@@ -1,6 +1,6 @@
 import 'dart:async';
 
-import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart'
     show
         AppUpdateStatus,
         AppVersionGetBundlesArgs,
@@ -10,9 +10,9 @@ import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
         Platform,
         UpdateInfo,
         UpdateStrategy;
-import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
+import 'package:flutter_ota_kit/src/pkg/client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
-import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart'
+import 'package:flutter_ota_kit/src/pkg/plugin_core/flutter_ota_kit_plugin_core.dart'
     show DatabasePlugin, StoragePlugin;
 
 import 'patch_info.dart' show PatchInfo;

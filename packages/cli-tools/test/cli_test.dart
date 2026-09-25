@@ -2,7 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
-import 'package:flutter_ota_kit_supabase/src/supabase_client_adapter.dart';
+import 'package:flutter_ota_kit/src/pkg/supabase/src/supabase_client_adapter.dart';
 import 'package:path/path.dart' as p;
 import 'package:test/test.dart';
 

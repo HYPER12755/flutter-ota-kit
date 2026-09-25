@@ -1,9 +1,9 @@
 import 'dart:io';
 
-import 'package:flutter_ota_kit_aws/flutter_ota_kit_aws.dart';
+import 'package:flutter_ota_kit/src/pkg/aws/flutter_ota_kit_aws.dart';
 import 'package:flutter_ota_kit_cli/flutter_ota_kit_cli.dart';
-import 'package:flutter_ota_kit_cloudflare/flutter_ota_kit_cloudflare.dart';
-import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart';
+import 'package:flutter_ota_kit/src/pkg/cloudflare/flutter_ota_kit_cloudflare.dart';
+import 'package:flutter_ota_kit/src/pkg/plugin_core/flutter_ota_kit_plugin_core.dart';
 import 'package:test/test.dart';
 
 import 'mocks/mock_aws_s3_client.dart' as aws;

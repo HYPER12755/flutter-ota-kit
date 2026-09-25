@@ -6,7 +6,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:args/args.dart';
-import 'package:flutter_ota_kit_pocketbase/flutter_ota_kit_pocketbase.dart';
+import 'package:flutter_ota_kit/src/pkg/pocketbase/flutter_ota_kit_pocketbase.dart';
 import 'package:path/path.dart' as p;
 
 import '../cli_base.dart';

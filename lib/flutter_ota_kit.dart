@@ -13,7 +13,7 @@ import 'src/patcher_channel.dart';
 import 'src/ota_progress_overlay.dart' show OtaOverlayManager;
 import 'src/flutter_ota_app.dart' show FlutterPatcherShowUpdateUiBinding;
 
-import 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart'
+import 'package:flutter_ota_kit/src/pkg/client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
 
 import 'src/supabase_update_source.dart'
@@ -26,7 +26,7 @@ import 'src/aws_update_source.dart' show AwsUpdateConfig, AwsUpdateSource;
 import 'src/pocketbase_update_source.dart'
     show PocketBaseUpdateConfig, PocketBaseUpdateSource;
 
-import 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart'
     show Platform, UpdateStrategy, AppUpdateStatus;
 
 export 'src/blacklist.dart';
@@ -51,8 +51,8 @@ export 'src/ota_progress_overlay.dart'
         OtaOverlayHandle,
         LogLine;
 
-export 'package:flutter_ota_kit_client/flutter_ota_kit_client.dart';
-export 'package:flutter_ota_kit_core/flutter_ota_kit_core.dart'
+export 'package:flutter_ota_kit/src/pkg/client/flutter_ota_kit_client.dart';
+export 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart'
     show Platform, UpdateStrategy, AppUpdateStatus;
 
 /// Outcome of [FlutterPatcher.rollbackToPrevious].

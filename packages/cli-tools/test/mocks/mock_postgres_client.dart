@@ -1,8 +1,8 @@
 import 'dart:typed_data';
 
-import 'package:flutter_ota_kit_plugin_core/flutter_ota_kit_plugin_core.dart';
+import 'package:flutter_ota_kit/src/pkg/plugin_core/flutter_ota_kit_plugin_core.dart';
 
-import 'package:flutter_ota_kit_postgres/flutter_ota_kit_postgres.dart';
+import 'package:flutter_ota_kit/src/pkg/postgres/flutter_ota_kit_postgres.dart';
 
 /// In-memory store backing [MockPostgresClient]. Mirrors the `bundles` and
 /// `bundle_patches` tables (snake_case row maps).
