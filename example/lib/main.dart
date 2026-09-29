@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_ota_kit/flutter_ota_kit.dart';
 
+import 'chat_list_screen.dart';
+import 'game_screen.dart';
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -170,11 +173,15 @@ class _HomePageState extends State<HomePage> {
       buf.writeln('No diagnostic recorded yet.');
     } else {
       buf.writeln('Status: ${diag.status.name}');
-      if (diag.patchVersion != null) buf.writeln('Patch v: ${diag.patchVersion}');
+      if (diag.patchVersion != null) {
+        buf.writeln('Patch v: ${diag.patchVersion}');
+      }
       if (diag.patchTargetVersionCode != null) {
         buf.writeln('Patch vc: ${diag.patchTargetVersionCode}');
       }
-      if (diag.appVersionCode != null) buf.writeln('App vc: ${diag.appVersionCode}');
+      if (diag.appVersionCode != null) {
+        buf.writeln('App vc: ${diag.appVersionCode}');
+      }
       if (diag.crashCount != null) buf.writeln('Crashes: ${diag.crashCount}');
       if (diag.message != null) buf.writeln('Message: ${diag.message}');
     }
@@ -202,7 +209,9 @@ class _HomePageState extends State<HomePage> {
               decoration: BoxDecoration(
                 color: Colors.deepPurple.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.deepPurple.withValues(alpha: 0.3)),
+                border: Border.all(
+                  color: Colors.deepPurple.withValues(alpha: 0.3),
+                ),
               ),
               child: const Text(
                 'OTA v1.0.2 — Purple theme active (v1.0.0)',
@@ -253,10 +262,7 @@ class _HomePageState extends State<HomePage> {
               child: const Text('Apply Update'),
             ),
             const SizedBox(height: 8),
-            OutlinedButton(
-              onPressed: _rollback,
-              child: const Text('Rollback'),
-            ),
+            OutlinedButton(onPressed: _rollback, child: const Text('Rollback')),
             const SizedBox(height: 8),
             OutlinedButton(
               onPressed: _showDiagnostics,
@@ -265,48 +271,50 @@ class _HomePageState extends State<HomePage> {
             const SizedBox(height: 24),
             const Divider(),
             const SizedBox(height: 8),
-            // Chat & Game buttons (hidden)
-            // Row(
-            //   children: [
-            //     Expanded(
-            //       child: FilledButton.icon(
-            //         onPressed: () {
-            //           Navigator.push(
-            //             context,
-            //             MaterialPageRoute(
-            //               builder: (_) => const ChatListScreen(),
-            //             ),
-            //           );
-            //         },
-            //         icon: const Icon(Icons.chat_bubble_outline),
-            //         label: const Text('Chat'),
-            //         style: FilledButton.styleFrom(
-            //           backgroundColor: Colors.deepPurple,
-            //           padding: const EdgeInsets.symmetric(vertical: 14),
-            //         ),
-            //       ),
-            //     ),
-            //     const SizedBox(width: 12),
-            //     Expanded(
-            //       child: FilledButton.icon(
-            //         onPressed: () {
-            //           Navigator.push(
-            //             context,
-            //             MaterialPageRoute(
-            //               builder: (_) => const GameScreen(),
-            //             ),
-            //           );
-            //         },
-            //         icon: const Icon(Icons.videogame_asset),
-            //         label: const Text('Game'),
-            //         style: FilledButton.styleFrom(
-            //           backgroundColor: Colors.deepPurple,
-            //           padding: const EdgeInsets.symmetric(vertical: 14),
-            //         ),
-            //       ),
-            //     ),
-            //   ],
-            // ),
+            const Text(
+              'OTA update 1.0.2 is live',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const ChatListScreen(),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.chat_bubble_outline),
+                    label: const Text('Chat'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: FilledButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (_) => const GameScreen()),
+                      );
+                    },
+                    icon: const Icon(Icons.videogame_asset),
+                    label: const Text('Snake Game'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ],
+            ),
           ],
         ),
       ),

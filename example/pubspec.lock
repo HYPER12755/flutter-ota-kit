@@ -5,10 +5,10 @@ packages:
     dependency: transitive
     description:
       name: archive
-      sha256: ace891da0862b0e4cabbb064ee3fd87b2728b898949fdb366d83fe98342c9f19
+      sha256: "6c5bcd986e06b94e3c40244af471750840a3d2341d1f9763a1100a14add517b4"
       url: "https://pub.dev"
     source: hosted
-    version: "4.2.0"
+    version: "4.3.0"
   args:
     dependency: transitive
     description:
@@ -156,7 +156,7 @@ packages:
       path: ".."
       relative: true
     source: path
-    version: "0.2.2"
+    version: "0.2.4"
   flutter_test:
     dependency: "direct dev"
     description: flutter
@@ -331,10 +331,10 @@ packages:
     dependency: transitive
     description:
       name: postgres
-      sha256: "123de5cbadc56a7e8d9fa485c780b6b56940b4081f4c74f3a5578682757c299b"
+      sha256: ff617b500da893a7bd66977b2185dc0ee52057aa9ddf1e225a37d67350a899e5
       url: "https://pub.dev"
     source: hosted
-    version: "3.5.12"
+    version: "3.5.17"
   postgrest:
     dependency: transitive
     description:
@@ -355,10 +355,10 @@ packages:
     dependency: transitive
     description:
       name: restart_app
-      sha256: "3ea6b790dd88d7d927ed4792f3c6dd68e2fdffcbb1bf4df6d19313702e2d6387"
+      sha256: b7ab4ec8e35ac5a716939bb3aee10c56d24e8b5c4798682b7aacb523f67c9367
       url: "https://pub.dev"
     source: hosted
-    version: "1.9.1"
+    version: "1.10.1"
   sky_engine:
     dependency: transitive
     description: flutter

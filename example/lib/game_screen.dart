@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:math';
+
 import 'package:flutter/material.dart';
 
 class GameScreen extends StatefulWidget {
@@ -9,9 +10,26 @@ class GameScreen extends StatefulWidget {
   State<GameScreen> createState() => _GameScreenState();
 }
 
+enum Difficulty {
+  easy(220, 99, 0),
+  normal(150, 3, 2),
+  hard(100, 2, 3);
+
+  const Difficulty(this.baseMs, this.obstacleFromLevel, this.blocksPerLevel);
+
+  final int baseMs;
+  final int obstacleFromLevel;
+  final int blocksPerLevel;
+}
+
 class _GameScreenState extends State<GameScreen> {
   static const int _gridSize = 20;
-  static const Duration _gameSpeed = Duration(milliseconds: 150);
+
+  Difficulty _difficulty = Difficulty.normal;
+  bool _wrapWalls = false;
+  bool _obstaclesEnabled = true;
+  int _level = 1;
+  Set<Offset> _obstacles = {};
 
   List<Offset> _snake = [const Offset(10, 10)];
   Offset _food = const Offset(5, 5);
@@ -38,10 +56,12 @@ class _GameScreenState extends State<GameScreen> {
 
   void _resetGame() {
     _snake = [const Offset(10, 10)];
+    _obstacles = {};
     _direction = Direction.right;
     _isPlaying = false;
     _isGameOver = false;
     _score = 0;
+    _level = 1;
     _timer?.cancel();
     _spawnFood();
   }
@@ -53,14 +73,35 @@ class _GameScreenState extends State<GameScreen> {
         _random.nextInt(_gridSize).toDouble(),
         _random.nextInt(_gridSize).toDouble(),
       );
-    } while (_snake.contains(newFood));
+    } while (_snake.contains(newFood) || _obstacles.contains(newFood));
     _food = newFood;
   }
+
+  void _addObstacles(int count) {
+    var placed = 0, guard = 0;
+    while (placed < count && guard++ < 500) {
+      final c = Offset(
+        _random.nextInt(_gridSize).toDouble(),
+        _random.nextInt(_gridSize).toDouble(),
+      );
+      if (!_snake.contains(c) && c != _food && !_obstacles.contains(c)) {
+        _obstacles.add(c);
+        placed++;
+      }
+    }
+  }
+
+  int get _currentSpeedMs => max(_difficulty.baseMs - (_level - 1) * 12, 60);
 
   void _startGame() {
     if (_isPlaying) return;
     _isPlaying = true;
-    _timer = Timer.periodic(_gameSpeed, (timer) {
+    _scheduleTick();
+  }
+
+  void _scheduleTick() {
+    _timer?.cancel();
+    _timer = Timer.periodic(Duration(milliseconds: _currentSpeedMs), (timer) {
       _moveSnake();
     });
   }
@@ -86,11 +127,18 @@ class _GameScreenState extends State<GameScreen> {
         newHead.dx >= _gridSize ||
         newHead.dy < 0 ||
         newHead.dy >= _gridSize) {
-      _gameOver();
-      return;
+      if (!_wrapWalls) {
+        _gameOver();
+        return;
+      }
+      newHead = Offset(
+        (newHead.dx + _gridSize) % _gridSize.toDouble(),
+        (newHead.dy + _gridSize) % _gridSize.toDouble(),
+      );
     }
 
-    if (_snake.contains(newHead)) {
+    if (_snake.contains(newHead) ||
+        (_obstaclesEnabled && _obstacles.contains(newHead))) {
       _gameOver();
       return;
     }
@@ -99,6 +147,25 @@ class _GameScreenState extends State<GameScreen> {
       _snake.insert(0, newHead);
       if (newHead == _food) {
         _score += 10;
+        final newLevel = 1 + _score ~/ 50;
+        if (newLevel > _level) {
+          _level = newLevel;
+          if (_obstaclesEnabled &&
+              _level >= _difficulty.obstacleFromLevel &&
+              _difficulty.blocksPerLevel > 0) {
+            _addObstacles(_difficulty.blocksPerLevel);
+          }
+          _scheduleTick();
+          ScaffoldMessenger.of(context)
+            ..clearSnackBars()
+            ..showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.floating,
+                duration: const Duration(milliseconds: 900),
+                content: Text('Level $_level — speed up!'),
+              ),
+            );
+        }
         _spawnFood();
       } else {
         _snake.removeLast();
@@ -148,6 +215,80 @@ class _GameScreenState extends State<GameScreen> {
     _swipeStart = null;
   }
 
+  Future<void> _showOptions() async {
+    await showModalBottomSheet<void>(
+      context: context,
+      backgroundColor: Colors.grey[850],
+      builder: (sheetContext) => StatefulBuilder(
+        builder: (context, setSheetState) => Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text(
+                'Game options',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Difficulty',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              const SizedBox(height: 6),
+              SegmentedButton<Difficulty>(
+                segments: const [
+                  ButtonSegment(value: Difficulty.easy, label: Text('Easy')),
+                  ButtonSegment(
+                    value: Difficulty.normal,
+                    label: Text('Normal'),
+                  ),
+                  ButtonSegment(value: Difficulty.hard, label: Text('Hard')),
+                ],
+                selected: {_difficulty},
+                onSelectionChanged: (sel) {
+                  setSheetState(() => _difficulty = sel.first);
+                  if (_isPlaying) _scheduleTick();
+                },
+              ),
+              const SizedBox(height: 10),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Wrap walls',
+                  style: TextStyle(color: Colors.white),
+                ),
+                subtitle: const Text(
+                  'Slide through edges instead of dying',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+                value: _wrapWalls,
+                onChanged: (v) => setSheetState(() => _wrapWalls = v),
+              ),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                title: const Text(
+                  'Obstacles',
+                  style: TextStyle(color: Colors.white),
+                ),
+                subtitle: const Text(
+                  'Blocks appear as you level up',
+                  style: TextStyle(color: Colors.white38, fontSize: 12),
+                ),
+                value: _obstaclesEnabled,
+                onChanged: (v) => setSheetState(() => _obstaclesEnabled = v),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -163,9 +304,24 @@ class _GameScreenState extends State<GameScreen> {
           onPressed: () => Navigator.pop(context),
         ),
         actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 8),
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            decoration: BoxDecoration(
+              color: Colors.orange.withValues(alpha: 0.2),
+              borderRadius: BorderRadius.circular(6),
+            ),
+            child: Text(
+              'LV $_level',
+              style: const TextStyle(
+                color: Colors.orangeAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
           Center(
             child: Padding(
-              padding: const EdgeInsets.only(right: 16),
+              padding: const EdgeInsets.only(right: 4),
               child: Text(
                 'Score: $_score',
                 style: const TextStyle(
@@ -175,6 +331,11 @@ class _GameScreenState extends State<GameScreen> {
                 ),
               ),
             ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.settings, color: Colors.white70),
+            tooltip: 'Options',
+            onPressed: _showOptions,
           ),
         ],
       ),
@@ -200,6 +361,7 @@ class _GameScreenState extends State<GameScreen> {
                     painter: _GamePainter(
                       snake: _snake,
                       food: _food,
+                      obstacles: _obstaclesEnabled ? _obstacles : const {},
                       gridSize: _gridSize,
                       isGameOver: _isGameOver,
                     ),
@@ -248,7 +410,7 @@ class _GameScreenState extends State<GameScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Score: $_score  |  Best: $_highScore',
+                    'Score: $_score  |  Level: $_level  |  Best: $_highScore',
                     style: const TextStyle(color: Colors.white70, fontSize: 16),
                   ),
                   const SizedBox(height: 16),
@@ -298,12 +460,14 @@ enum Direction { up, down, left, right }
 class _GamePainter extends CustomPainter {
   final List<Offset> snake;
   final Offset food;
+  final Set<Offset> obstacles;
   final int gridSize;
   final bool isGameOver;
 
   _GamePainter({
     required this.snake,
     required this.food,
+    required this.obstacles,
     required this.gridSize,
     required this.isGameOver,
   });
@@ -325,6 +489,22 @@ class _GamePainter extends CustomPainter {
         Offset(0, i * cellSize),
         Offset(size.width, i * cellSize),
         gridPaint,
+      );
+    }
+
+    final obstaclePaint = Paint()..color = Colors.orange[700]!;
+    for (final block in obstacles) {
+      canvas.drawRRect(
+        RRect.fromRectAndRadius(
+          Rect.fromLTWH(
+            block.dx * cellSize + 1,
+            block.dy * cellSize + 1,
+            cellSize - 2,
+            cellSize - 2,
+          ),
+          const Radius.circular(3),
+        ),
+        obstaclePaint,
       );
     }
 

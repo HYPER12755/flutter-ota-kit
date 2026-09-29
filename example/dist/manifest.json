@@ -1,7 +1,7 @@
 {
   "schemaVersion": 2,
-  "version": "1.0.0",
-  "md5": "a62469c6a17a95e53b26d91e5f893ee9",
+  "version": "1.0.7",
+  "md5": "2707f4f428ae478c0010fd639030cc7d",
   "targetVersionCode": 1,
   "abis": [
     "arm64-v8a"

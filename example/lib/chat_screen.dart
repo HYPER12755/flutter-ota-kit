@@ -66,7 +66,10 @@ class _ChatScreenState extends State<ChatScreen> {
               radius: 16,
               child: Text(
                 widget.name[0],
-                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
             const SizedBox(width: 10),
@@ -111,7 +114,10 @@ class _ChatScreenState extends State<ChatScreen> {
                       hintStyle: const TextStyle(color: Colors.white38),
                       filled: true,
                       fillColor: Colors.grey[800],
-                      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                      contentPadding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 10,
+                      ),
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(24),
                         borderSide: BorderSide.none,
@@ -126,7 +132,11 @@ class _ChatScreenState extends State<ChatScreen> {
                   child: CircleAvatar(
                     backgroundColor: widget.color,
                     radius: 22,
-                    child: const Icon(Icons.send, color: Colors.white, size: 20),
+                    child: const Icon(
+                      Icons.send,
+                      color: Colors.white,
+                      size: 20,
+                    ),
                   ),
                 ),
               ],
@@ -175,10 +185,16 @@ class _Bubble extends StatelessWidget {
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
             decoration: BoxDecoration(color: bg, borderRadius: radius),
-            child: Text(msg.text, style: const TextStyle(color: Colors.white, fontSize: 15)),
+            child: Text(
+              msg.text,
+              style: const TextStyle(color: Colors.white, fontSize: 15),
+            ),
           ),
           const SizedBox(height: 4),
-          Text(msg.time, style: TextStyle(color: Colors.grey[500], fontSize: 11)),
+          Text(
+            msg.time,
+            style: TextStyle(color: Colors.grey[500], fontSize: 11),
+          ),
         ],
       ),
     );
