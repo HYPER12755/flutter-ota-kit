@@ -93,9 +93,30 @@ class DoctorCommand extends FlutterPatcherCommand {
       steps.fail('SUPABASE_URL not set');
       return;
     }
+    final serviceKey = cfg.supabase.serviceRoleKey;
+    final anonKey = cfg.supabase.anonKey;
+    final hasServiceKey = serviceKey != null && serviceKey.isNotEmpty;
+    final probeKey = hasServiceKey
+        ? serviceKey
+        : (anonKey != null && anonKey.isNotEmpty ? anonKey : null);
+    if (probeKey == null) {
+      steps.fail(
+        'No Supabase key configured — set '
+        '${bold('supabase.anonKey')} or ${bold('supabase.serviceRoleKey')}',
+      );
+      return;
+    }
+    // Supabase now rejects keyless requests and restricts the PostgREST OpenAPI
+    // root to secret/service keys (2025 API-key hardening), so probe
+    // /rest/v1/ only when a service key is available, otherwise use
+    // /auth/v1/health which accepts public (anon/publishable) keys.
+    final endpoint = hasServiceKey ? '$url/rest/v1/' : '$url/auth/v1/health';
     try {
       final res = await http
-          .get(Uri.parse('$url/rest/v1/'))
+          .get(
+            Uri.parse(endpoint),
+            headers: {'apikey': probeKey, 'Authorization': 'Bearer $probeKey'},
+          )
           .timeout(const Duration(seconds: 5));
       if (res.statusCode < 400) {
         steps.success('Supabase reachable ($url)');

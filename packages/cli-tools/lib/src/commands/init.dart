@@ -329,24 +329,33 @@ class InitCommand extends FlutterPatcherCommand {
         step('Added `flutter_ota_kit` (latest) via `$exe pub add`');
         return;
       }
-      warn('`$exe pub add flutter_ota_kit` failed; falling back to a manual '
-          'edit. Run it yourself if the constraint looks wrong.');
+      warn(
+        '`$exe pub add flutter_ota_kit` failed; falling back to a manual '
+        'edit. Run it yourself if the constraint looks wrong.',
+      );
     }
     // Fallback: append an unpinned dependency so `pub get` picks the latest
     // compatible release. Still no hardcoded version.
     final marker = '\ndependencies:';
     final idx = content.indexOf(marker);
     if (idx == -1) {
-      warn('Could not find a `dependencies:` block; add `flutter_ota_kit` '
-          'manually (run `flutter pub add flutter_ota_kit`).');
+      warn(
+        'Could not find a `dependencies:` block; add `flutter_ota_kit` '
+        'manually (run `flutter pub add flutter_ota_kit`).',
+      );
       return;
     }
     final insertAt = idx + marker.length;
-    final updated =
-        content.replaceRange(insertAt, insertAt, '\n  flutter_ota_kit: any\n');
+    final updated = content.replaceRange(
+      insertAt,
+      insertAt,
+      '\n  flutter_ota_kit: any\n',
+    );
     pubspec.writeAsStringSync(updated);
-    step('Added `flutter_ota_kit` dependency to pubspec.yaml '
-        '(run `flutter pub get` to resolve the latest version)');
+    step(
+      'Added `flutter_ota_kit` dependency to pubspec.yaml '
+      '(run `flutter pub get` to resolve the latest version)',
+    );
   }
 
   /// Resolve the `flutter` executable (preferred) or `dart` for `pub add`.
