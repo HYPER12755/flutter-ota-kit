@@ -91,6 +91,7 @@ class AwsUpdateSource {
       fingerprintHash: config.fingerprintHash,
       minBundleId: config.minBundleId,
       currentBundleId: currentBundleId,
+      cohort: config.cohort,
       timeout: timeout,
     );
   }

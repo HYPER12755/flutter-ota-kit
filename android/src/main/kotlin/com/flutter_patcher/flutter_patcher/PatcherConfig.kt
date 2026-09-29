@@ -30,6 +30,11 @@ internal object PatcherConfig {
     const val KEY_CRASH_COUNT = "crash_count"
     const val KEY_PATCH_LOADING = "patch_loading"
 
+    /** Random UUID generated on first read and persisted; seeds the rollout
+     *  cohort on the Dart side. Survives patch updates and base-APK upgrades —
+     *  only reset by uninstall / `pm clear`, like the rest of these prefs. */
+    private const val KEY_DEVICE_ID = "device_install_id"
+
     /** PID written at [com.flutter_patcher.flutter_patcher.CrashGuard.markBooting]; consumed
      *  next cold start to look up `ActivityManager.getHistoricalProcessExitReasons` (API 30+).
      *  Unused on API < 30 — that path uses the naive "patch_loading=true ⇒ crash" rule. */
@@ -86,6 +91,21 @@ internal object PatcherConfig {
 
     fun prefs(context: Context): SharedPreferences =
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
+
+    /**
+     * Stable per-install device identifier (generated once, persisted).
+     *
+     * Used as the seed for server-side rollout-cohort hashing so a device
+     * lands in a consistent cohort across releases. Never leaves the device —
+     * the app sends only the derived 0-999 cohort number.
+     */
+    fun deviceInstallId(context: Context): String {
+        val existing = prefs(context).getString(KEY_DEVICE_ID, null)
+        if (!existing.isNullOrEmpty()) return existing
+        val fresh = java.util.UUID.randomUUID().toString()
+        prefs(context).edit().putString(KEY_DEVICE_ID, fresh).apply()
+        return fresh
+    }
 
     internal fun encodeLoaderFieldCandidates(fields: List<String>): String {
         val normalized = fields

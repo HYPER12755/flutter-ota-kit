@@ -1,3 +1,84 @@
+## 0.2.5
+
+### Fixed
+
+- **pub.dev documentation score:** the published archive omitted the `doc/` guide
+  files that `dartdoc_options.yaml` references as documentation categories,
+  so pub.dev's dartdoc pass crashed and awarded 0/10. `doc/` is now
+  included in the package archive.
+- **Static analysis (pub.dev):** fixed the three `curly_braces_in_flow_control_structures`
+  infos in `flutter_ota_kit.dart` and `ota_progress_overlay.dart` that cost
+  10 analysis points, and pinned the root `analysis_options.yaml` to
+  `package:lints/core.yaml` — the exact rule set pub.dev scores against.
+
+## 0.2.4
+
+### Fixed
+
+- **Server-side rollbacks were silently ignored on the device.**
+  `performSharedUpdateCheck` compared the `UpdateStatus` **enum** against the
+  string `'ROLLBACK'` — always false — so every rollback response was
+  mis-processed: the nil-UUID "fall back to base APK" signal degraded to
+  "up to date" (a disabled bad patch kept running forever), and a
+  rollback-to-older-bundle row degraded to a forward update with the wrong
+  status, bypassing the local rollback-history path in
+  `checkAndUpdate`. Now compared against `UpdateStatus.rollback`; locked in by
+  `test/update_check_pipeline_test.dart`.
+
+- **`cohort` was dead config on every backend.** All five update sources
+  expose a `cohort` field but never passed it into `GetBundlesArgs`, so
+  `get_update_info` always queried with `cohort = NULL`. Combined with the
+  server rule "NULL cohort is only eligible when rollout >= 1000" (verified
+  against the live `is_cohort_eligible` SQL), **any staged rollout below 100%
+  reached zero devices.** The cohort is now threaded from config, and when it
+  is unset the SDK derives a stable per-install cohort from a new native
+  device id (`deviceId` channel; random UUID persisted in the plugin prefs,
+  seeded through `getDefaultNumericCohort`). Apps shipping OTA-only to an
+  older base APK keep the historical null-cohort behaviour; devices on a base
+  built with this plugin get automatic cohorts.
+
+- **Forced update could restart the process while the install overlay was
+  still visible.** `applyUpdate` waited a fixed 3 s after `end()`, but the
+  overlay unmounts only after its minimum display time (up to 7 s). The handle
+  now exposes `dismissed`, and the restart waits for it (capped at 12 s).
+
+### Added
+
+- `PatcherChannel.deviceId()` / native `PatcherConfig.deviceInstallId` —
+  stable per-install identifier used for cohort hashing (never leaves the
+  device; only the derived 0-999 cohort is sent).
+- `test/production_safety_audit_test.dart` +
+  `test/update_check_pipeline_test.dart` — 12 audit/regression tests covering
+  rollback addressability, cohort eligibility, and the update-check pipeline.
+
+## 0.2.3
+
+### Fixed
+
+- **Forced-update overlay progress bar never visibly reached the end.** The
+  percentage readout sat in a fixed column beside the bar, reserving ~54px the
+  bar could not grow into, and the readout disappeared as soon as the download
+  phase ended — so during verify/finalize/restart the bar looked stuck just
+  below 100%. The readout now lives on its own line above the bar (right
+  aligned), the bar spans the full panel width, and completing phases display
+  `100%` until restart.
+
+### Changed
+
+- Raised the minimum versions of all direct dependencies to the newest
+  resolvable releases (`http 1.6.0`, `archive 4.3.0`, `postgres 3.5.17`,
+  `supabase 2.16.1`, `package_info_plus 10.2.1`, `restart_app 1.10.1`,
+  `asn1lib 1.6.5`, `mime 2.1.0`, `path 1.9.1`, and floors for
+  `args`/`crypto`/`plugin_platform_interface`).
+
+### CLI (flutter-ota 0.1.30)
+
+- `doctor` no longer reports a spurious `Supabase returned 401`: it probes
+  `/rest/v1/` with the service-role key when configured, falling back to
+  `/auth/v1/health` with the public key. Keyless requests to the PostgREST
+  OpenAPI root are rejected by Supabase's 2025 API-key hardening, so the old
+  keyless probe could never pass.
+
 ## 0.2.2
 
 ### Fixed

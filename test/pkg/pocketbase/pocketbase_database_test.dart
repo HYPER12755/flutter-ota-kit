@@ -57,7 +57,9 @@ void main() {
   group('pocketbaseDatabase', () {
     test('append + getBundleById round-trips', () async {
       final (:plugin, :store) = _newPlugin();
-      await plugin.appendBundle(_bundle('018f0000-0000-7000-8000-000000000001'));
+      await plugin.appendBundle(
+        _bundle('018f0000-0000-7000-8000-000000000001'),
+      );
       await plugin.commitBundle();
 
       final got = await plugin.getBundleById(
@@ -66,12 +68,17 @@ void main() {
       expect(got, isNotNull);
       expect(got!.channel, 'production');
       expect(got.platform, Platform.android);
-      expect(got.storageUri, 'pb://bundles/018f0000-0000-7000-8000-000000000001/patch.zip');
+      expect(
+        got.storageUri,
+        'pb://bundles/018f0000-0000-7000-8000-000000000001/patch.zip',
+      );
     });
 
     test('getChannels derives distinct channels from bundles', () async {
       final (:plugin, :store) = _newPlugin();
-      await plugin.appendBundle(_bundle('018f0000-0000-7000-8000-000000000001'));
+      await plugin.appendBundle(
+        _bundle('018f0000-0000-7000-8000-000000000001'),
+      );
       await plugin.appendBundle(
         _bundle('018f0000-0000-7000-8000-000000000002', channel: 'staging'),
       );
@@ -86,7 +93,9 @@ void main() {
 
     test('getBundles filters by channel + enabled and paginates', () async {
       final (:plugin, :store) = _newPlugin();
-      await plugin.appendBundle(_bundle('018f0000-0000-7000-8000-000000000001'));
+      await plugin.appendBundle(
+        _bundle('018f0000-0000-7000-8000-000000000001'),
+      );
       await plugin.appendBundle(
         _bundle('018f0000-0000-7000-8000-000000000002', enabled: false),
       );
@@ -106,52 +115,56 @@ void main() {
       expect(prod.pagination.total, 1);
     });
 
-    test('getUpdateInfo (appVersion) returns the newest compatible bundle',
-        () async {
-      final (:plugin, :store) = _newPlugin();
-      await plugin.appendBundle(
-        _bundle('018f0000-0000-7000-8000-000000000001', appVersion: '1.0.0'),
-      );
-      await plugin.appendBundle(
-        _bundle('018f0000-0000-7000-8000-000000000002', appVersion: '1.0.0'),
-      );
-      await plugin.commitBundle();
+    test(
+      'getUpdateInfo (appVersion) returns the newest compatible bundle',
+      () async {
+        final (:plugin, :store) = _newPlugin();
+        await plugin.appendBundle(
+          _bundle('018f0000-0000-7000-8000-000000000001', appVersion: '1.0.0'),
+        );
+        await plugin.appendBundle(
+          _bundle('018f0000-0000-7000-8000-000000000002', appVersion: '1.0.0'),
+        );
+        await plugin.commitBundle();
 
-      final info = await plugin.getUpdateInfo(
-        const AppVersionGetBundlesArgs(
-          channel: 'production',
-          platform: Platform.android,
-          bundleId: nilUuid,
-          minBundleId: nilUuid,
-          appVersion: '1.0.0',
-        ),
-      );
-      expect(info, isNotNull);
-      expect(info!.status, UpdateStatus.update);
-      // Newest (highest id) wins.
-      expect(info.id, '018f0000-0000-7000-8000-000000000002');
-      expect(info.storageUri, isNotNull);
-    });
+        final info = await plugin.getUpdateInfo(
+          const AppVersionGetBundlesArgs(
+            channel: 'production',
+            platform: Platform.android,
+            bundleId: nilUuid,
+            minBundleId: nilUuid,
+            appVersion: '1.0.0',
+          ),
+        );
+        expect(info, isNotNull);
+        expect(info!.status, UpdateStatus.update);
+        // Newest (highest id) wins.
+        expect(info.id, '018f0000-0000-7000-8000-000000000002');
+        expect(info.storageUri, isNotNull);
+      },
+    );
 
-    test('getUpdateInfo (appVersion) returns null when nothing compatible',
-        () async {
-      final (:plugin, :store) = _newPlugin();
-      await plugin.appendBundle(
-        _bundle('018f0000-0000-7000-8000-000000000001', appVersion: '2.0.0'),
-      );
-      await plugin.commitBundle();
+    test(
+      'getUpdateInfo (appVersion) returns null when nothing compatible',
+      () async {
+        final (:plugin, :store) = _newPlugin();
+        await plugin.appendBundle(
+          _bundle('018f0000-0000-7000-8000-000000000001', appVersion: '2.0.0'),
+        );
+        await plugin.commitBundle();
 
-      final info = await plugin.getUpdateInfo(
-        const AppVersionGetBundlesArgs(
-          channel: 'production',
-          platform: Platform.android,
-          bundleId: nilUuid,
-          minBundleId: nilUuid,
-          appVersion: '1.0.0',
-        ),
-      );
-      expect(info, isNull);
-    });
+        final info = await plugin.getUpdateInfo(
+          const AppVersionGetBundlesArgs(
+            channel: 'production',
+            platform: Platform.android,
+            bundleId: nilUuid,
+            minBundleId: nilUuid,
+            appVersion: '1.0.0',
+          ),
+        );
+        expect(info, isNull);
+      },
+    );
 
     test('getUpdateInfo (fingerprint) matches by fingerprint hash', () async {
       final (:plugin, :store) = _newPlugin();
@@ -189,7 +202,9 @@ void main() {
 
     test('updateBundle + deleteBundle mutate through commit', () async {
       final (:plugin, :store) = _newPlugin();
-      await plugin.appendBundle(_bundle('018f0000-0000-7000-8000-000000000001'));
+      await plugin.appendBundle(
+        _bundle('018f0000-0000-7000-8000-000000000001'),
+      );
       await plugin.commitBundle();
 
       await plugin.updateBundle('018f0000-0000-7000-8000-000000000001', {

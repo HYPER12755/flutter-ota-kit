@@ -275,36 +275,35 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
 
   // ── Title bar ─────────────────────────────────────────────────────────
   Widget _titleBar(OtaOverlayState s) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
-        decoration: const BoxDecoration(
-          color: _C.head,
-          borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
-          border: Border(bottom: BorderSide(color: _C.border)),
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
+    decoration: const BoxDecoration(
+      color: _C.head,
+      borderRadius: BorderRadius.vertical(top: Radius.circular(12)),
+      border: Border(bottom: BorderSide(color: _C.border)),
+    ),
+    child: Row(
+      children: [
+        _dot(_C.red),
+        const SizedBox(width: 6),
+        _dot(_C.yellow),
+        const SizedBox(width: 6),
+        _dot(_C.green),
+        const SizedBox(width: 12),
+        const Flexible(
+          child: Text(
+            'flutter-ota · forced update',
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: _C.text, fontFamily: _mono, fontSize: 12),
+          ),
         ),
-        child: Row(
-          children: [
-            _dot(_C.red),
-            const SizedBox(width: 6),
-            _dot(_C.yellow),
-            const SizedBox(width: 6),
-            _dot(_C.green),
-            const SizedBox(width: 12),
-            const Flexible(
-              child: Text(
-                'flutter-ota · forced update',
-                overflow: TextOverflow.ellipsis,
-                style: TextStyle(
-                    color: _C.text, fontFamily: _mono, fontSize: 12),
-              ),
-            ),
-            const SizedBox(width: 8),
-            _pill(
-              s.hasError ? 'FAILED' : 'RUNNING',
-              s.hasError ? _C.red : _C.green,
-            ),
-          ],
+        const SizedBox(width: 8),
+        _pill(
+          s.hasError ? 'FAILED' : 'RUNNING',
+          s.hasError ? _C.red : _C.green,
         ),
-      );
+      ],
+    ),
+  );
 
   // ── META ──────────────────────────────────────────────────────────────
   Widget _metaBlock(OtaOverlayState s) {
@@ -330,12 +329,15 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
                   style: const TextStyle(fontFamily: _mono, fontSize: 13),
                   children: [
                     TextSpan(
-                        text: '${r[0].padRight(9)} ',
-                        style: const TextStyle(color: _C.dim)),
+                      text: '${r[0].padRight(9)} ',
+                      style: const TextStyle(color: _C.dim),
+                    ),
                     TextSpan(
-                        text: r[1],
-                        style: TextStyle(
-                            color: r[0] == 'version' ? _C.blue : _C.text)),
+                      text: r[1],
+                      style: TextStyle(
+                        color: r[0] == 'version' ? _C.blue : _C.text,
+                      ),
+                    ),
                   ],
                 ),
               ),
@@ -367,18 +369,18 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
           final Color color = failed
               ? _C.red
               : done
-                  ? _C.green
-                  : active
-                      ? _C.blue
-                      : _C.faint;
+              ? _C.green
+              : active
+              ? _C.blue
+              : _C.faint;
 
           final String glyph = failed
               ? '✗'
               : done
-                  ? '✓'
-                  : active
-                      ? spinner
-                      : '·';
+              ? '✓'
+              : active
+              ? spinner
+              : '·';
 
           // Only the downloading step shows a percentage. Verify / install /
           // Only the download step shows a percentage. Other active phases show
@@ -390,8 +392,8 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
           } else if (done) {
             status = 'done';
           } else if (active) {
-            final showPct = s.phase == PatchApplyPhase.downloading &&
-                s.fraction != null;
+            final showPct =
+                s.phase == PatchApplyPhase.downloading && s.fraction != null;
             status = showPct ? _pct(s.fraction) : 'working…';
           } else {
             status = 'wait';
@@ -403,9 +405,14 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
               children: [
                 SizedBox(
                   width: 18,
-                  child: Text(glyph,
-                      style: TextStyle(
-                          color: color, fontFamily: _mono, fontSize: 14)),
+                  child: Text(
+                    glyph,
+                    style: TextStyle(
+                      color: color,
+                      fontFamily: _mono,
+                      fontSize: 14,
+                    ),
+                  ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
@@ -441,8 +448,8 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
     // Single honest fraction for the bar:
     //  - preparing (no phase / no fraction yet) → empty
     //  - downloading with a known size          → real fraction
-    //  - verifying / installing / finalizing / restarting → full (download is
-    //    already done, so the bar simply stays at 100% — no sliding animation)
+    //  - verifying / finalizing / restarting    → full (download is already
+    //    done, so the bar rests at 100%)
     //  - error → freeze wherever it was
     final double frac;
     if (s.hasError) {
@@ -458,32 +465,51 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
       frac = 0.0; // preparing
     }
 
-    // Percent read-out only while it's a real download percentage.
-    final bool showPct =
-        !s.hasError && s.phase == PatchApplyPhase.downloading && s.fraction != null;
+    // The readout lives on its own line above the bar (right aligned) so the
+    // bar itself spans the full panel width and can visibly reach the end.
+    // It used to sit in a fixed column beside the bar, which (a) reserved
+    // 54px the bar could never grow into and (b) hid the percent as soon as
+    // the download phase ended, making the bar look stuck below 100%.
+    final String pctLabel;
+    if (s.hasError) {
+      pctLabel = '';
+    } else if (s.restarting ||
+        s.phase == PatchApplyPhase.verifying ||
+        s.phase == PatchApplyPhase.finalizing) {
+      pctLabel = _pct(1.0);
+    } else if (s.phase == PatchApplyPhase.downloading && s.fraction != null) {
+      pctLabel = _pct(s.fraction);
+    } else {
+      pctLabel = '';
+    }
 
     return _panelBox(
-      child: Row(
+      child: Column(
+        key: const Key('ota-progress-panel'),
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Expanded(
+          SizedBox(
+            height: 16,
+            child: Align(
+              alignment: Alignment.centerRight,
+              child: Text(
+                pctLabel,
+                style: const TextStyle(
+                  fontFamily: _mono,
+                  fontSize: 13,
+                  color: _C.text,
+                  fontWeight: FontWeight.w700,
+                  fontFeatures: [FontFeature.tabularFigures()],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            key: const Key('ota-progress-bar'),
             child: _ProgressBar(
               fraction: frac,
               color: s.hasError ? _C.red : _C.blue,
-            ),
-          ),
-          const SizedBox(width: 10),
-          SizedBox(
-            width: 44,
-            child: Text(
-              showPct ? _pct(s.fraction) : '',
-              textAlign: TextAlign.right,
-              style: const TextStyle(
-                fontFamily: _mono,
-                fontSize: 13,
-                color: _C.text,
-                fontWeight: FontWeight.w700,
-                fontFeatures: [FontFeature.tabularFigures()],
-              ),
             ),
           ),
         ],
@@ -522,7 +548,10 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
                   child: Text(
                     s.errorHint ?? 'Close the app and reopen to retry.',
                     style: const TextStyle(
-                        color: _C.dim, fontFamily: _mono, fontSize: 12),
+                      color: _C.dim,
+                      fontFamily: _mono,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
                 if (showRetry)
@@ -530,25 +559,35 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
                     onTap: widget.onRetry,
                     child: Container(
                       padding: const EdgeInsets.symmetric(
-                          horizontal: 14, vertical: 7),
+                        horizontal: 14,
+                        vertical: 7,
+                      ),
                       decoration: BoxDecoration(
                         borderRadius: BorderRadius.circular(7),
                         border: Border.all(color: _C.border),
                       ),
-                      child: const Text('[ retry ]',
-                          style: TextStyle(
-                              color: _C.blue,
-                              fontFamily: _mono,
-                              fontSize: 13)),
+                      child: const Text(
+                        '[ retry ]',
+                        style: TextStyle(
+                          color: _C.blue,
+                          fontFamily: _mono,
+                          fontSize: 13,
+                        ),
+                      ),
                     ),
                   ),
               ],
             )
           : Row(
               children: [
-                const Text('›',
-                    style: TextStyle(
-                        color: _C.green, fontFamily: _mono, fontSize: 13)),
+                const Text(
+                  '›',
+                  style: TextStyle(
+                    color: _C.green,
+                    fontFamily: _mono,
+                    fontSize: 13,
+                  ),
+                ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
@@ -556,7 +595,10 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
                         ? s.message!
                         : 'Applying update, please keep the app open…',
                     style: const TextStyle(
-                        color: _C.dim, fontFamily: _mono, fontSize: 12),
+                      color: _C.dim,
+                      fontFamily: _mono,
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ],
@@ -566,52 +608,57 @@ class _OtaProgressOverlayState extends State<OtaProgressOverlay> {
 
   // ── helpers ─────────────────────────────────────────────────────────
   Widget _sectionLabel(String t) => Row(
-        children: [
-          Text(t,
-              style: const TextStyle(
-                color: _C.dim,
-                fontFamily: _mono,
-                fontSize: 11,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 1.5,
-              )),
-          const SizedBox(width: 10),
-          const Expanded(child: Divider(color: _C.sep, height: 1)),
-        ],
-      );
+    children: [
+      Text(
+        t,
+        style: const TextStyle(
+          color: _C.dim,
+          fontFamily: _mono,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          letterSpacing: 1.5,
+        ),
+      ),
+      const SizedBox(width: 10),
+      const Expanded(child: Divider(color: _C.sep, height: 1)),
+    ],
+  );
 
   Widget _panelBox({required Widget child}) => Container(
-        width: double.infinity,
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        decoration: BoxDecoration(
-          color: _C.inner,
-          borderRadius: BorderRadius.circular(8),
-          border: Border.all(color: _C.sep),
-        ),
-        child: child,
-      );
+    width: double.infinity,
+    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+    decoration: BoxDecoration(
+      color: _C.inner,
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: _C.sep),
+    ),
+    child: child,
+  );
 
   Widget _dot(Color c) => Container(
-        width: 11,
-        height: 11,
-        decoration: BoxDecoration(color: c, shape: BoxShape.circle),
-      );
+    width: 11,
+    height: 11,
+    decoration: BoxDecoration(color: c, shape: BoxShape.circle),
+  );
 
   Widget _pill(String t, Color c) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
-        decoration: BoxDecoration(
-          color: c.withValues(alpha: 0.15),
-          borderRadius: BorderRadius.circular(6),
-          border: Border.all(color: c.withValues(alpha: 0.5)),
-        ),
-        child: Text(t,
-            style: TextStyle(
-                color: c,
-                fontFamily: _mono,
-                fontSize: 10,
-                fontWeight: FontWeight.w700,
-                letterSpacing: 0.5)),
-      );
+    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 3),
+    decoration: BoxDecoration(
+      color: c.withValues(alpha: 0.15),
+      borderRadius: BorderRadius.circular(6),
+      border: Border.all(color: c.withValues(alpha: 0.5)),
+    ),
+    child: Text(
+      t,
+      style: TextStyle(
+        color: c,
+        fontFamily: _mono,
+        fontSize: 10,
+        fontWeight: FontWeight.w700,
+        letterSpacing: 0.5,
+      ),
+    ),
+  );
 }
 
 /// A single-line determinate progress bar that never wraps.
@@ -742,19 +789,20 @@ class _TerminalLogState extends State<_TerminalLog> {
               style: const TextStyle(fontFamily: _mono, fontSize: 12),
               children: [
                 TextSpan(
-                    text: '${match.group(1)!.padRight(8)} ',
-                    style: TextStyle(color: color)),
+                  text: '${match.group(1)!.padRight(8)} ',
+                  style: TextStyle(color: color),
+                ),
                 TextSpan(
-                    text: match.group(3),
-                    style: const TextStyle(color: _C.text)),
+                  text: match.group(3),
+                  style: const TextStyle(color: _C.text),
+                ),
               ],
             ),
           );
         } else {
           content = Text(
             line.text,
-            style: TextStyle(
-                fontFamily: _mono, fontSize: 12, color: color),
+            style: TextStyle(fontFamily: _mono, fontSize: 12, color: color),
           );
         }
 
@@ -780,6 +828,14 @@ class OtaOverlayManager {
   OverlayEntry? _entry;
   bool _disposed = false;
   DateTime? _startTime;
+
+  /// Completes once the active overlay entry has been removed. [begin] resets
+  /// it for every session; `FlutterPatcher.applyUpdate` awaits it so the
+  /// forced-update restart can never kill a still-visible install screen.
+  Completer<void>? _dismissed;
+
+  Future<void> get _dismissedFuture =>
+      _dismissed?.future ?? Future<void>.value();
 
   /// Last 10%-bucket we emitted a "download NN%" log line for, to throttle the
   /// feed. -1 = none yet.
@@ -820,6 +876,7 @@ class OtaOverlayManager {
 
     _startTime = DateTime.now();
     _lastLoggedPctBucket = -1;
+    _dismissed = Completer<void>();
 
     final logs = <LogLine>[
       if (channel != null) LogLine('gray', 'channel  $channel'),
@@ -943,7 +1000,12 @@ class OtaOverlayManager {
   }
 
   void _end({bool hasError = false, String? errorText}) {
-    if (_disposed || _entry == null) return;
+    if (_disposed || _entry == null) {
+      if (_dismissed != null && !_dismissed!.isCompleted) {
+        _dismissed!.complete();
+      }
+      return;
+    }
     if (hasError) {
       _log('red', 'error    ${errorText ?? 'unknown'}');
       _log('yellow', 'action   rolling back to base apk');
@@ -977,6 +1039,9 @@ class OtaOverlayManager {
       if (_disposed) return;
       entry?.remove();
       if (identical(_entry, entry)) _entry = null;
+      if (_dismissed != null && !_dismissed!.isCompleted) {
+        _dismissed!.complete();
+      }
     });
   }
 
@@ -1031,10 +1096,7 @@ class OtaOverlayManager {
                       ),
                       Text(
                         'Restored: $previousVersion',
-                        style: TextStyle(
-                          color: Colors.grey[400],
-                          fontSize: 12,
-                        ),
+                        style: TextStyle(color: Colors.grey[400], fontSize: 12),
                       ),
                     ],
                   ),
@@ -1064,4 +1126,8 @@ class OtaOverlayHandle {
 
   void end({bool hasError = false, String? errorText}) =>
       _manager._end(hasError: hasError, errorText: errorText);
+
+  /// Completes when the overlay has fully unmounted (dwell elapsed + removed),
+  /// or immediately if no overlay session is active.
+  Future<void> get dismissed => _manager._dismissedFuture;
 }

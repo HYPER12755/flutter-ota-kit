@@ -1,6 +1,7 @@
 import 'dart:io' show Directory, File;
 
-import 'package:flutter_ota_kit/src/pkg/aws/flutter_ota_kit_aws.dart' show s3Storage;
+import 'package:flutter_ota_kit/src/pkg/aws/flutter_ota_kit_aws.dart'
+    show s3Storage;
 import 'package:flutter_ota_kit/src/pkg/plugin_core/flutter_ota_kit_plugin_core.dart'
     show StoragePlugin;
 import 'package:path/path.dart' show basename;

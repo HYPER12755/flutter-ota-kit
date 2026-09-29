@@ -18,7 +18,6 @@ bool _hasText(WidgetTester tester, String needle) {
   return false;
 }
 
-
 Future<void> _pump(
   WidgetTester tester, {
   required ValueNotifier<OtaOverlayState> state,
@@ -57,8 +56,9 @@ void main() {
       expect(find.text('FAILED'), findsNothing);
     });
 
-    testWidgets('shows meta rows: channel, version, bundle, size',
-        (tester) async {
+    testWidgets('shows meta rows: channel, version, bundle, size', (
+      tester,
+    ) async {
       final state = ValueNotifier(
         const OtaOverlayState(
           phase: PatchApplyPhase.downloading,
@@ -101,8 +101,9 @@ void main() {
       expect(find.text('wait'), findsWidgets);
     });
 
-    testWidgets('error state flips pill, marks failed step, shows hint',
-        (tester) async {
+    testWidgets('error state flips pill, marks failed step, shows hint', (
+      tester,
+    ) async {
       final state = ValueNotifier(
         const OtaOverlayState(
           hasError: true,
@@ -141,8 +142,9 @@ void main() {
       expect(tapped, isTrue);
     });
 
-    testWidgets('no retry button when onRetry is null and canRetry is false',
-        (tester) async {
+    testWidgets('no retry button when onRetry is null and canRetry is false', (
+      tester,
+    ) async {
       final state = ValueNotifier(
         const OtaOverlayState(hasError: true, errorText: 'io error'),
       );
@@ -185,8 +187,44 @@ void main() {
       expect(find.text('working…'), findsNothing);
     });
 
-    testWidgets('non-download active phase shows working…, not a %',
-        (tester) async {
+    testWidgets(
+      'bar completes to 100% and spans full width once download ends',
+      (tester) async {
+        // Regression: the fixed 44px "%" column next to the bar left the bar
+        // ending ~54px short of the panel edge even when download was done,
+        // and the readout vanished so it looked stuck below 100%.
+        final state = ValueNotifier(
+          const OtaOverlayState(
+            phase: PatchApplyPhase.downloading,
+            fraction: 0.97,
+            bytesReceived: 99328,
+            totalBytes: 102400,
+            activeStep: 1,
+          ),
+        );
+        await _pump(tester, state: state);
+
+        // Native flips to verifying; the manager keeps the last fraction.
+        state.value = state.value.copyWith(
+          phase: PatchApplyPhase.verifying,
+          activeStep: 2,
+        );
+        await tester.pump();
+        await tester.pump(const Duration(milliseconds: 500));
+
+        expect(find.text('100%'), findsWidgets);
+
+        final bar = tester.getRect(find.byKey(const Key('ota-progress-bar')));
+        final panel = tester.getRect(
+          find.byKey(const Key('ota-progress-panel')),
+        );
+        expect(bar.width, moreOrLessEquals(panel.width));
+      },
+    );
+
+    testWidgets('non-download active phase shows working…, not a %', (
+      tester,
+    ) async {
       final state = ValueNotifier(
         const OtaOverlayState(
           phase: PatchApplyPhase.verifying,
@@ -200,8 +238,9 @@ void main() {
       expect(find.text('working…'), findsOneWidget);
     });
 
-    testWidgets('out-of-range activeStep never throws / clamps into the list',
-        (tester) async {
+    testWidgets('out-of-range activeStep never throws / clamps into the list', (
+      tester,
+    ) async {
       final state = ValueNotifier(
         const OtaOverlayState(
           phase: PatchApplyPhase.finalizing,

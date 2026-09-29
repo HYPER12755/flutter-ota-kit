@@ -44,7 +44,6 @@ plugins/
 npm/
 
 # Internal / non-package directories
-doc/
 .ota/
 scripts/
 .idx/

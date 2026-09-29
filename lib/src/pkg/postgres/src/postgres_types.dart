@@ -1,4 +1,5 @@
-import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart' show Platform;
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart'
+    show Platform;
 
 /// Database row for the `bundles` table (snake_case columns).
 ///

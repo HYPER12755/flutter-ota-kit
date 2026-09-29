@@ -27,10 +27,7 @@ Future<void> _shoot(
     MaterialApp(
       debugShowCheckedModeBanner: false,
       home: Scaffold(
-        body: OtaProgressOverlay(
-          state: ValueNotifier(state),
-          onRetry: onRetry,
-        ),
+        body: OtaProgressOverlay(state: ValueNotifier(state), onRetry: onRetry),
       ),
     ),
   );

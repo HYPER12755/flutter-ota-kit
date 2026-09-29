@@ -1,4 +1,5 @@
-import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart' show Bundle;
+import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart'
+    show Bundle;
 
 import 'bundle_unit_of_work.dart';
 import 'bundle_unit_of_work_store.dart';

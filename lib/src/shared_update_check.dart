@@ -6,9 +6,11 @@ import 'package:flutter_ota_kit/src/pkg/core/flutter_ota_kit_core.dart'
         AppVersionGetBundlesArgs,
         FingerprintGetBundlesArgs,
         GetBundlesArgs,
+        getDefaultNumericCohort,
         nilUuid,
         Platform,
         UpdateInfo,
+        UpdateStatus,
         UpdateStrategy;
 import 'package:flutter_ota_kit/src/pkg/client/flutter_ota_kit_client.dart'
     show ServerUpdateResult;
@@ -16,7 +18,23 @@ import 'package:flutter_ota_kit/src/pkg/plugin_core/flutter_ota_kit_plugin_core.
     show DatabasePlugin, StoragePlugin;
 
 import 'patch_info.dart' show PatchInfo;
+import 'patcher_channel.dart' show PatcherChannel;
 import 'app_version_resolver.dart';
+
+/// Stable rollout cohort derived from the native per-install device id.
+///
+/// Returns null on non-Android platforms, on Android bases compiled before
+/// `deviceId` existed, and in CLI/dart-VM contexts — callers must treat null
+/// as "no cohort", matching the pre-fix behaviour.
+Future<String?> _deviceCohort() async {
+  try {
+    final id = await PatcherChannel.deviceId();
+    if (id == null || id.isEmpty) return null;
+    return getDefaultNumericCohort(id);
+  } catch (_) {
+    return null;
+  }
+}
 
 final _uuidRe = RegExp(
   r'^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}$',
@@ -46,12 +64,17 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
   required String? fingerprintHash,
   required String minBundleId,
   String? currentBundleId,
+  String? cohort,
   Duration timeout = const Duration(seconds: 10),
 }) async {
   final bundleId =
       (currentBundleId != null && _uuidRe.hasMatch(currentBundleId))
       ? currentBundleId
       : nilUuid;
+
+  final effectiveCohort = (cohort != null && cohort.isNotEmpty)
+      ? cohort
+      : await _deviceCohort();
 
   final GetBundlesArgs args;
   if (updateStrategy == UpdateStrategy.fingerprint) {
@@ -61,6 +84,7 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
       bundleId: bundleId,
       minBundleId: minBundleId,
       fingerprintHash: fingerprintHash ?? '',
+      cohort: effectiveCohort,
     );
   } else {
     final resolvedAppVersion = await resolveAppVersion(appVersion);
@@ -70,6 +94,7 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
       bundleId: bundleId,
       minBundleId: minBundleId,
       appVersion: resolvedAppVersion,
+      cohort: effectiveCohort,
     );
   }
 
@@ -84,8 +109,11 @@ Future<ServerUpdateResult> performSharedUpdateCheck({
   if (info == null) return ServerUpdateResult.upToDate();
 
   final storageUri = info.storageUri;
-  // Server signals rollback with ROLLBACK status and null/empty storageUri
-  if (info.status == 'ROLLBACK') {
+  // Server signals rollback with ROLLBACK status and null/empty storageUri.
+  // NOTE: `info.status` is the `UpdateStatus` enum, not a String — comparing
+  // it to `'ROLLBACK'` is always false and silently swallowed every rollback
+  // response (including the nil-UUID "fall back to base" the SQL emits).
+  if (info.status == UpdateStatus.rollback) {
     return ServerUpdateResult(
       isUpToDate: false,
       patch: null,

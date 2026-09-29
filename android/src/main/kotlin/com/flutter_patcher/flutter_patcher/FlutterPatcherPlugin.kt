@@ -96,6 +96,7 @@ class FlutterPatcherPlugin :
             "rollback" -> handleRollback(result)
             "rollbackToPrevious" -> handleRollbackToPrevious(result)
             "currentVersion" -> handleCurrentVersion(result)
+            "deviceId" -> result.success(PatcherConfig.deviceInstallId(appContext))
             "lastBootDiagnostic" -> handleLastBootDiagnostic(result)
             "cacheDir" -> result.success(appContext.cacheDir.absolutePath)
             "appVersionCode" -> result.success(PatcherConfig.currentVersionCode(appContext))

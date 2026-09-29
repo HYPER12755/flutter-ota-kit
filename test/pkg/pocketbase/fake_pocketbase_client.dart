@@ -72,7 +72,9 @@ class FakePocketBaseClient implements PocketBaseClient {
     int page = 1,
     int perPage = 50,
   }) async {
-    var rows = store.records(collection).values
+    var rows = store
+        .records(collection)
+        .values
         .map((r) => Map<String, dynamic>.from(r))
         .where((r) => _matchesFilter(r, filter))
         .toList();
@@ -92,7 +94,9 @@ class FakePocketBaseClient implements PocketBaseClient {
     final totalPages = total == 0 ? 0 : (total / perPage).ceil();
     final start = (page - 1) * perPage;
     final end = (start + perPage).clamp(0, total);
-    final pageRows = start >= total ? <Map<String, dynamic>>[] : rows.sublist(start, end);
+    final pageRows = start >= total
+        ? <Map<String, dynamic>>[]
+        : rows.sublist(start, end);
 
     return PocketBaseList<T>(
       items: pageRows.map(fromJson).toList(),
@@ -114,8 +118,7 @@ class FakePocketBaseClient implements PocketBaseClient {
 
   bool _matchesClause(Map<String, dynamic> row, String clause) {
     // `field ?= [ "a","b" ]`  (membership)
-    final inMatch =
-        RegExp(r'^(\w+)\s*\?=\s*\[(.*)\]$').firstMatch(clause);
+    final inMatch = RegExp(r'^(\w+)\s*\?=\s*\[(.*)\]$').firstMatch(clause);
     if (inMatch != null) {
       final field = inMatch.group(1)!;
       final list = RegExp(r'"((?:[^"\\]|\\.)*)"')
@@ -125,7 +128,8 @@ class FakePocketBaseClient implements PocketBaseClient {
       return list.contains(row[field]?.toString());
     }
     // `field != ""`
-    final neMatch = RegExp(r'^(\w+)\s*!=\s*"((?:[^"\\]|\\.)*)"$').firstMatch(clause);
+    final neMatch = RegExp(r'^(\w+)\s*!=\s*"((?:[^"\\]|\\.)*)"$')
+        .firstMatch(clause);
     if (neMatch != null) {
       final field = neMatch.group(1)!;
       final val = _unescape(neMatch.group(2)!);
@@ -140,8 +144,8 @@ class FakePocketBaseClient implements PocketBaseClient {
       return (row[field] as bool? ?? false) == want;
     }
     // `field <op> "value"` where op ∈ = > >= < <=
-    final cmpMatch =
-        RegExp(r'^(\w+)\s*(=|>=|<=|>|<)\s*"((?:[^"\\]|\\.)*)"$').firstMatch(clause);
+    final cmpMatch = RegExp(r'^(\w+)\s*(=|>=|<=|>|<)\s*"((?:[^"\\]|\\.)*)"$')
+        .firstMatch(clause);
     if (cmpMatch != null) {
       final field = cmpMatch.group(1)!;
       final op = cmpMatch.group(2)!;
@@ -162,10 +166,13 @@ class FakePocketBaseClient implements PocketBaseClient {
       }
     }
     // Unrecognized clause → don't silently pass; fail closed so tests catch it.
-    throw StateError('FakePocketBaseClient: unhandled filter clause: "$clause"');
+    throw StateError(
+      'FakePocketBaseClient: unhandled filter clause: "$clause"',
+    );
   }
 
-  String _unescape(String s) => s.replaceAll(r'\"', '"').replaceAll(r'\\', r'\');
+  String _unescape(String s) =>
+      s.replaceAll(r'\"', '"').replaceAll(r'\\', r'\');
 
   @override
   Future<T> createRecord<T>(
@@ -274,9 +281,11 @@ class FakePocketBaseClient implements PocketBaseClient {
   @override
   Future<void> importCollection(String c, List<Map<String, dynamic>> r) async {}
   @override
-  Future<http.Response> rawRequest(String method, String path,
-          {Map<String, dynamic>? body}) async =>
-      http.Response('{}', 200);
+  Future<http.Response> rawRequest(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+  }) async => http.Response('{}', 200);
   @override
   Future<List<int>> downloadFileUnauth(String url) async => [];
   @override
@@ -298,31 +307,34 @@ class FakePocketBaseClient implements PocketBaseClient {
   Future<Map<String, dynamic>> getCollection(String nameOrId) async => {};
   @override
   Future<Map<String, dynamic>> createCollection(
-          Map<String, dynamic> body) async =>
-      {};
+    Map<String, dynamic> body,
+  ) async => {};
   @override
   Future<Map<String, dynamic>> updateCollection(
-          String nameOrId, Map<String, dynamic> body) async =>
-      {};
+    String nameOrId,
+    Map<String, dynamic> body,
+  ) async => {};
   @override
   Future<void> deleteCollection(String nameOrId) async {}
   @override
   Future<void> truncateCollection(String nameOrId) async {}
   @override
-  Future<void> importCollections(List<Map<String, dynamic>> collections,
-      {bool deleteMissing = false}) async {}
+  Future<void> importCollections(
+    List<Map<String, dynamic>> collections, {
+    bool deleteMissing = false,
+  }) async {}
   @override
   Future<void> uploadBackup(List<int> bytes, {String? name}) async {}
   @override
   Future<List<Map<String, dynamic>>> batch(
-          List<Map<String, dynamic>> requests) async =>
-      [];
+    List<Map<String, dynamic>> requests,
+  ) async => [];
   @override
   Future<Map<String, dynamic>> listSettings() async => {};
   @override
   Future<Map<String, dynamic>> updateSettings(
-          Map<String, dynamic> body) async =>
-      {};
+    Map<String, dynamic> body,
+  ) async => {};
   @override
   Future<void> testS3(String filesystem) async {}
   @override

@@ -756,7 +756,9 @@ class FlutterPatcher {
   ///
   /// Call [restart] after a successful rollback to activate the previous patch.
   static Future<RollbackOutcome> rollbackToPrevious() async {
-    if (_notAndroidGuard('rollbackToPrevious')) return RollbackOutcome.fallbackToBase;
+    if (_notAndroidGuard('rollbackToPrevious')) {
+      return RollbackOutcome.fallbackToBase;
+    }
     try {
       final outcomeName = await PatcherChannel.rollbackToPrevious();
       return RollbackOutcome.values.byName(outcomeName);
@@ -815,8 +817,9 @@ class FlutterPatcher {
     final showOverlay = showUpdateUi && result.shouldForceUpdate;
     final fromVersion = await currentVersion;
     final patchHash = result.patch!.md5;
-    final shortHash =
-        patchHash.isNotEmpty ? patchHash.substring(0, patchHash.length.clamp(0, 8)) : null;
+    final shortHash = patchHash.isNotEmpty
+        ? patchHash.substring(0, patchHash.length.clamp(0, 8))
+        : null;
 
     // Extract channel/platform from whichever config is active
     String? channel;
@@ -878,7 +881,9 @@ class FlutterPatcher {
       if (error != null &&
           deterministic.contains(error) &&
           patchVersion.isNotEmpty) {
-        _log('applyUpdate: patch failed (${error.name}), blacklisting $patchVersion');
+        _log(
+          'applyUpdate: patch failed (${error.name}), blacklisting $patchVersion',
+        );
         try {
           await PatcherChannel.reportApplyFailure(
             version: patchVersion,
@@ -889,15 +894,22 @@ class FlutterPatcher {
           _log('applyUpdate: failed to blacklist $patchVersion: $e', s);
         }
       } else {
-        _log('applyUpdate: patch failed (${error?.name}); transient, not '
-            'blacklisting (will retry next check)');
+        _log(
+          'applyUpdate: patch failed (${error?.name}); transient, not '
+          'blacklisting (will retry next check)',
+        );
       }
     }
 
     if (applied.ok && result.shouldForceUpdate) {
       handle?.end();
-      // Wait for overlay to finish its minimum display time + success dwell
-      await Future.delayed(const Duration(seconds: 3));
+      // Let the overlay finish its minimum display time + success dwell and
+      // fully unmount before killing the process. The old fixed 3s wait could
+      // restart while the install screen was still visible, because a fast
+      // download keeps the overlay up until the 7s minimum duration elapses.
+      await (handle?.dismissed ??
+              Future<void>.delayed(const Duration(seconds: 3)))
+          .timeout(const Duration(seconds: 12), onTimeout: () {});
       await restart();
     } else {
       handle?.end(hasError: !applied.ok, errorText: applied.message);
@@ -932,7 +944,9 @@ class FlutterPatcher {
           if (showUpdateUi) {
             OtaOverlayManager.instance.showRollbackToast(
               message: 'Update reverted — using previous version',
-              previousVersion: outcome == RollbackOutcome.success ? 'previous' : 'base',
+              previousVersion: outcome == RollbackOutcome.success
+                  ? 'previous'
+                  : 'base',
             );
           }
           await restart();
@@ -953,7 +967,10 @@ class FlutterPatcher {
       final patchVersion = result.patch!.version;
       final patchMd5 = result.patch!.md5;
       try {
-        if (await PatcherChannel.isVersionBlacklisted(patchVersion, md5: patchMd5)) {
+        if (await PatcherChannel.isVersionBlacklisted(
+          patchVersion,
+          md5: patchMd5,
+        )) {
           _log('checkAndApplyUpdates: $patchVersion is blacklisted, skip');
           return null;
         }
@@ -1039,7 +1056,10 @@ class FlutterPatcher {
   ///
   /// When [md5] is provided, the match uses both version and md5. Without md5,
   /// any entry with the same version is considered a match.
-  static Future<bool> isVersionBlacklisted(String version, {String md5 = ''}) async {
+  static Future<bool> isVersionBlacklisted(
+    String version, {
+    String md5 = '',
+  }) async {
     if (_notAndroidGuard('isVersionBlacklisted')) return false;
     try {
       return await PatcherChannel.isVersionBlacklisted(version, md5: md5);

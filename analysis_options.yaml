@@ -5,6 +5,9 @@
 # independently. Excluding them here keeps `dart analyze .` focused on the root
 # device-SDK package (`lib/` + `test/`), which is the only thing the root
 # package owns. Each sub-package is analyzed on its own and is already clean.
+# pana scores with `lints` core — match that exact contract locally.
+include: package:lints/core.yaml
+
 analyzer:
   exclude:
     - packages/**

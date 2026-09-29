@@ -83,6 +83,16 @@ class PatcherChannel {
     return channel.invokeMethod<String>('currentVersion');
   }
 
+  /// Stable per-install device identifier, persisted natively (SharedPreferences).
+  ///
+  /// Generated once on first call and never changes for the app install (even
+  /// across patch updates and base APK upgrades), making it a suitable seed for
+  /// rollout cohort hashing. Throws [MissingPluginException] on non-Android
+  /// platforms and on Android bases compiled before this method existed.
+  static Future<String?> deviceId() async {
+    return channel.invokeMethod<String>('deviceId');
+  }
+
   /// Diagnostics from the last cold-start patch load.
   ///
   /// The native side returns `Map?` (see `BootDiagnosticStore`), deserialized by the
@@ -137,7 +147,10 @@ class PatcherChannel {
   }
 
   /// Checks whether a patch version (optionally with md5) is blacklisted.
-  static Future<bool> isVersionBlacklisted(String version, {String md5 = ''}) async {
+  static Future<bool> isVersionBlacklisted(
+    String version, {
+    String md5 = '',
+  }) async {
     final found = await channel.invokeMethod<bool>('isVersionBlacklisted', {
       'version': version,
       'md5': md5,

@@ -1,6 +1,6 @@
 name: flutter_ota_kit
 description: Open-source, self-hosted code push (OTA updates) for Flutter Android. Patches Dart AOT libapp.so and assets on cold start with integrity checks and crash rollback.
-version: 0.2.2
+version: 0.2.5
 homepage: https://github.com/HYPER12755/flutter-ota-kit
 repository: https://github.com/HYPER12755/flutter-ota-kit
 issue_tracker: https://github.com/HYPER12755/flutter-ota-kit/issues
@@ -21,30 +21,30 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  plugin_platform_interface: '>=2.0.2 <3.0.0'
-  package_info_plus: ^10.0.0
-  restart_app: ^1.9.1
+  plugin_platform_interface: '>=2.1.8 <3.0.0'
+  package_info_plus: ^10.2.1
+  restart_app: ^1.10.1
   # The npm `flutter-ota` CLI (`flutter_ota_kit_cli`) is intentionally NOT a pub
   # dependency; `dart run flutter_ota_kit:pack` is implemented in `lib/src/pack`.
-  archive: ^4.0.0
-  args: '>=2.4.0 <3.0.0'
-  crypto: '>=3.0.3 <4.0.0'
+  archive: ^4.3.0
+  args: '>=2.7.0 <3.0.0'
+  crypto: '>=3.0.7 <4.0.0'
   # Merged from the former sub-packages (core, plugin-core, client, and the
   # supabase/postgres/cloudflare/aws/pocketbase backends), now bundled directly
   # under lib/src/pkg/. Their external dependencies are unioned here.
-  http: ^1.2.0
-  path: ^1.9.0
-  mime: ^2.0.0
-  supabase: ^2.14.0
-  postgres: ^3.4.0
+  http: ^1.6.0
+  path: ^1.9.1
+  mime: ^2.1.0
+  supabase: ^2.16.1
+  postgres: ^3.5.17
   pointycastle: ^4.0.0
-  asn1lib: ^1.5.4
+  asn1lib: ^1.6.5
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
-  test: ^1.25.0
+  test: ^1.31.1
 
 flutter:
   plugin:
